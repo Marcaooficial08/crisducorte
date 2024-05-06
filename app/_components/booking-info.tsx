@@ -55,3 +55,4 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
 
 export default BookingInfo;
 
+
