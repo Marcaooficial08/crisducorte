@@ -8,7 +8,7 @@ interface BookingInfoProps {
     date: Date;
     service: Pick<Service, "name" | "price">;
     barbershop: Pick<Barbershop, "name">;
-    user: Pick<User, "name">; // Corrigido para usar o tipo correto de usuário
+    user: Pick<User, "name">;
   };
 }
 
@@ -39,7 +39,7 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
 
             <div className="flex justify-between">
               <h3 className="text-gray-400 text-sm">Horário</h3>
-              <h4 className="text-sm">{format(booking.date, "hh:mm")}</h4>
+              <h4 className="text-sm">{format(booking.date, "HH:mm")}</h4>
             </div>
           </>
         )}
@@ -54,3 +54,4 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
 };
 
 export default BookingInfo;
+
