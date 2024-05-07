@@ -14,7 +14,7 @@ import { authOptions } from "../_lib/auth";
 export default async function Home() {
   const session = await getServerSession(authOptions);
  
-  const [barbershops, recommendedBarbershops, confirmeBookings] = await Promise.all([
+  const [barbershops, recommendedBarbershops, confirmedBookings] = await Promise.all([
     db.barbershop.findMany({}),
     db.barbershop.findMany({
       orderBy: {
@@ -23,8 +23,8 @@ export default async function Home() {
     }),
     session?.user ? db.booking.findMany({
       where: {
-        userId:(session.user as any).id,
-        date:{
+        userId: (session.user as any).id,
+        date: {
           gte: new Date(),
         }
       },
@@ -32,6 +32,9 @@ export default async function Home() {
         service: true,
         barbershop: true,
         user: true,
+      },
+      orderBy: {
+        date: 'asc',
       },
     }) : Promise.resolve([]),
   ]);
@@ -54,11 +57,11 @@ export default async function Home() {
       </div>
 
       <div className="mt-6">
-        {confirmeBookings.length > 0 && ( 
+        {confirmedBookings.length > 0 && ( 
           <>
             <h2 className="pl-5 text-sm mb-3 uppercase text-gray-400 font-bold">Agendamentos</h2>
             <div className="px-5 flex gap-3 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-              {confirmeBookings.map(booking => (    
+              {confirmedBookings.map(booking => (    
                 <BookingItem key={booking.id} booking={booking} />
               ))}
             </div>

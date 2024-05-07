@@ -1,7 +1,6 @@
 "use client";
 
 
-
 import { Button } from "@/app/_components/ui/button";
 import { Calendar } from "@/app/_components/ui/calendar";
 import { Card, CardContent } from "@/app/_components/ui/card";
@@ -96,13 +95,24 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
     }
   };
 
-  const isFridayOrSaturday = (date: Date) => {
-    const day = date.getDay();
-    return day === 5 || day === 6; // sexta-feira = 5, sábado = 6
-  };
-
   const tileDisabled = (date: Date) => {
-    return !isFridayOrSaturday(date);
+    const currentDate = new Date();
+    const currentDay = currentDate.getDay();
+    const currentWeekMonday = new Date(currentDate);
+    currentWeekMonday.setDate(currentDate.getDate() - currentDay + (currentDay === 0 ? -6 : 1)); // Encontrar a segunda-feira da semana atual
+    const endOfWeek = new Date(currentWeekMonday);
+    endOfWeek.setDate(endOfWeek.getDate() + 7); // Encontrar o final da semana atual
+
+    // Verificar se a data fornecida está dentro da semana atual
+    const isCurrentWeek = date >= currentWeekMonday && date < endOfWeek;
+
+    // Se a data fornecida estiver dentro da semana atual e for sexta-feira (5) ou sábado (6)
+    if (isCurrentWeek && (date.getDay() === 5 || date.getDay() === 6)) {
+      return false; // Habilitar para agendamento
+    }
+
+    // Desabilitar para agendamento
+    return true;
   };
 
   const timeList = useMemo(() => {
@@ -236,6 +246,40 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
 };
 
 export default ServiceItem;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
