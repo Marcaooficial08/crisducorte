@@ -1,6 +1,4 @@
 "use client";
-
-
 import { Button } from "@/app/_components/ui/button";
 import { Calendar } from "@/app/_components/ui/calendar";
 import { Card, CardContent } from "@/app/_components/ui/card";
@@ -32,6 +30,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
   const [submitIsLoading, setSubmitIsLoading] = useState(false);
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const [dayBookings, setDayBookings] = useState<Booking[]>([]);
+  const [specificUserCanEditDates, setSpecificUserCanEditDates] = useState(false); // Estado para controlar se o usuário específico pode editar as datas
 
   useEffect(() => {
     if (!date) {
@@ -95,7 +94,14 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
     }
   };
 
+  const specificUserEmail = "crisducorteserra@gmail.com"; // Email do usuário específico
+
   const tileDisabled = (date: Date) => {
+    // Verificar se o usuário atual está logado e se seu email corresponde ao email específico
+    if (data?.user?.email === specificUserEmail) {
+      return !specificUserCanEditDates; // Se o usuário específico não puder editar as datas, desabilitar
+    }
+
     const currentDate = new Date();
     const currentDay = currentDate.getDay();
     const currentWeekMonday = new Date(currentDate);
@@ -132,6 +138,18 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
     });
   }, [date, dayBookings]);
 
+  const handleToggleEditDates = () => {
+    setSpecificUserCanEditDates((prevState) => !prevState); // Alternar o estado de edição das datas
+  };
+
+  const handleOpenDates = () => {
+    setSpecificUserCanEditDates(true); // Permitir que o usuário específico edite as datas
+  };
+
+  const handleBlockDates = () => {
+    setSpecificUserCanEditDates(false); // Impedir que o usuário específico edite as datas
+  };
+
   return (
     <Card>
       <CardContent className="p-3 w-full">
@@ -157,11 +175,11 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
                     Reservar
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="p-0 overflow-auto"> {/* Adicionado overflow-auto */}
+                <SheetContent className="p-0 overflow-auto">
                   <SheetHeader className="text-left px-5 py-6 border-b border-solid border-secondary">
                     <SheetTitle>Fazer Reserva</SheetTitle>
                   </SheetHeader>
-                  <div className="py-6 overflow-auto"> {/* Adicionado overflow-auto */}
+                  <div className="py-6 overflow-auto">
                     <Calendar
                       mode="single"
                       selected={date}
@@ -192,8 +210,15 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
                       }}
                     />
                   </div>
+                  {data?.user?.email === specificUserEmail && (
+                    <div className="py-6 px-5 border-t border-solid border-secondary">
+                      <Button onClick={specificUserCanEditDates ? handleBlockDates : handleOpenDates} variant="outline" className="mr-4">
+                        {specificUserCanEditDates ? "Fechar datas" : "Abrir datas"}
+                      </Button>
+                    </div>
+                  )}
                   {date && (
-                    <div className="flex gap-3 overflow-auto py-6 px-5 border-t border-solid border-secondary [&::-webkit-scrollbar]:hidden">
+                    <div className="flex gap-3 overflow-auto py-6 px-5 border-t border-solid border-secondary">
                       {timeList.map((time) => (
                         <Button onClick={() => handleHourClick(time)} variant={hour === time ? "default" : "outline"} className="rounded-full" key={time}>
                           {time}
@@ -246,6 +271,39 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
 };
 
 export default ServiceItem;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
