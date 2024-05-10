@@ -31,10 +31,20 @@ const BookingsPage = async () => {
         },
     });
 
-    // Filtrando os horários confirmados que estão há mais de uma hora no passado
-    const now = new Date();
-    const oneHourAgo = addHours(now, -1);
-    const finishedBookings = confirmedBookings.filter(booking => new Date(booking.date) < oneHourAgo);
+    // Obtendo horários finalizados
+    const finishedBookings = await db.booking.findMany({
+        where: {
+            userId,
+            date: {
+                lt: new Date(),
+            },
+        },
+        include: {
+            service: true,
+            barbershop: true,
+            user: true,
+        },
+    });
 
     // Ordenando os horários
     confirmedBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -71,5 +81,6 @@ const BookingsPage = async () => {
 };
 
 export default BookingsPage;
+
 
 
