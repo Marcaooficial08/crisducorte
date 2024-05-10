@@ -16,7 +16,7 @@ const BookingsPage = async () => {
 
     const userId = (session.user as any).id;
 
-    // Obtendo horários confirmados e finalizados
+    // Obtendo horários confirmados
     const confirmedBookings = await db.booking.findMany({
         where: {
             userId,
@@ -31,20 +31,10 @@ const BookingsPage = async () => {
         },
     });
 
-    const finishedBookings = await db.booking.findMany({
-        where: {
-            userId,
-            date: {
-                lt: new Date(),
-            },
-            NOT: { id: { in: confirmedBookings.map(booking => booking.id) } } // Excluindo horários confirmados
-        },
-        include: {
-            service: true,
-            barbershop: true,
-            user: true,
-        },
-    });
+    // Filtrando os horários confirmados que estão há mais de uma hora no passado
+    const now = new Date();
+    const oneHourAgo = addHours(now, -1);
+    const finishedBookings = confirmedBookings.filter(booking => new Date(booking.date) < oneHourAgo);
 
     // Ordenando os horários
     confirmedBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -81,4 +71,5 @@ const BookingsPage = async () => {
 };
 
 export default BookingsPage;
+
 
