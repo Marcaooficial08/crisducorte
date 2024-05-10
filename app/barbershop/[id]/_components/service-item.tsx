@@ -1,4 +1,5 @@
 "use client";
+
 "use client";
 
 
@@ -247,6 +248,83 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
 };
 
 export default ServiceItem;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

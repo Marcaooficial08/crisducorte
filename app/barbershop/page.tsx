@@ -1,54 +1,84 @@
-import { redirect } from "next/navigation";
-import BarbershopItem from "../(home)/_components/barbershop-item";
 import Header from "../_components/header";
+import { redirect } from "next/navigation";
 import { db } from "../_lib/prisma";
+import BookingItem from "../_components/booking-item";
+import { isFuture, isPast, addHours } from "date-fns";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../_lib/auth";
+import BookingItemAdm from "../_components/booking-item-adm";
 
-import Search from "../(home)/_components/search";
+const BookingsPage = async () => {
+    const session = await getServerSession(authOptions);
 
+    if (!session?.user) {
+        return redirect("/");
+    }
 
-interface BarbershopsPageProps {
-  searchParams: {
-    search?: string;
-  };
-}
+    const userId = (session.user as any).id;
 
-const BarbershopsPage = async ({ searchParams }: BarbershopsPageProps) => {
-  if (!searchParams.search) {
-    return redirect("/");
-  }
+    // Obtendo horários confirmados e finalizados
+    const confirmedBookings = await db.booking.findMany({
+        where: {
+            userId,
+            date: {
+                gte: new Date(),
+            }
+        },
+        include: {
+            service: true,
+            barbershop: true,
+            user: true,
+        },
+    });
 
-  const barbershops = await db.barbershop.findMany({
-    where: {
-      name: {
-        contains: searchParams.search,
-        mode: "insensitive",
-      },
-    },
-  });
+    const finishedBookings = await db.booking.findMany({
+        where: {
+            userId,
+            date: {
+                lt: new Date(),
+            },
+            NOT: { id: { in: confirmedBookings.map(booking => booking.id) } } // Excluindo horários confirmados
+        },
+        include: {
+            service: true,
+            barbershop: true,
+            user: true,
+        },
+    });
 
-  return (
-    <>
-      <Header />
+    // Ordenando os horários
+    confirmedBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    finishedBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      <div className="px-5 py-6 flex flex-col gap-6">
-        <Search
-          defaultValues={{
-            search: searchParams.search,
-          }}
-        />
-
-        <h1 className="text-gray-400 font-bold text-xs uppercase">Resultados para &quot;{searchParams.search}&quot;</h1>
-
-        <div className="grid grid-cols-2 gap-4">
-          {barbershops.map((barbershop) => (
-            <div key={barbershop.id} className="w-full">
-              <BarbershopItem barbershop={barbershop} />
+    return (
+        <>
+            <Header />
+            <div className="px-5 py-6">
+                <h1 className="text-xl font-bold mb-6">Agendamentos</h1>
+                {confirmedBookings.length > 0 && (
+                    <>
+                        <h2 className="text-gray-400 uppercase font-bold text-sm mb-3">Confirmados</h2>
+                        <div className="flex flex-col gap-3">
+                            {confirmedBookings.map((booking) => (
+                                <BookingItem key={booking.id} booking={booking} />
+                            ))}
+                        </div>
+                    </>
+                )}
+                {finishedBookings.length > 0 && (
+                    <>
+                        <h2 className="text-gray-400 uppercase font-bold text-sm mt-6 mb-3">Finalizados</h2>
+                        <div className="flex flex-col gap-3">
+                            {finishedBookings.map((booking) => (
+                                <BookingItem key={booking.id} booking={booking} />
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
-          ))}
-        </div>
-      </div>
-    </>
-  );
+        </>
+    );
 };
 
-export default BarbershopsPage;
+export default BookingsPage;
+

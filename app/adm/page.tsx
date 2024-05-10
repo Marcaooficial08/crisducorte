@@ -2,7 +2,7 @@ import Header from "../_components/header";
 import { redirect } from "next/navigation";
 import { db } from "../_lib/prisma";
 import BookingItem from "../_components/booking-item";
-import { isFuture, isPast } from "date-fns";
+import { isFuture, isPast, addHours } from "date-fns";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
 import BookingItemAdm from "../_components/booking-item-adm";
@@ -14,38 +14,39 @@ const BookingsPageAdm = async () => {
         return redirect("/");
     }
 
-    const userId = (session.user as any).id; // Acessa o ID do usuário
+    const userId = (session.user as any).id;
 
-    const [confirmedBookings, finishedBookings] = await Promise.all([
-        db.booking.findMany({
-            where: {
-                userId,
-                date: {
-                    gte: new Date(),
-                }
-            },
-            include: {
-                service: true,
-                barbershop: true,
-                user: true,
-            },
-        }),
-        db.booking.findMany({
-            where: {
-                userId,
-                date: {
-                    lt: new Date(),
-                }
-            },
-            include: {
-                service: true,
-                barbershop: true,
-                user: true,
-            },
-        }),
-    ]);
+    // Obtendo horários confirmados e finalizados
+    const confirmedBookings = await db.booking.findMany({
+        where: {
+            userId,
+            date: {
+                gte: new Date(),
+            }
+        },
+        include: {
+            service: true,
+            barbershop: true,
+            user: true,
+        },
+    });
 
-    // Ordena as reservas por data
+    const finishedBookings = await db.booking.findMany({
+        where: {
+            userId,
+            date: {
+                lt: new Date(),
+            },
+            NOT: { id: { in: confirmedBookings.map(booking => booking.id) } } // Excluindo horários confirmados
+        },
+        include: {
+            service: true,
+            barbershop: true,
+            user: true,
+        },
+    });
+
+    // Ordenando os horários
     confirmedBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     finishedBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -80,6 +81,7 @@ const BookingsPageAdm = async () => {
 };
 
 export default BookingsPageAdm;
+
 
 
 
