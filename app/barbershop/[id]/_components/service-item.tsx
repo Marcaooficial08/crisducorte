@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 
 interface ServiceItemProps {
   barbershop: Barbershop;
-  service: Service;
+  service: Omit<Service, "price"> & { price: number }; // Modificado para garantir que `price` seja um número
   isAuthenticated: boolean;
 }
 
@@ -43,11 +43,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
     refreshAvailableHours();
   }, [date, barbershop.id]);
 
-  const tileDisabled = (date: Date) => {
-    return true; // Bloquear todas as datas
-  };
-
-  const handledaleClick = (date: Date | undefined) => {
+  const handleDateClick = (date: Date | undefined) => {
     setDate(date);
     setHour(undefined);
   };
@@ -83,7 +79,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       setDate(undefined);
 
       toast("Reserva realizada com sucesso!", {
-        description: format(newDate, "'Para' dd 'de' MMMM 'às' HH':'mm'.'", {
+        description: format(newDate, "'Para' dd 'de' MMMM 'às' HH':'mm'.", {
           locale: ptBR,
         }),
         action: {
@@ -96,6 +92,26 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
     } finally {
       setSubmitIsLoading(false);
     }
+  };
+
+  const tileDisabled = (date: Date) => {
+    const currentDate = new Date();
+    const currentDay = currentDate.getDay();
+    const currentWeekMonday = new Date(currentDate);
+    currentWeekMonday.setDate(currentDate.getDate() - currentDay + (currentDay === 0 ? -6 : 1)); // Encontrar a segunda-feira da semana atual
+    const endOfWeek = new Date(currentWeekMonday);
+    endOfWeek.setDate(endOfWeek.getDate() + 7); // Encontrar o final da semana atual
+
+    // Verificar se a data fornecida está dentro da semana atual
+    const isCurrentWeek = date >= currentWeekMonday && date < endOfWeek;
+
+    // Se a data fornecida estiver dentro da semana atual e for sexta-feira (5)
+    if (isCurrentWeek && date.getDay() === 5) {
+      return false; // Habilitar para agendamento
+    }
+
+    // Desabilitar para agendamento em qualquer outro dia, incluindo sábados
+    return true;
   };
 
   const timeList = useMemo(() => {
@@ -131,7 +147,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
                 {Intl.NumberFormat("pt-BR", {
                   style: "currency",
                   currency: "BRL",
-                }).format(Number(service.price))}
+                }).format(service.price)} {/* O preço agora é um número serializável */}
               </p>
 
               <Sheet open={sheetIsOpen} onOpenChange={setSheetIsOpen}>
@@ -140,15 +156,15 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
                     Reservar
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="p-0 overflow-auto"> {/* Adicionado overflow-auto */}
+                <SheetContent className="p-0 overflow-auto">
                   <SheetHeader className="text-left px-5 py-6 border-b border-solid border-secondary">
                     <SheetTitle>Fazer Reserva</SheetTitle>
                   </SheetHeader>
-                  <div className="py-6 overflow-auto"> {/* Adicionado overflow-auto */}
+                  <div className="py-6 overflow-auto">
                     <Calendar
                       mode="single"
                       selected={date}
-                      onSelect={handledaleClick}
+                      onSelect={handleDateClick}
                       locale={ptBR}
                       fromDate={new Date()}
                       disabled={tileDisabled}
@@ -229,6 +245,8 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
 };
 
 export default ServiceItem;
+
+
 
 
 
