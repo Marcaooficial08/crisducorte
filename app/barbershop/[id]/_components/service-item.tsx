@@ -1,5 +1,6 @@
 "use client";
 
+
 import { Button } from "@/app/_components/ui/button";
 import { Calendar } from "@/app/_components/ui/calendar";
 import { Card, CardContent } from "@/app/_components/ui/card";
@@ -19,7 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 
 interface ServiceItemProps {
   barbershop: Barbershop;
-  service: Omit<Service, "price"> & { price: number }; // Modificado para garantir que `price` seja um número
+  service: Service;
   isAuthenticated: boolean;
 }
 
@@ -43,7 +44,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
     refreshAvailableHours();
   }, [date, barbershop.id]);
 
-  const handleDateClick = (date: Date | undefined) => {
+  const handledaleClick = (date: Date | undefined) => {
     setDate(date);
     setHour(undefined);
   };
@@ -79,7 +80,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       setDate(undefined);
 
       toast("Reserva realizada com sucesso!", {
-        description: format(newDate, "'Para' dd 'de' MMMM 'às' HH':'mm'.", {
+        description: format(newDate, "'Para' dd 'de' MMMM 'às' HH':'mm'.'", {
           locale: ptBR,
         }),
         action: {
@@ -105,12 +106,12 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
     // Verificar se a data fornecida está dentro da semana atual
     const isCurrentWeek = date >= currentWeekMonday && date < endOfWeek;
 
-    // Se a data fornecida estiver dentro da semana atual e for sexta-feira (5)
-    if (isCurrentWeek && date.getDay() === 5) {
+    // Se a data fornecida estiver dentro da semana atual e for sexta-feira (5) ou sábado (6)
+    if (isCurrentWeek && (date.getDay() === 5 || date.getDay() === 6)) {
       return false; // Habilitar para agendamento
     }
 
-    // Desabilitar para agendamento em qualquer outro dia, incluindo sábados
+    // Desabilitar para agendamento
     return true;
   };
 
@@ -147,7 +148,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
                 {Intl.NumberFormat("pt-BR", {
                   style: "currency",
                   currency: "BRL",
-                }).format(service.price)} {/* O preço agora é um número serializável */}
+                }).format(Number(service.price))}
               </p>
 
               <Sheet open={sheetIsOpen} onOpenChange={setSheetIsOpen}>
@@ -156,15 +157,15 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
                     Reservar
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="p-0 overflow-auto">
+                <SheetContent className="p-0 overflow-auto"> {/* Adicionado overflow-auto */}
                   <SheetHeader className="text-left px-5 py-6 border-b border-solid border-secondary">
                     <SheetTitle>Fazer Reserva</SheetTitle>
                   </SheetHeader>
-                  <div className="py-6 overflow-auto">
+                  <div className="py-6 overflow-auto"> {/* Adicionado overflow-auto */}
                     <Calendar
                       mode="single"
                       selected={date}
-                      onSelect={handleDateClick}
+                      onSelect={handledaleClick}
                       locale={ptBR}
                       fromDate={new Date()}
                       disabled={tileDisabled}
@@ -245,6 +246,19 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
 };
 
 export default ServiceItem;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
