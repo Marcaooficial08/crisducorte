@@ -68,12 +68,17 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       }
       const newDate = setMinutes(setHours(date, Number(hour.split(":")[0])), Number(hour.split(":")[1]));
 
-      await saveBooking({
+      const result = await saveBooking({
         serviceId: service.id,
         barbershopId: barbershop.id,
         date: newDate.toISOString(),
-        userId: (data.user as any).id,
+        userId: data.user.id,
       });
+
+      if (!result.success) {
+        toast(result.error ?? "Erro ao criar reserva.", { description: "Escolha outro horário." });
+        return;
+      }
 
       setSheetIsOpen(false);
       setHour(undefined);

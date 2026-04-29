@@ -1,36 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images:
-  {
-
-   remotePatterns:[{
-
-          hostname:"utfs.io"
-        
-
-   }
-
-
-
-   ]
-   
-
-
-
-
-
-  }
-  
-
-
-
-
-
-
-
+  transpilePackages: ["date-fns-tz"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "utfs.io",
+      },
+    ],
+  },
 };
 
-
-
 export default nextConfig;
-

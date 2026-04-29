@@ -1,5 +1,6 @@
-import { Barbershop } from '@prisma/client';
 "use server"
+
+import { Prisma } from "@prisma/client";
 import { db } from "@/app/_lib/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -10,331 +11,65 @@ interface SaveBookingParams {
   date: string;
 }
 
-// Função para excluir a reserva do usuário especial criada junto com a reserva do usuário comum
-const deleteSpecialUserBooking = async (barbershopId: string, date: string) => {
+export const saveBooking = async (params: SaveBookingParams): Promise<{ success: boolean; error?: string }> => {
+  const bookingDate = new Date(params.date);
+
   try {
-    const specialUserId = "clu79mptd0000tvy12eh8254l"; // ID do usuário especial
+    await db.$transaction(async (tx) => {
+      const existing = await tx.booking.findFirst({
+        where: {
+          barbershopId: params.barbershopId,
+          date: bookingDate,
+        },
+      });
 
-    // Encontra e exclui a reserva do usuário especial para a mesma barbearia e data
-    await db.booking.deleteMany({
-      where: {
-        userId: specialUserId,
-        barbershopId: barbershopId,
-        date: date,
-      },
-    });
-  } catch (error) {
-    console.error("Erro ao excluir reserva do usuário especial:", error);
-  }
-};
+      if (existing) {
+        throw new Error("SLOT_TAKEN");
+      }
 
-export const saveBooking = async (params: SaveBookingParams) => {
-  try {
-    const specialUserId = "clu79mptd0000tvy12eh8254l"; // ID do usuário especial
-
-    // Cria a reserva para o usuário especial
-    await db.booking.create({
-      data: {
-        serviceId: params.serviceId,
-        userId: specialUserId,
-        date: params.date,
-        barbershopId: params.barbershopId,
-      },
+      await tx.booking.create({
+        data: {
+          serviceId: params.serviceId,
+          userId: params.userId,
+          date: bookingDate,
+          barbershopId: params.barbershopId,
+        },
+      });
     });
 
-    // Se o usuário for especial, retorna true para indicar que a reserva foi criada com sucesso
-    if (params.userId === specialUserId) {
-      return true;
-    }
-
-    // Cria a reserva para o usuário normal
-    await db.booking.create({
-      data: {
-        serviceId: params.serviceId,
-        userId: params.userId,
-        date: params.date,
-        barbershopId: params.barbershopId,
-      },
-    });
-
-    // Exclui a reserva do usuário especial, caso tenha sido criada junto com a reserva do usuário comum
-    await deleteSpecialUserBooking(params.barbershopId, params.date);
-
-    // Revalida as rotas após criar a reserva
     revalidatePath("/");
     revalidatePath("/bookings");
     revalidatePath("/adm");
 
-    // Retorna true para indicar que a reserva foi criada com sucesso
-    return true;
+    return { success: true };
   } catch (error) {
-    // Se ocorrer um erro, registra o erro e retorna false
+    if (error instanceof Error && error.message === "SLOT_TAKEN") {
+      return { success: false, error: "Horário já reservado. Escolha outro." };
+    }
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { success: false, error: "Horário já reservado. Escolha outro." };
+    }
     console.error("Erro ao criar reserva:", error);
-    return false;
+    return { success: false, error: "Erro ao criar reserva. Tente novamente." };
   }
 };
 
 export const getUserBookings = async (userId: string) => {
   try {
-    const specialUserId = "clu79mptd0000tvy12eh8254l"; // ID do usuário especial
+    const specialUserId = "clu79mptd0000tvy12eh8254l";
 
-    // Se o usuário for especial, retorna apenas as reservas dele
     if (userId === specialUserId) {
-      const userBookings = await db.booking.findMany({
-        where: {
-          userId: specialUserId,
-        },
+      return await db.booking.findMany({
+        where: { userId: specialUserId },
       });
-
-      return userBookings;
     }
 
-    // Caso contrário, retorna um array vazio
     return [];
   } catch (error) {
     console.error("Erro ao recuperar reservas:", error);
     return [];
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

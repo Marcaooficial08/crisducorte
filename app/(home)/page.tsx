@@ -1,11 +1,9 @@
 import Header from "../_components/header";
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Search, User } from "lucide-react";
 
 import Final from "./_components/search";
 import BookingItem from "../_components/booking-item";
-import BookingItemAdm from "../_components/booking-item";
 import { db } from "../_lib/prisma";
 import BarbershopItem from "./_components/barbershop-item";
 import { getServerSession } from "next-auth";
@@ -14,6 +12,9 @@ import { authOptions } from "../_lib/auth";
 export default async function Home() {
   const session = await getServerSession(authOptions);
  
+  const isAdmin = session?.user?.hasFullAccess === true;
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+
   const [barbershops, recommendedBarbershops, confirmedBookings] = await Promise.all([
     db.barbershop.findMany({}),
     db.barbershop.findMany({
@@ -23,9 +24,9 @@ export default async function Home() {
     }),
     session?.user ? db.booking.findMany({
       where: {
-        userId: (session.user as any).id,
+        ...(isAdmin ? {} : { userId: session.user.id }),
         date: {
-          gte: new Date(),
+          gte: weekStart,
         }
       },
       include: {
@@ -61,7 +62,7 @@ export default async function Home() {
           <>
             <h2 className="pl-5 text-sm mb-3 uppercase text-gray-400 font-bold">Agendamentos</h2>
             <div className="px-5 flex gap-3 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-              {confirmedBookings.map(booking => (    
+              {confirmedBookings.map(booking => (
                 <BookingItem key={booking.id} booking={booking} />
               ))}
             </div>

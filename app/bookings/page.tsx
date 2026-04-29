@@ -2,7 +2,6 @@ import Header from "../_components/header";
 import { redirect } from "next/navigation";
 import { db } from "../_lib/prisma";
 import BookingItem from "../_components/booking-item";
-import { isFuture, isPast } from "date-fns";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
 
@@ -13,7 +12,7 @@ const BookingsPage = async () => {
         return redirect("/");
     }
 
-    const userId = (session.user as any).id; // Acessa o ID do usuário
+    const userId = session.user.id;
 
     const [confirmedBookings, finishedBookings] = await Promise.all([
         db.booking.findMany({
@@ -72,6 +71,9 @@ const BookingsPage = async () => {
                             ))}
                         </div>
                     </>
+                )}
+                {confirmedBookings.length === 0 && finishedBookings.length === 0 && (
+                    <p className="text-gray-400 text-sm">Nenhum agendamento encontrado.</p>
                 )}
             </div>
         </>

@@ -1,8 +1,6 @@
 import Header from "../_components/header";
 import { redirect } from "next/navigation";
 import { db } from "../_lib/prisma";
-import BookingItem from "../_components/booking-item";
-import { isFuture, isPast, addHours } from "date-fns";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
 import BookingItemAdm from "../_components/booking-item-adm";
@@ -14,41 +12,36 @@ const BookingsPageAdm = async () => {
         return redirect("/");
     }
 
-    const userId = (session.user as any).id;
+    if (!session.user.hasFullAccess) {
+        return redirect("/");
+    }
 
-    // Obtendo horários confirmados
+    const now = new Date();
+
+    // Admin vê todas as reservas — sem filtro de userId
     const confirmedBookings = await db.booking.findMany({
         where: {
-            userId,
-            date: {
-                gte: new Date(),
-            }
+            date: { gte: now },
         },
         include: {
             service: true,
             barbershop: true,
             user: true,
         },
+        orderBy: { date: "asc" },
     });
 
-    // Obtendo horários finalizados
     const finishedBookings = await db.booking.findMany({
         where: {
-            userId,
-            date: {
-                lt: new Date(),
-            },
+            date: { lt: now },
         },
         include: {
             service: true,
             barbershop: true,
             user: true,
         },
+        orderBy: { date: "desc" },
     });
-
-    // Ordenando os horários
-    confirmedBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    finishedBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     return (
         <>
@@ -75,20 +68,12 @@ const BookingsPageAdm = async () => {
                         </div>
                     </>
                 )}
+                {confirmedBookings.length === 0 && finishedBookings.length === 0 && (
+                    <p className="text-gray-400 text-sm">Nenhum agendamento encontrado.</p>
+                )}
             </div>
         </>
     );
 };
 
 export default BookingsPageAdm;
-
-
-
-
-
-
-
-
-
-
-

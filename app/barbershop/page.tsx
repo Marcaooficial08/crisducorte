@@ -14,7 +14,7 @@ const BookingsPage = async () => {
         return redirect("/");
     }
 
-    const userId = (session.user as any).id;
+    const userId = session.user.id;
 
     // Obtendo horários confirmados
     const confirmedBookings = await db.booking.findMany({

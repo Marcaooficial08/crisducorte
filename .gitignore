@@ -37,6 +37,10 @@ next-env.d.ts
 
 .env
 .postgres-data
+.Promptscd
+.claude
+
+
 
 
 

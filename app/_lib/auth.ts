@@ -3,7 +3,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { Adapter } from "next-auth/adapters";
 import GoogleProvider from "next-auth/providers/google";
-import NextAuth, { AuthOptions } from "next-auth";
+import { AuthOptions } from "next-auth";
 import { Booking } from "@prisma/client";
 
 // Função para redirecionar as reservas marcadas pelo usuário especial para outro usuário
@@ -70,9 +70,13 @@ export const authOptions: AuthOptions = {
     async session({ session, user }) {
       // Adiciona uma flag ao objeto de sessão para indicar que o usuário tem acesso total
       // às reservas de outros usuários se o ID do usuário for clu79mptd0000tvy12eh8254l
-      if (user.id === "clu79mptd0000tvy12eh8254l") {
-        session.user = { ...session.user, hasFullAccess: true, } as SessionUser;
-      }else {
+      const isAdmin =
+        user.id === "clu79mptd0000tvy12eh8254l" ||
+        user.email === "crisducorteserra@gmail.com";
+
+      if (isAdmin) {
+        session.user = { ...session.user, id: user.id, hasFullAccess: true } as SessionUser;
+      } else {
         // Usuário normal
         session.user = {
           ...session.user,
@@ -84,7 +88,7 @@ export const authOptions: AuthOptions = {
       return Promise.resolve(session);
     },
   },
-  secret: process.env.NEXT_AUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 

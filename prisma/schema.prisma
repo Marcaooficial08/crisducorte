@@ -78,7 +78,7 @@ model Booking {
   user         User       @relation(fields: [userId], references: [id])
   date         DateTime   @db.Timestamp
 
- 
+  @@unique([barbershopId, date])
 }
 
 model Service {
