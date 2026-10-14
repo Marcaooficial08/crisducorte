@@ -17,7 +17,7 @@ npx prisma db seed       # seed via prisma/seed.ts (ts-node)
 npx prisma studio        # DB GUI
 ```
 
-No test runner configured.
+`npm test` — Vitest (`vitest.config.mts`, arquivos `app/**/*.test.ts`).
 
 ## Stack
 
