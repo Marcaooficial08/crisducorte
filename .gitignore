@@ -45,3 +45,8 @@ next-env.d.ts
 
 
 
+
+# arquivos locais que não vão para o GitHub
+bookings-duplicados.txt
+.agents/
+skills-lock.json

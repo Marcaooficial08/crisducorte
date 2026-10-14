@@ -17,6 +17,7 @@ import { getDayBookings } from "../_actions/get-day-bookings";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { track } from "@/app/_lib/track";
 
 interface ServiceItemProps {
   barbershop: Barbershop;
@@ -55,8 +56,10 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
 
   const handleBookingClick = () => {
     if (!data?.user) {
+      track("login_from_booking", { service: service.name });
       return signIn("google");
     }
+    track("booking_started", { service: service.name });
     setSheetIsOpen(true);
   };
 
@@ -76,9 +79,12 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       });
 
       if (!result.success) {
+        track("booking_failed", { service: service.name, reason: "rejected" });
         toast(result.error ?? "Erro ao criar reserva.", { description: "Escolha outro horário." });
         return;
       }
+
+      track("booking_confirmed", { service: service.name, weekday: format(newDate, "EEEE"), hour });
 
       setSheetIsOpen(false);
       setHour(undefined);
@@ -95,6 +101,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       });
     } catch (error) {
       console.error(error);
+      track("booking_failed", { service: service.name, reason: "exception" });
     } finally {
       setSubmitIsLoading(false);
     }

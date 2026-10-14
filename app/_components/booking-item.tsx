@@ -33,6 +33,7 @@ import {
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
 import BookingInfo from "./booking-info";
+import { track } from "../_lib/track";
 
 interface BookingItemProps {
   booking: Prisma.BookingGetPayload<{
@@ -52,6 +53,7 @@ const BookingItem = ({ booking }: BookingItemProps) => {
     setIsDeleteLoading(true);
     try {
       await cancelBooking(booking.id);
+      track("booking_cancelled", { by: "customer" });
       toast.success("Reserva cancelada com sucesso!");
     } catch (error) {
       console.error(error);
