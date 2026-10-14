@@ -58,7 +58,7 @@ All routes live under `app/`. Underscore folders are non-route by convention:
 `.env` necessário:
 - `DATABASE_URL` — PostgreSQL
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
-- `NEXT_AUTH_SECRET` (atenção: **não** é `NEXTAUTH_SECRET`)
+- `NEXTAUTH_SECRET` — único nome lido pelo NextAuth (`app/_lib/auth.ts`); modelo em `.env.example`
 
 ## Workflow
 
