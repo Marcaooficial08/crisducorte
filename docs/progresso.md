@@ -3,6 +3,7 @@
 | Prompt | Status | Data | Branch |
 |---|---|---|---|
 | 0 · Preparação | ✅ Concluído | 2026-10-14 | `mel-000/preparacao` |
+| 1 · Chave do login + Analytics | ✅ Concluído | 2026-10-14 | `fase1/secret-analytics` |
 
 ## Prompt 0 · Preparação
 
@@ -28,3 +29,28 @@
 - Barbearia "Indisponivel" tem 12 reservas ligadas e aparece na home → Prompt 7 (esconder, não apagar).
 - Serviços sem `orderBy`; `prisma/seed.ts` desatualizado em relação ao banco.
 - Nenhuma configuração de testes → Prompt 4.
+
+## Prompt 1 · Chave do login + Analytics
+
+**Feito:**
+- `NEXTAUTH_SECRET` já era o único nome lido (`app/_lib/auth.ts:91`); corrigidos `CLAUDE.md` e `app/.claude/CLAUDE.md`; criado `.env.example`.
+- `<Analytics />` e `<SpeedInsights />` em `app/layout.tsx`.
+- `app/_lib/track.ts` (ponto único de eventos) + eventos `booking_started`, `login_from_booking`, `booking_confirmed`, `booking_failed` (`service-item.tsx`) e `booking_cancelled` (`booking-item.tsx`, `booking-item-adm.tsx`).
+- `app/_lib/metrics.ts` → `getBookingMetrics(desde, ate)`: confirmadas + total por semana (segunda-feira, UTC).
+- Vitest 3 (`npm test`, `vitest.config.mts`) + `app/_lib/metrics.test.ts`.
+
+**Decisões:**
+- Plano Hobby: eventos personalizados não aparecem no painel; critério de aceite não depende deles.
+- Canceladas fora das métricas: cancelamento apaga a reserva → Prompt 3.
+- Vitest 3 em vez do 5 (o 5 exige `@types/node` ≥ 22; projeto usa 20).
+- `getBookingMetrics` conferida contra SQL direto no banco do `.env`: 2774 reservas, 132 semanas, iguais.
+- Reservas da barbearia "Indisponivel" entram na contagem (decidir no Prompt 7).
+- `app/.claude/` está no `.gitignore`: a correção do `app/.claude/CLAUDE.md` é só local.
+
+**Vercel (registrado em 2026-10-14):**
+- `NEXTAUTH_SECRET` criada em Production com o mesmo valor da chave antiga; redeploy feito e login testado no site real ✅.
+- `NEXT_AUTH_SECRET` mantida por segurança até a Fase 1 ir ao ar.
+- Vercel desativou Node 20; projeto usa Node 24.x → `"engines": { "node": "24.x" }` no `package.json`. Node local: v24.14.1.
+
+**Pendências:**
+- [ ] Apagar `NEXT_AUTH_SECRET` e adicionar Preview à `NEXTAUTH_SECRET`.
