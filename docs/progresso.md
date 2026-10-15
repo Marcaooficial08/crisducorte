@@ -50,7 +50,8 @@
 **Vercel (registrado em 2026-10-14):**
 - `NEXTAUTH_SECRET` criada em Production com o mesmo valor da chave antiga; redeploy feito e login testado no site real ✅.
 - `NEXT_AUTH_SECRET` mantida por segurança até a Fase 1 ir ao ar.
+- `NEXTAUTH_SECRET` também já existe em Preview (criada como variável separada, ambiente Preview).
 - Vercel desativou Node 20; projeto usa Node 24.x → `"engines": { "node": "24.x" }` no `package.json`. Node local: v24.14.1.
 
 **Pendências:**
-- [ ] Apagar `NEXT_AUTH_SECRET` e adicionar Preview à `NEXTAUTH_SECRET`.
+- [ ] Apagar `NEXT_AUTH_SECRET` quando a Fase 1 for ao ar.
