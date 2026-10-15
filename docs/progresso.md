@@ -5,7 +5,7 @@
 | 0 · Preparação | ✅ Concluído | 2026-10-14 | `mel-000/preparacao` |
 | 1 · Chave do login + Analytics | ✅ Concluído | 2026-10-14 | `fase1/secret-analytics` |
 | 2 · Admin pelo isAdmin | ✅ Publicado em produção | 2026-10-15 | `fase1/is-admin` (PR #2) |
-| 3 · Reservas seguras e leves | ✅ Testado em localhost (PR aberto) | 2026-10-15 | `fase1/bookings-seguros` |
+| 3 · Reservas seguras e leves | ✅ Publicado em produção | 2026-10-15 | `fase1/bookings-seguros` (PR #3) |
 
 ## Prompt 0 · Preparação
 
@@ -98,6 +98,8 @@
 - Rate limit em memória: por instância da Vercel, não global (aprovado).
 
 **Teste de aceite (localhost, banco Neon) ✅:** reservar e cancelar como admin e como cliente; cada conta vê só as próprias reservas; `/adm` ok. Aviso do rate limit validado por teste automatizado, não reproduzido manualmente.
+
+**Produção (2026-10-15) ✅:** PR #3 mergeado na `main` (`96b3b7d`) e publicado pela Vercel. Testado no site real: reservar, cancelar e `/adm` funcionando.
 
 **Pendências:**
 - [ ] Prompt 16: tratar os 12 pares de reservas no mesmo horário (Cris Du Corte + Indisponivel) antes de um `@@unique` só por data.
