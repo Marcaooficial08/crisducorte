@@ -17,7 +17,12 @@ npx prisma db seed       # seed via prisma/seed.ts (ts-node)
 npx prisma studio        # DB GUI
 ```
 
-`npm test` — Vitest (`vitest.config.mts`, arquivos `app/**/*.test.ts`).
+Testes (`vitest.config.mts`, `playwright.config.ts`):
+- `npm run test:unit` — Vitest com mocks (`app/**/*.test.ts`, `tests/setup/**/*.test.ts`)
+- `npm run test:int` — Vitest com Postgres real (`tests/integration/**/*.int.test.ts`)
+- `npm test` — unit + integração (integração pulada sem `TEST_DATABASE_URL`)
+- `npm run test:e2e` — Playwright contra `next start` (rodar `npm run build` antes); login simulado pelo cookie `next-auth.session-token` com sessões criadas em `tests/setup/fixtures.ts`
+- Integração e e2e **apagam dados**: só leem `TEST_DATABASE_URL` (trava em `tests/setup/test-database-url.ts` recusa Supabase/produção e o mesmo host do `DATABASE_URL`). Local: branch `testes` do Neon. CI: Postgres temporário em `.github/workflows/testes.yml`.
 
 ## Stack
 
@@ -43,7 +48,7 @@ All routes live under `app/`. Underscore folders are non-route by convention:
 
 - Agendamentos apenas sexta e sábado
 - Horários fixos: 9:00, 10:30, 11:30 … 19:30 (gerados em `barbershop/[id]/_helpers/hours.ts`)
-- Agenda abre na segunda-feira para a semana seguinte (sexta/sábado)
+- Agenda abre na segunda-feira só para a sexta e o sábado daquela semana (regra completa em `app/_lib/schedule.ts` e `docs/redesign-spec.md` §1)
 
 ## Admin (load-bearing)
 
@@ -57,6 +62,7 @@ Admin = `User.isAdmin` (lido do banco no session callback de `app/_lib/auth.ts`,
 
 `.env` necessário:
 - `DATABASE_URL` — PostgreSQL
+- `TEST_DATABASE_URL` — banco só de testes (opcional; necessário para `test:int` e `test:e2e`)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 - `NEXTAUTH_SECRET` — único nome lido pelo NextAuth (`app/_lib/auth.ts`); modelo em `.env.example`
 
@@ -75,7 +81,7 @@ Ao implementar:
 
 ## Regras do redesign
 
-- Atendimento só na **próxima sexta** e no **próximo sábado**
+- Atendimento só na sexta e no sábado **da semana atual**, abrindo na segunda; sábado só mostra o sábado; domingo não mostra dia nenhum (`getNextServiceDays`)
 - Grade fixa de 11 horários, igual nos dois dias: 09:00, 10:30, 11:30, 12:30, 13:30, 14:30, 15:30, 16:30, 17:30, 18:30, 19:30
 - Todo serviço ocupa exatamente 1 horário
 - Admin definido por `User.isAdmin` — nunca por e-mail ou id escrito no código
@@ -84,3 +90,4 @@ Ao implementar:
 - Toda mudança visível ao cliente fica atrás de feature flag
 - Migrações do Prisma só aditivas (nada de drop/rename destrutivo)
 - **Nunca** fazer commit, push ou deploy sem autorização explícita do usuário
+- A `main` é protegida (PR + check `testes` obrigatórios): nada de commit direto na `main`. O registro em `docs/progresso.md` vai **dentro do próprio PR**, com o status "publicado em produção — previsto após o merge"; não se faz commit de docs depois do merge
