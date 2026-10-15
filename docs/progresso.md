@@ -4,7 +4,7 @@
 |---|---|---|---|
 | 0 · Preparação | ✅ Concluído | 2026-10-14 | `mel-000/preparacao` |
 | 1 · Chave do login + Analytics | ✅ Concluído | 2026-10-14 | `fase1/secret-analytics` |
-| 2 · Admin pelo isAdmin | 🟡 Aguardando teste em localhost | 2026-10-15 | `fase1/is-admin` |
+| 2 · Admin pelo isAdmin | ✅ Concluído | 2026-10-15 | `fase1/is-admin` |
 
 ## Prompt 0 · Preparação
 
@@ -72,8 +72,9 @@
 - `redirectSpecialBookings` e os dois `getUserBookings` removidos: nenhum código os chamava (conferido no histórico do Git), então nada muda no `/adm` nem em "Meus agendamentos". Reservas já movidas no passado não foram corrigidas.
 - Em dev o admin é `marcoscaramu@gmail.com`; em produção será o e-mail do Cris (no deploy).
 
+**Teste de aceite (localhost, banco Neon) ✅:** com `marcoscaramu@gmail.com` (isAdmin no Neon) `/adm` abre; com outra conta Google `/adm` volta para a home.
+
 **Pendências:**
-- [ ] Teste de aceite em localhost (admin abre `/adm`; outra conta volta para a home).
 - [ ] Produção: rodar `set-admin` com o e-mail do Cris no deploy (com orientação).
 - [ ] Próximo PR: remover o fallback do e-mail antigo.
 
