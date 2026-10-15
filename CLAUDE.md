@@ -29,7 +29,7 @@ Path alias `@/*` → repo root (e.g. `@/app/_lib/prisma`).
 
 All routes live under `app/`. Underscore folders are non-route by convention:
 
-- `app/_lib/` — shared singletons: `prisma.ts` exports `db`, `auth.ts` exports `authOptions` + `getUserBookings`, `utils.ts` exports `cn`
+- `app/_lib/` — shared singletons: `prisma.ts` exports `db`, `auth.ts` exports `authOptions`, `auth-guards.ts` exports `assertUser`/`assertAdmin`, `utils.ts` exports `cn`
 - `app/_components/ui/` — shadcn primitives
 - `app/_components/` — shared layout components (Header, Footer, SideMenu, BookingItem, etc.)
 - `app/_actions/` — Server Actions (e.g. `cancel-booking.ts`)
@@ -37,7 +37,7 @@ All routes live under `app/`. Underscore folders are non-route by convention:
 - Route segments: `(home)`, `barbershop/[id]`, `bookings`, `adm`, `api/auth/[...nextauth]`
 - `pages/_document.tsx` — legacy shim, do not add routes here
 
-**Data model:** `User ↔ Booking ↔ Service ↔ Barbershop`. NextAuth tables coexist (`Account`, `Session`, `VerificationToken`, `VerificationRequest`). `User.isAdmin` field exists but admin gating uses hardcoded user IDs (see below).
+**Data model:** `User ↔ Booking ↔ Service ↔ Barbershop`. NextAuth tables coexist (`Account`, `Session`, `VerificationToken`, `VerificationRequest`). Admin gating via `User.isAdmin` (see below).
 
 ## Business Rules (não tratar como bug sem confirmação)
 
@@ -45,13 +45,14 @@ All routes live under `app/`. Underscore folders are non-route by convention:
 - Horários fixos: 9:00, 10:30, 11:30 … 19:30 (gerados em `barbershop/[id]/_helpers/hours.ts`)
 - Agenda abre na segunda-feira para a semana seguinte (sexta/sábado)
 
-## Admin / Special-User Logic (load-bearing, non-obvious)
+## Admin (load-bearing)
 
-`getUserBookings` em `app/_lib/auth.ts` tem **efeito colateral de escrita**: toda chamada redireciona agendamentos do userId `clu79mptd0000tvy12eh8254l` (conta especial) para `clu79vlr300001l7m8izc642g`, depois retorna visão mesclada ao usuário especial. O session callback marca `hasFullAccess: true` para esse mesmo id.
+Admin = `User.isAdmin` (lido do banco no session callback de `app/_lib/auth.ts`, exposto como `session.user.isAdmin`).
 
-- Não assumir que `getUserBookings` é somente leitura
-- IDs hardcoded não funcionam em outros ambientes — preservar até substituir o modelo admin por `User.isAdmin`
-- Novas features admin: estender a flag `hasFullAccess` na sessão, não espalhar mais checks de id
+- Guards em `app/_lib/auth-guards.ts`: `assertUser(session)` e `assertAdmin(session)`. Actions/páginas de admin usam `assertAdmin`; actions de cliente, `assertUser`.
+- Marcar admin: `npm run set-admin -- email@x.com` (mostra o host do banco e pede confirmação).
+- Fallback temporário (TODO MEL-014): se nenhum usuário tiver `isAdmin`, o e-mail antigo do Cris continua admin com `console.warn`. Remover no próximo PR.
+- Não adicionar checks por id ou e-mail no código.
 
 ## Environment
 

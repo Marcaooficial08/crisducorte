@@ -4,15 +4,14 @@ import { db } from "../_lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
 import BookingItemAdm from "../_components/booking-item-adm";
+import { assertAdmin } from "../_lib/auth-guards";
 
 const BookingsPageAdm = async () => {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user) {
-        return redirect("/");
-    }
-
-    if (!session.user.hasFullAccess) {
+    try {
+        assertAdmin(session);
+    } catch {
         return redirect("/");
     }
 

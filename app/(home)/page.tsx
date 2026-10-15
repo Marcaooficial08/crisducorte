@@ -12,7 +12,7 @@ import { authOptions } from "../_lib/auth";
 export default async function Home() {
   const session = await getServerSession(authOptions);
  
-  const isAdmin = session?.user?.hasFullAccess === true;
+  const isAdmin = session?.user?.isAdmin === true;
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
 
   const [barbershops, recommendedBarbershops, confirmedBookings] = await Promise.all([

@@ -1,62 +1,26 @@
 import { db } from "@/app/_lib/prisma";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
-import { Adapter } from "next-auth/adapters";
+import { Adapter, AdapterUser } from "next-auth/adapters";
 import GoogleProvider from "next-auth/providers/google";
 import { AuthOptions } from "next-auth";
-import { Booking } from "@prisma/client";
 
-// Função para redirecionar as reservas marcadas pelo usuário especial para outro usuário
-const redirectSpecialBookings = async (): Promise<void> => {
-  try {
-    const specialUserId = "clu79mptd0000tvy12eh8254l";
-    const redirectedUserId = "clu79vlr300001l7m8izc642g";
+// TODO(MEL-014): remover este fallback no próximo PR, depois que o isAdmin
+// estiver marcado em produção.
+const LEGACY_ADMIN_EMAIL = "crisducorteserra@gmail.com";
 
-    // Redirecionar as reservas marcadas pelo usuário especial para o novo ID
-    await db.booking.updateMany({
-      where: {
-        userId: specialUserId,
-      },
-      data: {
-        userId: redirectedUserId,
-      },
-    });
-  } catch (error) {
-    console.error("Erro ao redirecionar reservas do usuário especial:", error);
-  }
+const resolveIsAdmin = async (user: AdapterUser & { isAdmin?: boolean }): Promise<boolean> => {
+  if (user.isAdmin) return true;
+  if (user.email !== LEGACY_ADMIN_EMAIL) return false;
+
+  const adminCount = await db.user.count({ where: { isAdmin: true } });
+  if (adminCount > 0) return false;
+
+  console.warn(
+    `[auth] Nenhum usuário com isAdmin = true; usando fallback do e-mail antigo para ${LEGACY_ADMIN_EMAIL}. Rode prisma/scripts/set-admin.ts.`,
+  );
+  return true;
 };
-// Função para recuperar as reservas do usuário
-export const getUserBookings = async (userId: string): Promise<Booking[]> => {
-  try {
-    // Redirecionar as reservas marcadas pelo usuário especial, se necessário
-    await redirectSpecialBookings();
-
-    // Recuperar todas as reservas de todos os usuários
-    const allBookings = await db.booking.findMany();
-
-    // Se o usuário for especial, retorna todas as reservas normais e as reservas redirecionadas para ele
-    if (userId === "clu79mptd0000tvy12eh8254l") {
-      return allBookings.filter((booking) => booking.userId === userId || booking.userId === "clu79vlr300001l7m8izc642g" );
-    }
-
-    // Para usuários normais, retorna apenas as suas próprias reservas
-    return allBookings.filter((booking) => booking.userId === userId);
-  } catch (error) {
-    console.error("Erro ao recuperar reservas:", error);
-    return [];
-  }
-};
-
-
-
-
-// Definindo a interface para o objeto de usuário na sessão
-interface SessionUser {
-  id: string;
-  name: string;
-  email: string;
-  hasFullAccess?: boolean; // Propriedade opcional para indicar acesso total
-}
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(db) as Adapter,
@@ -67,293 +31,16 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
+    // Sessão no banco (PrismaAdapter): `user` vem do banco a cada requisição,
+    // então mudanças em isAdmin valem sem precisar sair e entrar de novo.
     async session({ session, user }) {
-      // Adiciona uma flag ao objeto de sessão para indicar que o usuário tem acesso total
-      // às reservas de outros usuários se o ID do usuário for clu79mptd0000tvy12eh8254l
-      const isAdmin =
-        user.id === "clu79mptd0000tvy12eh8254l" ||
-        user.email === "crisducorteserra@gmail.com";
-
-      if (isAdmin) {
-        session.user = { ...session.user, id: user.id, hasFullAccess: true } as SessionUser;
-      } else {
-        // Usuário normal
-        session.user = {
-          ...session.user,
-          id: user.id,
-          hasFullAccess: false,
-        } as SessionUser;
-      }
-
-      return Promise.resolve(session);
+      session.user = {
+        ...session.user,
+        id: user.id,
+        isAdmin: await resolveIsAdmin(user),
+      };
+      return session;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-  
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-  
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-  
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-  
-
-
-  

@@ -4,6 +4,7 @@
 |---|---|---|---|
 | 0 · Preparação | ✅ Concluído | 2026-10-14 | `mel-000/preparacao` |
 | 1 · Chave do login + Analytics | ✅ Concluído | 2026-10-14 | `fase1/secret-analytics` |
+| 2 · Admin pelo isAdmin | 🟡 Aguardando teste em localhost | 2026-10-15 | `fase1/is-admin` |
 
 ## Prompt 0 · Preparação
 
@@ -55,3 +56,24 @@
 
 **Pendências:**
 - [ ] Apagar `NEXT_AUTH_SECRET` quando a Fase 1 for ao ar.
+
+## Prompt 2 · Admin pelo isAdmin (MEL-014)
+
+**Feito:**
+- `isAdmin` na sessão (session callback lê `User.isAdmin` do banco a cada requisição); `hasFullAccess` removido.
+- `app/_lib/auth-guards.ts` com `assertUser`/`assertAdmin` + testes (`auth-guards.test.ts`).
+- `/adm` usa `assertAdmin` (falhou → home); `cancelBooking` usa `assertUser` + dono ou admin; home e menu lateral usam `isAdmin`.
+- Removidos ids/e-mail fixos de `auth.ts`, `side-menu.tsx`, `save-booking.ts`.
+- `npm run set-admin -- email` (`prisma/scripts/set-admin.ts`): mostra o host, pede confirmação.
+- Fallback temporário: sem nenhum `isAdmin` no banco, o e-mail antigo do Cris continua admin com `console.warn` (TODO MEL-014: remover no próximo PR).
+
+**Decisões:**
+- Banco local passou a ser o Neon (dev), com cópia de `Barbershop` e `Service` de produção (mesmos ids, sem dados de cliente).
+- `redirectSpecialBookings` e os dois `getUserBookings` removidos: nenhum código os chamava (conferido no histórico do Git), então nada muda no `/adm` nem em "Meus agendamentos". Reservas já movidas no passado não foram corrigidas.
+- Em dev o admin é `marcoscaramu@gmail.com`; em produção será o e-mail do Cris (no deploy).
+
+**Pendências:**
+- [ ] Teste de aceite em localhost (admin abre `/adm`; outra conta volta para a home).
+- [ ] Produção: rodar `set-admin` com o e-mail do Cris no deploy (com orientação).
+- [ ] Próximo PR: remover o fallback do e-mail antigo.
+

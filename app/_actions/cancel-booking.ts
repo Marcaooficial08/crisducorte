@@ -4,13 +4,10 @@ import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { authOptions } from "../_lib/auth";
 import { db } from "../_lib/prisma";
+import { assertUser } from "../_lib/auth-guards";
 
 export const cancelBooking = async (bookingId: string) => {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user) {
-    throw new Error("Não autenticado.");
-  }
+  const user = assertUser(await getServerSession(authOptions));
 
   const booking = await db.booking.findUnique({
     where: { id: bookingId },
@@ -20,10 +17,9 @@ export const cancelBooking = async (bookingId: string) => {
     throw new Error("Reserva não encontrada.");
   }
 
-  const isOwner = session.user.id === booking.userId;
-  const isAdmin = session.user.hasFullAccess === true;
+  const isOwner = user.id === booking.userId;
 
-  if (!isOwner && !isAdmin) {
+  if (!isOwner && !user.isAdmin) {
     throw new Error("Sem permissão para cancelar esta reserva.");
   }
 
