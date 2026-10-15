@@ -55,7 +55,7 @@ const SideMenu = () => {
           </Link>
         </Button>
 
-        {data?.user && data.user.email !== "crisducorteserra@gmail.com" && (
+        {data?.user && !data.user.isAdmin && (
           <Button variant="outline" className="justify-start" asChild>
             <Link href="/bookings">
               <CalendarIcon size={18} className="mr-2" />
@@ -64,7 +64,7 @@ const SideMenu = () => {
           </Button>
         )}
 
-        {data?.user && data.user.email === "crisducorteserra@gmail.com" && (
+        {data?.user?.isAdmin && (
           <Button variant="outline" className="justify-start" asChild>
             <Link href="/adm">
               <CalendarIcon size={18} className="mr-2" />

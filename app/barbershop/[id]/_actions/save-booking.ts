@@ -56,20 +56,3 @@ export const saveBooking = async (params: SaveBookingParams): Promise<{ success:
     return { success: false, error: "Erro ao criar reserva. Tente novamente." };
   }
 };
-
-export const getUserBookings = async (userId: string) => {
-  try {
-    const specialUserId = "clu79mptd0000tvy12eh8254l";
-
-    if (userId === specialUserId) {
-      return await db.booking.findMany({
-        where: { userId: specialUserId },
-      });
-    }
-
-    return [];
-  } catch (error) {
-    console.error("Erro ao recuperar reservas:", error);
-    return [];
-  }
-};
