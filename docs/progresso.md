@@ -75,6 +75,6 @@
 **Teste de aceite (localhost, banco Neon) ✅:** com `marcoscaramu@gmail.com` (isAdmin no Neon) `/adm` abre; com outra conta Google `/adm` volta para a home.
 
 **Pendências:**
-- [ ] Produção: rodar `set-admin` com o e-mail do Cris no deploy (com orientação).
+- [x] Produção: rodar `set-admin` com o e-mail do Cris — não se aplica — o Cris já é admin em produção (isAdmin = true).
 - [ ] Próximo PR: remover o fallback do e-mail antigo.
 
