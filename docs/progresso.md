@@ -6,6 +6,7 @@
 | 1 · Chave do login + Analytics | ✅ Concluído | 2026-10-14 | `fase1/secret-analytics` |
 | 2 · Admin pelo isAdmin | ✅ Publicado em produção | 2026-10-15 | `fase1/is-admin` (PR #2) |
 | 3 · Reservas seguras e leves | ✅ Publicado em produção | 2026-10-15 | `fase1/bookings-seguros` (PR #3) |
+| 4 · Testes automáticos | ✅ Publicado em produção — previsto após o merge | 2026-10-15 | `fase1/testes` (PR #4) |
 
 ## Prompt 0 · Preparação
 
@@ -108,3 +109,31 @@
 - Cris Du Corte: 2765 reservas no total, 282 nos últimos 90 dias.
 - Indisponivel: 12 no total, 0 nos últimos 90 dias (de 2024-05-17 a 2026-05-16); todas de contas sem `isAdmin`.
 - Horários com reserva nas duas barbearias ao mesmo tempo: 12 no total, 0 nos últimos 90 dias, 0 futuros.
+
+## Prompt 4 · Testes automáticos (MEL-018)
+
+**Feito:**
+- Vitest 3 → 5.0.5 e `@types/node` 20 → 24 (Node 24 já era o da Vercel); Playwright 1.64.
+- Scripts: `test` (unit + integração), `test:unit`, `test:int`, `test:e2e`.
+- Regra de dias: `getNextServiceDays(agora)` + `TIME_GRID` + `AGENDA_CLOSED_MESSAGE` em `app/_lib/schedule.ts`, com testes de segunda a domingo, horários passados, fuso e virada de mês. **Ainda não ligada na tela** (Prompt 6, atrás de feature flag).
+- Unit (mocks): grade de 11 horários (`hours.test.ts`), `cancelBooking` (dono ok, outro cliente recusado, admin ok), `/adm` (sem sessão e conta comum → home sem ler reservas; admin abre).
+- Integração (Postgres real, `tests/integration/bookings.int.test.ts`): reservar horário livre; dois clientes **ao mesmo tempo** no mesmo horário → só um grava, o outro recebe "Horário já reservado. Escolha outro."; cancelar a própria reserva; cancelar a de outro → recusado; admin cancela.
+- E2E (Playwright, `e2e/fluxos.spec.ts`, contra `next start`): home deslogada; cliente reserva pelo calendário e vê em "Meus agendamentos"; cliente em `/adm` → home; admin abre `/adm` e vê a reserva.
+- Login simulado sem Google: o setup cria `User` + `Session` no banco de teste e o Playwright envia o cookie `next-auth.session-token`. Nenhuma rota de teste no app.
+- Trava (`tests/setup/test-database-url.ts`): integração e e2e só usam `TEST_DATABASE_URL`; recusam host Supabase e o mesmo host do `DATABASE_URL`. Sem a variável, a integração é pulada.
+- GitHub Actions (`.github/workflows/testes.yml`, job `testes`): em todo PR e push na `main` → lint, unit, integração, build, e2e, com Postgres 16 temporário dentro do job.
+- `CLAUDE.md`: comandos de teste, `TEST_DATABASE_URL` e a regra nova de registro no PR.
+
+**Decisões:**
+- **Regra de dias (decisão do dono, 2026-10-15, substitui a da spec):** a agenda abre na segunda só para a sexta e o sábado daquela semana (fuso São Paulo). Seg–qui: sexta e sábado; sexta: sexta (só horários futuros) e sábado; sábado: só o sábado (só horários futuros); domingo: nenhum dia, com "A agenda da próxima semana abre na segunda-feira"; dia sem horário futuro sai da lista. Horário igual ao "agora" conta como passado. Atualizado em `docs/redesign-spec.md` §1 e `CLAUDE.md`.
+- Função criada como `getNextServiceDays` em `app/_lib/schedule.ts` (nome e lugar que o Prompt 6 já usa), em vez de `booking-days.ts` do plano.
+- Banco de testes: local = branch "Testes" do Neon (host `ep-bitter-pond…`, separado da dev); CI = Postgres temporário do Actions (grátis, sem secrets).
+- Ainda não existe action exclusiva de admin; o acesso de admin foi testado em `/adm` e no `cancelBooking`. Actions futuras ganham testes nos seus prompts.
+- E2E depende da tela atual (calendário); será ajustado no Prompt 14.
+- **Processo:** com a `main` protegida, o registro "publicado em produção" entra no próprio PR como "previsto após o merge"; sem commit direto na `main`.
+
+**Validação (local, 2026-10-15):** `npm run lint` ✅ · `npm run test:unit` 40 ✅ · `npm run test:int` 6 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 4 ✅ (duas execuções seguidas).
+
+**Pendências:**
+- [ ] Ativar no GitHub a regra da `main` exigindo o check `testes` (passo a passo no PR #4).
+- [ ] Conferir o primeiro run do workflow no PR #4.

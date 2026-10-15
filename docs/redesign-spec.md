@@ -10,7 +10,7 @@ Este documento especifica os 23 itens aprovados do plano (MEL-020 e MEL-021 repr
 
 | Regra | Definição |
 | --- | --- |
-| Dias de atendimento | Somente sexta e sábado; sempre a **próxima** sexta e o **próximo** sábado (inclusive aos domingos) |
+| Dias de atendimento | Somente sexta e sábado. A agenda abre na **segunda-feira** só para a sexta e o sábado **daquela semana** (fuso America/Sao_Paulo). Seg–qui: sexta e sábado. Sexta: sexta (só horários futuros) e sábado. Sábado: só o sábado (só horários futuros). Domingo: nenhum dia, com o aviso "A agenda da próxima semana abre na segunda-feira". Dia sem horário futuro sai da lista. *(Decisão do dono em 15/10/2026, substitui "sempre a próxima sexta e o próximo sábado".)* |
 | Grade de horários | 09:00, 10:30, 11:30, 12:30, 13:30, 14:30, 15:30, 16:30, 17:30, 18:30, 19:30 (11 por dia, mesma grade nos dois dias) |
 | Duração | Todo serviço ocupa exatamente 1 horário da grade |
 | Admin | Mesmo e-mail atual (conta Google do Cris), agora via `User.isAdmin = true`; vê todos os agendamentos |
