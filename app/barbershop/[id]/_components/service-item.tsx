@@ -45,7 +45,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
     refreshAvailableHours();
   }, [date, barbershop.id]);
 
-  const handledaleClick = (date: Date | undefined) => {
+  const handleDateClick = (date: Date | undefined) => {
     setDate(date);
     setHour(undefined);
   };
@@ -75,7 +75,6 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
         serviceId: service.id,
         barbershopId: barbershop.id,
         date: newDate.toISOString(),
-        userId: data.user.id,
       });
 
       if (!result.success) {
@@ -177,7 +176,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
                     <Calendar
                       mode="single"
                       selected={date}
-                      onSelect={handledaleClick}
+                      onSelect={handleDateClick}
                       locale={ptBR}
                       fromDate={new Date()}
                       disabled={tileDisabled}

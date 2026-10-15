@@ -50,7 +50,11 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
   const handleCancelClick = async () => {
     setIsDeleteLoading(true);
     try {
-      await cancelBooking(booking.id);
+      const result = await cancelBooking(booking.id);
+      if (!result.success) {
+        toast.error(result.error ?? "Erro ao cancelar reserva.");
+        return;
+      }
       track("booking_cancelled", { by: "admin" });
       toast.success("Reserva cancelada com sucesso!");
     } catch (error) {
