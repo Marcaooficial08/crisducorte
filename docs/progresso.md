@@ -5,6 +5,7 @@
 | 0 · Preparação | ✅ Concluído | 2026-10-14 | `mel-000/preparacao` |
 | 1 · Chave do login + Analytics | ✅ Concluído | 2026-10-14 | `fase1/secret-analytics` |
 | 2 · Admin pelo isAdmin | ✅ Publicado em produção | 2026-10-15 | `fase1/is-admin` (PR #2) |
+| 3 · Reservas seguras e leves | ✅ Testado em localhost (PR aberto) | 2026-10-15 | `fase1/bookings-seguros` |
 
 ## Prompt 0 · Preparação
 
@@ -78,5 +79,30 @@
 
 **Pendências:**
 - [x] Produção: rodar `set-admin` com o e-mail do Cris — não se aplica — o Cris já é admin em produção (isAdmin = true).
-- [ ] Próximo PR: remover o fallback do e-mail antigo.
+- [x] Próximo PR: remover o fallback do e-mail antigo — feito no Prompt 3.
 
+## Prompt 3 · Reservas seguras e leves
+
+**Feito:**
+- `saveBooking`: `userId` sempre da sessão (`assertUser`); parâmetro `userId` removido do cliente (`service-item.tsx`). Sem sessão → "Faça login para agendar."
+- Rate limit em memória (`app/_lib/rate-limit.ts`): 10 por minuto por usuário em `saveBooking` e `cancelBooking` → "Muitas tentativas seguidas. Aguarde 1 minuto."
+- `cancelBooking` passa a retornar `{ success, error }` (em produção o Next esconde a mensagem de erros lançados); `booking-item.tsx` e `booking-item-adm.tsx` mostram o erro no toast.
+- Fallback do e-mail antigo do Cris removido de `auth.ts` (TODO MEL-014) e do `CLAUDE.md`.
+- `getAllBookings` (findMany sem filtro, sem uso) removido de `app/_lib/prisma.ts`.
+- `handledaleClick` → `handleDateClick`.
+- Testes: `rate-limit.test.ts`, `save-booking.test.ts`.
+
+**Já feito no Prompt 2 (só conferido):** `redirectSpecialBookings`, `getUserBookings` duplicado e as linhas em branco do `auth.ts`. `/bookings` já filtra por `userId` da sessão e não grava nada.
+
+**Decisões:**
+- Rate limit em memória: por instância da Vercel, não global (aprovado).
+
+**Teste de aceite (localhost, banco Neon) ✅:** reservar e cancelar como admin e como cliente; cada conta vê só as próprias reservas; `/adm` ok. Aviso do rate limit validado por teste automatizado, não reproduzido manualmente.
+
+**Pendências:**
+- [ ] Prompt 16: tratar os 12 pares de reservas no mesmo horário (Cris Du Corte + Indisponivel) antes de um `@@unique` só por data.
+
+**Consulta em produção (só leitura, `READ ONLY`, 2026-10-15) — para Prompts 7 e 16:**
+- Cris Du Corte: 2765 reservas no total, 282 nos últimos 90 dias.
+- Indisponivel: 12 no total, 0 nos últimos 90 dias (de 2024-05-17 a 2026-05-16); todas de contas sem `isAdmin`.
+- Horários com reserva nas duas barbearias ao mesmo tempo: 12 no total, 0 nos últimos 90 dias, 0 futuros.

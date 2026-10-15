@@ -51,7 +51,6 @@ Admin = `User.isAdmin` (lido do banco no session callback de `app/_lib/auth.ts`,
 
 - Guards em `app/_lib/auth-guards.ts`: `assertUser(session)` e `assertAdmin(session)`. Actions/páginas de admin usam `assertAdmin`; actions de cliente, `assertUser`.
 - Marcar admin: `npm run set-admin -- email@x.com` (mostra o host do banco e pede confirmação).
-- Fallback temporário (TODO MEL-014): se nenhum usuário tiver `isAdmin`, o e-mail antigo do Cris continua admin com `console.warn`. Remover no próximo PR.
 - Não adicionar checks por id ou e-mail no código.
 
 ## Environment

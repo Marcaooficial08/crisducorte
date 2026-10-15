@@ -15,14 +15,3 @@ if (process.env.NODE_ENV === "production") {
 }
 
 export const db = prisma;
-
-export async function getAllBookings() {
-  return prisma.booking.findMany({
-    include: {
-      barbershop: true,
-      service: true,
-      user: true,
-    },
-  });
-}
-
