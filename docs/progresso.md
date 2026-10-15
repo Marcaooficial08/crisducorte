@@ -4,7 +4,7 @@
 |---|---|---|---|
 | 0 · Preparação | ✅ Concluído | 2026-10-14 | `mel-000/preparacao` |
 | 1 · Chave do login + Analytics | ✅ Concluído | 2026-10-14 | `fase1/secret-analytics` |
-| 2 · Admin pelo isAdmin | ✅ Concluído | 2026-10-15 | `fase1/is-admin` |
+| 2 · Admin pelo isAdmin | ✅ Publicado em produção | 2026-10-15 | `fase1/is-admin` (PR #2) |
 
 ## Prompt 0 · Preparação
 
@@ -73,6 +73,8 @@
 - Em dev o admin é `marcoscaramu@gmail.com`; em produção será o e-mail do Cris (no deploy).
 
 **Teste de aceite (localhost, banco Neon) ✅:** com `marcoscaramu@gmail.com` (isAdmin no Neon) `/adm` abre; com outra conta Google `/adm` volta para a home.
+
+**Produção (2026-10-15) ✅:** PR #2 mergeado na `main` (`67a0ecf`) e publicado pela Vercel. Testado no site real: o Cris vê "Agendamentos Clientes" e abre o `/adm`; outra conta aparece como usuário comum.
 
 **Pendências:**
 - [x] Produção: rodar `set-admin` com o e-mail do Cris — não se aplica — o Cris já é admin em produção (isAdmin = true).
