@@ -29,8 +29,8 @@ const BarbershopInfo  = ({barbershop}: BarbershopInfoProps) => {
                      
 
 
-                    <Button onClick={handleBackClick} size="icon" variant="outline" className="z-50 absolute top-4 left-4">
-                      <ChevronLeftIcon/>
+                    <Button onClick={handleBackClick} size="icon" variant="outline" className="z-50 absolute top-4 left-4" aria-label="Voltar">
+                      <ChevronLeftIcon aria-hidden="true"/>
 
                     </Button>
 
@@ -38,8 +38,8 @@ const BarbershopInfo  = ({barbershop}: BarbershopInfoProps) => {
 
                    < Sheet>
           <SheetTrigger asChild>
-          <Button size="icon" variant="outline" className="z-50 absolute top-4 right-4">
-                      <MenuIcon/>
+          <Button size="icon" variant="outline" className="z-50 absolute top-4 right-4" aria-label="Abrir menu">
+                      <MenuIcon aria-hidden="true"/>
 
                     </Button>
           </SheetTrigger>
@@ -62,7 +62,7 @@ const BarbershopInfo  = ({barbershop}: BarbershopInfoProps) => {
               <h1 className="text-xl font-bold  ">{barbershop.name}</h1>
              
                  <div className="flex items-center gap-1 mt-2">
-                    <MapPinIcon className="text-primary" size={18}/>
+                    <MapPinIcon className="text-accent" size={18} aria-hidden="true"/>
                  <p className="text-sm">{barbershop.address}</p>
                  </div>
               </div>

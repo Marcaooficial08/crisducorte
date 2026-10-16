@@ -35,7 +35,7 @@ const PrivacyPage = () => {
       <main className="px-5 py-6 flex flex-col gap-6 max-w-2xl">
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-bold">Política de Privacidade</h1>
-          <p className="text-xs text-gray-400">Última atualização: {LAST_UPDATED}</p>
+          <p className="text-xs text-muted-foreground">Última atualização: {LAST_UPDATED}</p>
         </div>
 
         <p className="text-sm text-gray-300 leading-relaxed">

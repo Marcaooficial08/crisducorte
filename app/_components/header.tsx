@@ -26,8 +26,8 @@ const Header = () => {
         </Link>
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon">
-              <MenuIcon size={16} />
+            <Button variant="outline" size="icon" aria-label="Abrir menu">
+              <MenuIcon size={16} aria-hidden="true" />
             </Button>
           </SheetTrigger>
           <SheetContent className="p-0">

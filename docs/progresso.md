@@ -9,7 +9,8 @@
 | 4 · Testes automáticos | ✅ Publicado em produção | 2026-10-15 | `fase1/testes` (PR #4) |
 | 5 · LGPD básica | ✅ Publicado em produção | 2026-10-16 | `fase1/lgpd` |
 | 6 · Dias e grade (AGENDA_V2) | ✅ Publicado em produção | 2026-10-16 | `fase1/dias-grade` |
-| 7 · Marca e textos | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/marca` |
+| 7 · Marca e textos | ✅ Publicado em produção | 2026-10-16 | `fase1/marca` (PR #7) |
+| 8 · Contraste e alvos de toque | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/contraste` |
 
 ## Prompt 0 · Preparação
 
@@ -226,3 +227,34 @@
 - Agenda (`schedule.ts`, `AGENDA_V2`) e banco não foram tocados.
 
 **Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 60 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 8 ✅ · busca pelo nome do template antigo no repositório: nada.
+
+**Produção (2026-10-16) ✅:** PR #7 mergeado na `main` (`f1d90c4`) e publicado pela Vercel. Validado pelo dono no site real.
+
+## Prompt 8 · Contraste e alvos de toque
+
+**Feito:**
+- Tokens em `app/globals.css` (tabela da spec §2): `--primary` #7354F5 (botões com texto branco, ~4,9:1); `--accent` #8162FF (ícones, bordas, destaques); `--accent-soft` #B7A6FF (texto roxo sobre fundo escuro, `text-accent-soft` no Tailwind); `--secondary` #22232A, `--muted` #2E3038 e `--muted-foreground` #A1A1AA separados; `--ring` #8162FF (anel de foco).
+- Branco sobre #8162FF dá só ~4,1:1, então nenhum texto fica sobre `bg-accent`: hover de `outline`/`ghost` usa `bg-secondary`; no calendário só o "hoje" tem borda accent; dia e horário selecionados são `bg-primary` com texto branco.
+- `text-gray-400` → `text-muted-foreground` em todas as telas; `opacity-75` saiu do rodapé. Badge "Confirmado", preço do serviço e link usam `text-accent-soft` (o roxo antigo dava 3,9–4,2:1).
+- 44px: botões `default`, `sm`, `lg` e `icon` com `h-11`; dias e setas do calendário com 44px; X de fechar dos sheets com 44px e "Fechar". Sheet da reserva com largura total no celular: calendário cabe em 390px sem rolagem horizontal.
+- `aria-label` em "Abrir menu" (header e barbearia), "Buscar", "Voltar" e "Sair"; o `onClick` do logout foi do ícone para o `<button>`. Ícones decorativos com `aria-hidden`.
+- Card de reserva (`booking-item`, `booking-item-adm`) dentro de um `<button>` de verdade (antes: `<div>` com `aria-expanded`). Avatares com `alt`.
+- Teste: `e2e/acessibilidade.spec.ts` (nomes acessíveis, alvos de 44px, setas nos cantos, sem rolagem horizontal em 390px).
+
+**Decisões:**
+- Sem feature flag (decisão do dono): correção de acessibilidade.
+- Fundo e card não mudaram; o resto da paleta da spec fica para o Prompt 14 (`NEW_THEME`).
+- Agenda (`schedule.ts`, `AGENDA_V2`), logo/marca do Prompt 7 e banco não foram tocados. Em `service-item.tsx` mudaram só classes e a largura das setas.
+
+**Lighthouse acessibilidade (local, `next start`, banco Neon "Testes", cliente logado por cookie), antes → depois:**
+
+| Página | Celular | Desktop |
+|---|---|---|
+| Home | 78 → 100 | 78 → 100 |
+| Barbearia | 89 → 100 | 89 → 100 |
+| `/bookings` | 77 → 100 | 77 → 100 |
+
+**Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 60 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 10 ✅.
+
+**Pendências:**
+- [ ] Prompt 14: a seção "Agendamentos" da home (NextBookingCard) deve mostrar só reservas futuras. Hoje ela busca desde a segunda-feira da semana (`gte: startOfWeek`, `app/(home)/page.tsx`), então uma reserva de hoje já passada aparece como "Finalizado". Já acontecia na `main` antes deste prompt; não alterado aqui.
