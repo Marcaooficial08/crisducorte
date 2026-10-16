@@ -62,7 +62,7 @@ export default async function Home() {
       <div className="mt-6">
         {confirmedBookings.length > 0 && ( 
           <>
-            <h2 className="pl-5 text-sm mb-3 uppercase text-gray-400 font-bold">Agendamentos</h2>
+            <h2 className="pl-5 text-sm mb-3 uppercase text-muted-foreground font-bold">Agendamentos</h2>
             <div className="px-5 flex gap-3 overflow-x-auto [&::-webkit-scrollbar]:hidden">
               {confirmedBookings.map(booking => (
                 <BookingItem key={booking.id} booking={booking} />
@@ -73,7 +73,7 @@ export default async function Home() {
       </div> 
 
       <div className="mt-6">
-        <h2 className="pl-5 text-sm mb-3 uppercase text-gray-400 font-bold">
+        <h2 className="pl-5 text-sm mb-3 uppercase text-muted-foreground font-bold">
           Recomendados
         </h2>
         <div className="flex px-5 gap-4 overflow-x-auto [&::-webkit-scrollbar]:hidden">
@@ -92,7 +92,7 @@ export default async function Home() {
       </div>
 
       <div className="mt-6 mb-[4.5rem]">
-        <h2 className="pl-5 text-sm mb-3 uppercase text-gray-400 font-bold">
+        <h2 className="pl-5 text-sm mb-3 uppercase text-muted-foreground font-bold">
           Populares
         </h2>
         <div className="flex px-5 gap-4 overflow-x-auto [&::-webkit-scrollbar]:hidden">

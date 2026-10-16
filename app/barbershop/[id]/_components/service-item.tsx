@@ -191,10 +191,10 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
           </div>
           <div className="flex flex-col w-full">
             <h2 className="font-bold">{service.name}</h2>
-            <p className="text-sm text-gray-400">{service.description}</p>
+            <p className="text-sm text-muted-foreground">{service.description}</p>
 
             <div className="flex items-center justify-between mt-3">
-              <p className="text-primary text-sm font-bold">
+              <p className="text-accent-soft text-sm font-bold">
                 {Intl.NumberFormat("pt-BR", {
                   style: "currency",
                   currency: "BRL",
@@ -207,13 +207,13 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
                     Reservar
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="p-0 overflow-auto"> {/* Adicionado overflow-auto */}
+                <SheetContent className="w-full p-0 overflow-auto"> {/* Adicionado overflow-auto */}
                   <SheetHeader className="text-left px-5 py-6 border-b border-solid border-secondary">
                     <SheetTitle>Fazer Reserva</SheetTitle>
                   </SheetHeader>
                   <div className="py-6 overflow-auto"> {/* Adicionado overflow-auto */}
                     {serviceDays && serviceDays.length === 0 ? (
-                      <p className="px-5 text-center text-sm text-gray-400">{AGENDA_CLOSED_MESSAGE}</p>
+                      <p className="px-5 text-center text-sm text-muted-foreground">{AGENDA_CLOSED_MESSAGE}</p>
                     ) : (
                     <Calendar
                       mode="single"
@@ -235,10 +235,10 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
                           width: "100%",
                         },
                         nav_button_previous: {
-                          width: "32px",
+                          width: "44px",
                         },
                         nav_button_next: {
-                          width: "32px",
+                          width: "44px",
                         },
                         caption: {
                           textTransform: "capitalize",
@@ -265,19 +265,19 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
                         </div>
                         {date && (
                           <div className="flex justify-between">
-                            <h3 className="text-gray-400 text-sm">Data</h3>
+                            <h3 className="text-muted-foreground text-sm">Data</h3>
                             <h4 className="text-sm ">{format(date, "dd 'de' MMMM", { locale: ptBR })}</h4>
                           </div>
                         )}
                         {hour && (
                           <div className="flex justify-between">
-                            <h3 className="text-gray-400 text-sm">Horário</h3>
+                            <h3 className="text-muted-foreground text-sm">Horário</h3>
                             <h4 className="text-sm ">{hour}</h4>
                           </div>
                         )}
                         {hour && (
                           <div className="flex justify-between">
-                            <h3 className="text-gray-400 text-sm">Barbearia</h3>
+                            <h3 className="text-muted-foreground text-sm">Barbearia</h3>
                             <h4 className="text-sm ">{barbershop.name}</h4>
                           </div>
                         )}

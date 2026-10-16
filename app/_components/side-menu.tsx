@@ -24,14 +24,14 @@ const SideMenu = () => {
         <div className="flex justify-between px-5 py-6 items-center">
           <div className="flex items-center gap-3">
             <Avatar>
-              <AvatarImage src={data.user?.image ?? ""} />
+              <AvatarImage src={data.user?.image ?? ""} alt={data.user.name ?? ""} />
             </Avatar>
 
             <h2 className="font-bold">{data.user.name}</h2>
           </div>
 
-          <Button variant="secondary" size="icon">
-            <LogOutIcon onClick={handleLogoutClick} />
+          <Button variant="secondary" size="icon" aria-label="Sair" onClick={handleLogoutClick}>
+            <LogOutIcon aria-hidden="true" />
           </Button>
         </div>
       ) : (
@@ -44,7 +44,7 @@ const SideMenu = () => {
             <LogInIcon className="mr-2" size={18} />
             Fazer Login
           </Button>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             Ao entrar, você concorda com a{" "}
             <Link href="/privacidade" className="underline">
               Política de Privacidade

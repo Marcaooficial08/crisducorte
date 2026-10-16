@@ -69,7 +69,7 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
 
   return (
     <Sheet>
-      <SheetTrigger asChild>
+      <SheetTrigger className="min-w-full rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
         <Card className="min-w-full cursor-pointer hover:bg-secondary/40 transition-colors">
           <CardContent className="py-0 flex px-0">
             <div className="flex flex-col gap-2 py-5 flex-[3] pl-5 pr-3">
@@ -86,7 +86,7 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
 
               <div className="flex items-center gap-2">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src={booking.user?.image ?? ""} />
+                  <AvatarImage src={booking.user?.image ?? ""} alt="" />
                   <AvatarFallback className="text-xs">
                     {booking.user?.name?.charAt(0).toUpperCase() ?? "?"}
                   </AvatarFallback>
@@ -95,7 +95,7 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
                   <span className="text-sm font-medium leading-tight">
                     {customerName}
                   </span>
-                  <span className="text-xs text-gray-400 leading-tight truncate max-w-[160px]">
+                  <span className="text-xs text-muted-foreground leading-tight truncate max-w-[160px]">
                     {booking.user?.email ?? ""}
                   </span>
                 </div>
@@ -107,7 +107,7 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
                 {format(booking.date, "MMMM", { locale: ptBR })}
               </p>
               <p className="text-2xl font-bold">{format(booking.date, "dd")}</p>
-              <p className="text-sm text-gray-400">{format(booking.date, "HH:mm")}</p>
+              <p className="text-sm text-muted-foreground">{format(booking.date, "HH:mm")}</p>
             </div>
           </CardContent>
         </Card>
@@ -123,14 +123,14 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
           <Card>
             <CardContent className="p-3 flex items-center gap-3">
               <Avatar>
-                <AvatarImage src={booking.user?.image ?? ""} />
+                <AvatarImage src={booking.user?.image ?? ""} alt="" />
                 <AvatarFallback>
                   {booking.user?.name?.charAt(0).toUpperCase() ?? "?"}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-bold text-sm">{customerName}</p>
-                <p className="text-xs text-gray-400">{booking.user?.email ?? ""}</p>
+                <p className="text-xs text-muted-foreground">{booking.user?.email ?? ""}</p>
               </div>
             </CardContent>
           </Card>
@@ -146,19 +146,19 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
               </div>
 
               <div className="flex justify-between">
-                <span className="text-gray-400 text-sm">Data</span>
+                <span className="text-muted-foreground text-sm">Data</span>
                 <span className="text-sm">
                   {format(booking.date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </span>
               </div>
 
               <div className="flex justify-between">
-                <span className="text-gray-400 text-sm">Horário</span>
+                <span className="text-muted-foreground text-sm">Horário</span>
                 <span className="text-sm font-medium">{format(booking.date, "HH:mm")}</span>
               </div>
 
               <div className="flex justify-between">
-                <span className="text-gray-400 text-sm">Barbearia</span>
+                <span className="text-muted-foreground text-sm">Barbearia</span>
                 <span className="text-sm">{booking.barbershop.name}</span>
               </div>
             </CardContent>

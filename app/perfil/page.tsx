@@ -26,19 +26,19 @@ const ProfilePage = async () => {
         <Card>
           <CardContent className="p-5 flex items-center gap-3">
             <Avatar>
-              <AvatarImage src={user.image ?? ""} />
+              <AvatarImage src={user.image ?? ""} alt="" />
               <AvatarFallback>{user.name?.charAt(0).toUpperCase() ?? "?"}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <p className="font-bold">{user.name}</p>
-              <p className="text-sm text-gray-400 truncate">{user.email}</p>
+              <p className="text-sm text-muted-foreground truncate">{user.email}</p>
             </div>
           </CardContent>
         </Card>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm uppercase text-gray-400 font-bold">Privacidade</h2>
-          <p className="text-sm text-gray-400">
+          <h2 className="text-sm uppercase text-muted-foreground font-bold">Privacidade</h2>
+          <p className="text-sm text-muted-foreground">
             Veja como usamos seus dados na{" "}
             <Link href="/privacidade" className="underline text-foreground">
               Política de Privacidade
@@ -47,7 +47,7 @@ const ProfilePage = async () => {
           </p>
 
           {user.isAdmin ? (
-            <p className="text-sm text-gray-400">{ADMIN_DELETE_MESSAGE}.</p>
+            <p className="text-sm text-muted-foreground">{ADMIN_DELETE_MESSAGE}.</p>
           ) : (
             <DeleteAccountButton />
           )}

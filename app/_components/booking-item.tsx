@@ -69,7 +69,7 @@ const BookingItem = ({ booking }: BookingItemProps) => {
 
   return (
     <Sheet>
-      <SheetTrigger asChild>
+      <SheetTrigger className="min-w-full rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
         <Card className="min-w-full cursor-pointer hover:bg-secondary/40 transition-colors">
           <CardContent className="py-0 flex px-0">
             <div className="flex flex-col gap-2 py-5 flex-[3] pl-5">
@@ -84,12 +84,12 @@ const BookingItem = ({ booking }: BookingItemProps) => {
 
               <div className="flex items-center gap-2">
                 <Avatar className="h-6 w-6">
-                  <AvatarImage src={booking.barbershop.imageUrl} />
+                  <AvatarImage src={booking.barbershop.imageUrl} alt="" />
                   <AvatarFallback>
                     {booking.barbershop.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-muted-foreground">
                   {booking.barbershop.name}
                 </span>
               </div>
@@ -100,7 +100,7 @@ const BookingItem = ({ booking }: BookingItemProps) => {
                 {format(booking.date, "MMMM", { locale: ptBR })}
               </p>
               <p className="text-2xl font-bold">{format(booking.date, "dd")}</p>
-              <p className="text-sm text-gray-400">{format(booking.date, "HH:mm")}</p>
+              <p className="text-sm text-muted-foreground">{format(booking.date, "HH:mm")}</p>
             </div>
           </CardContent>
         </Card>
@@ -122,14 +122,14 @@ const BookingItem = ({ booking }: BookingItemProps) => {
               <Card>
                 <CardContent className="p-3 flex gap-2 items-center">
                   <Avatar>
-                    <AvatarImage src={booking.barbershop.imageUrl} />
+                    <AvatarImage src={booking.barbershop.imageUrl} alt="" />
                     <AvatarFallback>
                       {booking.barbershop.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <h2 className="font-bold">{booking.barbershop.name}</h2>
-                    <h3 className="text-xs overflow-hidden text-nowrap text-ellipsis text-gray-400">
+                    <h3 className="text-xs overflow-hidden text-nowrap text-ellipsis text-muted-foreground">
                       {booking.barbershop.address}
                     </h3>
                   </div>

@@ -30,7 +30,7 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
         {booking.date && (
           <>
             <div className="flex justify-between">
-              <h3 className="text-gray-400 text-sm">Data</h3>
+              <h3 className="text-muted-foreground text-sm">Data</h3>
               <h4 className="text-sm">
                 {format(booking.date, "dd 'de' MMMM", {
                   locale: ptBR,
@@ -39,14 +39,14 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
             </div>
 
             <div className="flex justify-between">
-              <h3 className="text-gray-400 text-sm">Horário</h3>
+              <h3 className="text-muted-foreground text-sm">Horário</h3>
               <h4 className="text-sm">{format(booking.date, "HH:mm")}</h4>
             </div>
           </>
         )}
 
         <div className="flex justify-between">
-          <h3 className="text-gray-400 text-sm">Cliente</h3>
+          <h3 className="text-muted-foreground text-sm">Cliente</h3>
           <h4 className="text-sm">{booking.user ? booking.user.name : DELETED_ACCOUNT_LABEL}</h4>
         </div>
       </CardContent>
