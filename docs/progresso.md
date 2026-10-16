@@ -11,7 +11,8 @@
 | 6 · Dias e grade (AGENDA_V2) | ✅ Publicado em produção | 2026-10-16 | `fase1/dias-grade` |
 | 7 · Marca e textos | ✅ Publicado em produção | 2026-10-16 | `fase1/marca` (PR #7) |
 | 8 · Contraste e alvos de toque | ✅ Publicado em produção | 2026-10-16 | `fase1/contraste` (PR #8) |
-| 9 · SEO e imagens | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/seo-imagens` |
+| 9 · SEO e imagens | ✅ Publicado em produção | 2026-10-16 | `fase1/seo-imagens` (PR #9) |
+| 10 · Tokens, fontes e escala | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase2/tokens` |
 
 ## Prompt 0 · Preparação
 
@@ -294,7 +295,46 @@ Medido com o otimizador local do Next (sem `sharp` instalado); na Vercel os byte
 
 **Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 60 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 15 ✅. Depois da correção do número do endereço (2255): lint ✅, build ✅, e2e 15 ✅. Numa execução intermediária, os 2 testes de reserva de `fluxos.spec.ts` falharam uma vez e passaram isolados e na suíte seguinte (instável, sem relação com este prompt).
 
+**Produção (2026-10-16) ✅:** PR #9 mergeado na `main` (`e42e98c`) e publicado pela Vercel. Prévia no WhatsApp validada pelo dono no site real.
+
+**Banco de produção (2026-10-16):** endereço da barbearia corrigido à mão pelo dono para "Ns de Fátima, 2255" (mesmo número do JSON-LD).
+
 **Pendências:**
-- [ ] Depois do deploy: dono testa a prévia no WhatsApp (link novo ou com `?v=1`, por causa do cache).
+- [x] Depois do deploy: dono testa a prévia no WhatsApp — validada em 2026-10-16.
 - [ ] Opcional: Google Rich Results Test na URL de produção.
 
+## Prompt 10 · Tokens, fontes e escala
+
+**Feito:**
+- `app/globals.css`: variáveis da spec §2 em `:root` (antes em `.dark`). Novas: `--surface-2`, `--disabled`, `--warning`, `--radius-sm/lg/xl`, vidro, brilho, sombras, `--ease-out` e `--dur-*`; bloco `prefers-reduced-motion` e fallback `.glass`. Cores do Prompt 8 (primary, accent, accent-soft, secondary, muted, ring) mantidas.
+- Fundo, card, texto e borda passam para a spec: #15161A, #1A1C21, #F4F4F5 e #2E3038 (a borda era #26272B).
+- HSL × HEX conferido: 7 valores da spec com números inteiros davam outra cor (background, card, primary, accent, accent-soft, warning, destructive). Corrigidos com uma casa decimal no CSS e na spec.
+- `tailwind.config.ts`: `font-sans` (Space Grotesk), escala `caption/label/body/title/display`, cores `surface2`, `disabled`, `warning`, `shadow-glow`, `shadow-selected`, `spacing.tap` (44px), `spacing.page` (20px) e `ease-out`.
+- `app/layout.tsx`: Inter → Space Grotesk via `next/font` (`--font-space-grotesk`); Permanent Marker igual.
+- Escala aplicada em todas as telas e nas primitivas `ui/`: `text-xs` → `caption`; `text-sm` → `body` (14 → 15px); títulos de seção em caixa alta → `label`; `text-lg` e `text-xl` → `title` (h1 20 → 18px); `text-2xl` → `display` (24 → 26px). Exceção: a marca no header (`font-brand text-lg`).
+- `px-5` (margem lateral da página e dos sheets) → `px-page`; `pl-5` dos títulos da home → `pl-page`. Mesmos 20px.
+- `app/_lib/utils.ts`: `cn` usa `extendTailwindMerge` com a escala e o espaçamento novos. Sem isso, o `tailwind-merge` tratava `text-body` como cor e o descartava ao lado de `text-muted-foreground`. Teste em `utils.test.ts`.
+
+**Decisões:**
+- **Sem feature flag (decisão do dono, 2026-10-16):** fonte, escala e todas as cores da spec valem para todos.
+- Raio fica para o prompt de componentes (decisão do dono): variáveis novas criadas, mas `--radius` continua 0.5rem e o mapeamento `rounded-*` do Tailwind não mudou.
+- `px-page` é token de espaçamento, não componente: o container `max-w-md`/`max-w-3xl` da spec muda o layout e fica para depois.
+- Layout, componentes, agenda (`schedule.ts`, `AGENDA_V2`), banco e marca não foram tocados.
+
+**Conferência em 390px (Playwright, `next start`, banco Neon "Testes"):** home, menu lateral, barbearia, sheet de reserva (chips de horário e resumo), `/bookings`, sheet do card de agendamento, `/adm` e sheet do admin. Nenhum elemento passa da largura da tela nem tem texto cortado. Os chips de horário continuam numa linha com rolagem lateral, como antes.
+
+**Lighthouse acessibilidade (local, `next start`, banco Neon "Testes", cliente logado por cookie):**
+
+| Página | Celular | Desktop |
+|---|---|---|
+| Home | 100 | 100 |
+| Barbearia | 100 | 100 |
+| `/bookings` | 100 | 100 |
+
+**Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 63 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 15 ✅.
+
+**Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-16.
+
+**Pendências:**
+- [ ] Prompt de componentes: raio da spec (`rounded-lg` 16px etc.) e container `max-w-md`/`max-w-3xl`.
+- [ ] Título "Detalhes do Agendamento" do sheet do admin fica encostado no X em 390px (não sobrepõe); revisar no prompt de componentes.
