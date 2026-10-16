@@ -2,6 +2,11 @@ import { Session } from "next-auth";
 
 export type SessionUser = Session["user"];
 
+// Reserva passada de quem excluiu a conta (userId = null).
+export const DELETED_ACCOUNT_LABEL = "Conta excluída";
+
+export const ADMIN_DELETE_MESSAGE = "Conta de administrador não pode ser excluída por aqui";
+
 export class AuthError extends Error {
   constructor(message: string) {
     super(message);

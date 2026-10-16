@@ -32,6 +32,7 @@ import {
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
 import { track } from "../_lib/track";
+import { DELETED_ACCOUNT_LABEL } from "../_lib/auth-guards";
 
 interface BookingItemAdmProps {
   booking: Prisma.BookingGetPayload<{
@@ -46,6 +47,7 @@ interface BookingItemAdmProps {
 const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   const isBookingConfirmed = isFuture(booking.date);
+  const customerName = booking.user ? (booking.user.name ?? "Cliente") : DELETED_ACCOUNT_LABEL;
 
   const handleCancelClick = async () => {
     setIsDeleteLoading(true);
@@ -84,17 +86,17 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
 
               <div className="flex items-center gap-2">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src={booking.user.image ?? ""} />
+                  <AvatarImage src={booking.user?.image ?? ""} />
                   <AvatarFallback className="text-xs">
-                    {booking.user.name?.charAt(0).toUpperCase() ?? "?"}
+                    {booking.user?.name?.charAt(0).toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col">
                   <span className="text-sm font-medium leading-tight">
-                    {booking.user.name ?? "Cliente"}
+                    {customerName}
                   </span>
                   <span className="text-xs text-gray-400 leading-tight truncate max-w-[160px]">
-                    {booking.user.email ?? ""}
+                    {booking.user?.email ?? ""}
                   </span>
                 </div>
               </div>
@@ -121,14 +123,14 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
           <Card>
             <CardContent className="p-3 flex items-center gap-3">
               <Avatar>
-                <AvatarImage src={booking.user.image ?? ""} />
+                <AvatarImage src={booking.user?.image ?? ""} />
                 <AvatarFallback>
-                  {booking.user.name?.charAt(0).toUpperCase() ?? "?"}
+                  {booking.user?.name?.charAt(0).toUpperCase() ?? "?"}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-bold text-sm">{booking.user.name ?? "Cliente"}</p>
-                <p className="text-xs text-gray-400">{booking.user.email ?? ""}</p>
+                <p className="font-bold text-sm">{customerName}</p>
+                <p className="text-xs text-gray-400">{booking.user?.email ?? ""}</p>
               </div>
             </CardContent>
           </Card>
@@ -185,7 +187,7 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
             </AlertDialogTrigger>
             <AlertDialogContent className="w-[90%]">
               <AlertDialogHeader>
-                <AlertDialogTitle>Cancelar reserva de {booking.user.name}?</AlertDialogTitle>
+                <AlertDialogTitle>Cancelar reserva de {customerName}?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Esta ação não poderá ser revertida.
                 </AlertDialogDescription>

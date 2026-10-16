@@ -2,13 +2,14 @@ import { Barbershop, Booking, Prisma, Service, User } from "@prisma/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent } from "./ui/card";
+import { DELETED_ACCOUNT_LABEL } from "../_lib/auth-guards";
 
 interface BookingInfoProps {
   booking: {
     date: Date;
     service: Pick<Service, "name" | "price">;
     barbershop: Pick<Barbershop, "name">;
-    user: Pick<User, "name">;
+    user: Pick<User, "name"> | null;
   };
 }
 
@@ -46,7 +47,7 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
 
         <div className="flex justify-between">
           <h3 className="text-gray-400 text-sm">Cliente</h3>
-          <h4 className="text-sm">{booking.user.name}</h4>
+          <h4 className="text-sm">{booking.user ? booking.user.name : DELETED_ACCOUNT_LABEL}</h4>
         </div>
       </CardContent>
     </Card>
