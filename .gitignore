@@ -54,3 +54,6 @@ bookings-duplicados.txt
 .agents/
 skills-lock.json
 .env.producao-backup
+
+# prints de referência locais
+tmp/

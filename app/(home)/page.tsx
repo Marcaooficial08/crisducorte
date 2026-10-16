@@ -5,6 +5,7 @@ import { ptBR } from "date-fns/locale";
 import Final from "./_components/search";
 import BookingItem from "../_components/booking-item";
 import { db } from "../_lib/prisma";
+import { visibleBarbershopWhere } from "../_lib/barbershops";
 import BarbershopItem from "./_components/barbershop-item";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
@@ -16,8 +17,9 @@ export default async function Home() {
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
 
   const [barbershops, recommendedBarbershops, confirmedBookings] = await Promise.all([
-    db.barbershop.findMany({}),
+    db.barbershop.findMany({ where: visibleBarbershopWhere }),
     db.barbershop.findMany({
+      where: visibleBarbershopWhere,
       orderBy: {
         id: 'asc',
       },
@@ -45,7 +47,7 @@ export default async function Home() {
       <Header />
 
       <div className="px-5 pt-5">
-        <h2 className="text-xl font-bold">{session?.user ? `Olá ${session.user.name?.split(" ")[0]}!` : "Olá vamos agendar um corte hoje?"}</h2>
+        <h2 className="text-xl font-bold">{session?.user ? `Olá, ${session.user.name?.split(" ")[0]}!` : "Olá, vamos agendar um corte?"}</h2>
         <p className="capitalize text-sm">
           {format(new Date(), "EEEE',' dd 'de' MMMM", {
             locale: ptBR,
@@ -76,7 +78,7 @@ export default async function Home() {
         </h2>
         <div className="flex px-5 gap-4 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {barbershops.length === 1 ? (
-            <div className="w-full">
+            <div className="w-full max-w-sm">
               <BarbershopItem key={barbershops[0].id} barbershop={barbershops[0]} />
             </div>
           ) : (
@@ -95,7 +97,7 @@ export default async function Home() {
         </h2>
         <div className="flex px-5 gap-4 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {recommendedBarbershops.map((barbershop) => (
-            <div key={barbershop.id} className={barbershops.length === 1 ? "w-full" : "min-w-[167px] max-w-[167px]"}>
+            <div key={barbershop.id} className={barbershops.length === 1 ? "w-full max-w-sm" : "min-w-[167px] max-w-[167px]"}>
               <BarbershopItem key={barbershop.id} barbershop={barbershop} />
             </div>
           ))}
