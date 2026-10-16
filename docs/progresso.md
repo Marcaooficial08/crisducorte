@@ -6,7 +6,8 @@
 | 1 · Chave do login + Analytics | ✅ Concluído | 2026-10-14 | `fase1/secret-analytics` |
 | 2 · Admin pelo isAdmin | ✅ Publicado em produção | 2026-10-15 | `fase1/is-admin` (PR #2) |
 | 3 · Reservas seguras e leves | ✅ Publicado em produção | 2026-10-15 | `fase1/bookings-seguros` (PR #3) |
-| 4 · Testes automáticos | ✅ Publicado em produção — previsto após o merge | 2026-10-15 | `fase1/testes` (PR #4) |
+| 4 · Testes automáticos | ✅ Publicado em produção | 2026-10-15 | `fase1/testes` (PR #4) |
+| 5 · LGPD básica | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/lgpd` |
 
 ## Prompt 0 · Preparação
 
@@ -135,5 +136,41 @@
 **Validação (local, 2026-10-15):** `npm run lint` ✅ · `npm run test:unit` 40 ✅ · `npm run test:int` 6 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 4 ✅ (duas execuções seguidas).
 
 **Pendências:**
-- [ ] Ativar no GitHub a regra da `main` exigindo o check `testes` (passo a passo no PR #4).
-- [ ] Conferir o primeiro run do workflow no PR #4.
+- [x] Ativar no GitHub a regra da `main` exigindo o check `testes` — feito: ruleset "Proteger main" ativo (PR obrigatório, check `testes` obrigatório, sem force push, sem apagar a branch). Conferido pela API do GitHub em 2026-10-16.
+- [x] Conferir o primeiro run do workflow no PR #4 — passou (2m31s).
+
+**Produção ✅:** PR #4 mergeado na `main` (`51f05b8`). Não muda nada visível para o cliente.
+
+## Prompt 5 · LGPD básica (MEL-016)
+
+**Feito:**
+- `/privacidade`: Política de Privacidade em português simples (responsável, dados coletados, finalidade, base legal, compartilhamento, prazo de guarda, direitos e como excluir a conta). Responsável: Cris du Corte; contato: WhatsApp (31) 97357-6347 (`wa.me`); atualizada em 16/10/2026. Comentário no topo do arquivo: revisão jurídica antes de divulgar.
+- Login pelo menu: "Ao entrar, você concorda com a Política de Privacidade" com link.
+- Link "Privacidade" no rodapé e no menu; item "Perfil" no menu (logado).
+- `/perfil` (só logado): avatar, nome, e-mail e "Excluir minha conta" com AlertDialog.
+- `deleteAccount` (`app/_actions/delete-account.ts`): `assertUser` + rate limit; numa transação apaga as reservas futuras, deixa as passadas com `userId = null`, apaga Session, Account e User; limpa o cookie da sessão.
+- Admin (`isAdmin`) não exclui pelo app: a tela mostra "Conta de administrador não pode ser excluída por aqui" e a action também recusa.
+- Migração `20261016000000_booking_user_optional`: `Booking.userId` passa a ser opcional (`DROP NOT NULL`; chave estrangeira continua `RESTRICT`). `/adm` mostra "Conta excluída" nessas reservas.
+- Testes: unit (`delete-account.test.ts`), integração (`tests/integration/delete-account.int.test.ts`) e e2e (`e2e/lgpd.spec.ts`: rodapé → política; admin sem botão; cliente exclui a conta e perde o acesso).
+
+**Decisões:**
+- **A1 (dono, 2026-10-16):** reservas passadas ficam no histórico sem dono, em vez de apagadas — métricas do Cris preservadas, sem dado pessoal.
+- **B1 (dono, 2026-10-16):** sem feature flag (exceção à regra): é exigência legal e as flags só chegam no Prompt 14.
+- Política sem CPF/CNPJ, endereço e cidade/UF (decisão do dono): não aparecem no texto.
+- Aviso de consentimento ao reservar sem login (botão "Reservar" chama o Google direto) → Prompt 15.
+- Sem `signOut()` depois de excluir: a sessão já não existe e o NextAuth registraria `SIGNOUT_ERROR`; a action apaga o cookie e a tela recarrega a home.
+- Banco: só Neon (dev e "Testes"). Produção não foi tocada.
+
+**Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 44 ✅ · `npm run test:int` 8 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 7 ✅.
+
+**Teste de aceite (localhost, banco Neon) ✅:** conta comum exclui a própria conta; admin vê o bloqueio e não exclui.
+
+**Migração em produção (2026-10-16) ✅** — a Vercel não roda `prisma migrate deploy` no build, então foi feito à mão:
+- Backup `pg_dump` de produção feito antes, fora do Git.
+- `ALTER TABLE "Booking" ALTER COLUMN "userId" DROP NOT NULL;` aplicado pelo dono no SQL Editor do Supabase.
+- Conferido: `is_nullable = YES`; 2781 reservas intactas.
+- Registrada no histórico com `npx prisma migrate resolve --applied 20261016000000_booking_user_optional`; `migrate status` → "Database schema is up to date!".
+
+**Pendências:**
+- [ ] Revisão jurídica da política antes de divulgar o link.
+- [ ] Depois do merge: testar a exclusão no site real com uma conta de teste (nunca a do Cris).
