@@ -65,6 +65,7 @@ Admin = `User.isAdmin` (lido do banco no session callback de `app/_lib/auth.ts`,
 - `TEST_DATABASE_URL` — banco só de testes (opcional; necessário para `test:int` e `test:e2e`)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 - `NEXTAUTH_SECRET` — único nome lido pelo NextAuth (`app/_lib/auth.ts`); modelo em `.env.example`
+- `AGENDA_V2` — feature flag `off | admin | all` (padrão `off`), lida por `isEnabled` em `app/_lib/flags.ts`
 
 ## Workflow
 

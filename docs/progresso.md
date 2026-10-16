@@ -8,6 +8,7 @@
 | 3 · Reservas seguras e leves | ✅ Publicado em produção | 2026-10-15 | `fase1/bookings-seguros` (PR #3) |
 | 4 · Testes automáticos | ✅ Publicado em produção | 2026-10-15 | `fase1/testes` (PR #4) |
 | 5 · LGPD básica | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/lgpd` |
+| 6 · Dias e grade (AGENDA_V2) | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/dias-grade` |
 
 ## Prompt 0 · Preparação
 
@@ -174,3 +175,29 @@
 **Pendências:**
 - [ ] Revisão jurídica da política antes de divulgar o link.
 - [ ] Depois do merge: testar a exclusão no site real com uma conta de teste (nunca a do Cris).
+
+## Prompt 6 · Dias e grade na tela (AGENDA_V2)
+
+**Feito:**
+- `getNextServiceDays` conferida: já seguia a regra (fuso SP; seg–qui sexta e sábado; sexta só horários futuros + sábado; sábado só o sábado; domingo nada; dia sem horário futuro sai). Não precisou de correção.
+- Feature flag genérica `app/_lib/flags.ts`: `isEnabled(flag, session)` lê `process.env[flag]` com `off | admin | all` (ausente/inválido = `off`); atalho `isAgendaV2Enabled`. Pronta para `NEW_HOME`/`NEW_THEME` (Prompt 14).
+- `/barbershop/[id]`: com a flag ligada, o servidor calcula `getNextServiceDays(new Date())` e passa ao `ServiceItem`. Calendário só habilita esses dias; horários = `day.times` menos os reservados (comparados no fuso SP); a data enviada é montada com `fromZonedTime` (não mais o fuso do navegador). Sem dia liberado → "A agenda da próxima semana abre na segunda-feira" no lugar do calendário.
+- `saveBooking`: com a flag ligada para o usuário, recusa dia fora dos liberados, horário fora da grade, horário passado (ou com segundos) → "Esse horário não está mais disponível." (`isBookableSlot` em `schedule.ts`). Na recusa, a tela mostra o toast, recarrega as reservas do dia e faz `router.refresh()`: o horário vencido some.
+- `_helpers/hours.ts` (`generateDayTimeList`) removido; a agenda antiga usa `TIME_GRID` (mesmos 11 horários).
+- `AGENDA_V2` em `.env.example` e `CLAUDE.md`.
+- Testes: `flags.test.ts`; `schedule.test.ts` (+ sexta à tarde, grade de 11, `isBookableSlot`); `save-booking.test.ts` (off/admin/all); integração `tests/integration/agenda-v2.int.test.ts` (relógio fixo: recusa sábado da semana seguinte, horário fora da grade e horário passado; aceita horário liberado; reserva antiga fora da regra continua intacta).
+
+**Decisões:**
+- Dias e horários calculados só no servidor (relógio do celular pode estar errado); página aberta por muito tempo é coberta pela validação do `saveBooking`.
+- Flag `off`: tela e `saveBooking` iguais a antes (inclusive o fuso do navegador). `admin`: só quem tem `isAdmin` vê e usa a regra nova.
+- Nenhuma reserva existente é alterada ou apagada; a regra só vale para reservas novas. Sem migração.
+- Sem e2e novo (decisão do dono): unit + integração com relógio fixo.
+- Código MEL não identificado na spec para este prompt → commits com escopo `agenda`.
+- Banco: só Neon ("Testes"). Produção não foi tocada.
+
+**Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 59 ✅ · `npm run test:int` 12 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 7 ✅.
+
+**Teste de aceite (localhost, banco Neon, `AGENDA_V2=admin`) ✅:** admin vê a regra nova; cliente comum vê a antiga.
+
+**Pendências:**
+- [ ] Vercel: criar `AGENDA_V2` (Production e Preview); começar com `admin`, depois `all`.

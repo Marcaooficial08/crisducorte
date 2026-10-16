@@ -3,6 +3,8 @@ import BarbershopInfo from "./_components/barbershop-info";
 import ServiceItem from "./_components/service-item";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/_lib/auth";
+import { isAgendaV2Enabled } from "@/app/_lib/flags";
+import { getNextServiceDays } from "@/app/_lib/schedule";
 
 interface BarbershopDetailsPageProps {
   params: {
@@ -26,6 +28,9 @@ const BarbershopDetailsPage = async ({ params }: BarbershopDetailsPageProps) => 
     return null;
   }
 
+  // Agenda nova: dias e horários calculados só no servidor.
+  const serviceDays = isAgendaV2Enabled(session) ? getNextServiceDays(new Date()) : null;
+
   return (
     <div>
       <BarbershopInfo barbershop={barbershop} />
@@ -36,6 +41,7 @@ const BarbershopDetailsPage = async ({ params }: BarbershopDetailsPageProps) => 
             barbershop={barbershop}
             service={service}
             isAuthenticated={!!session?.user}
+            serviceDays={serviceDays}
           />
         ))}
       </div>
