@@ -12,7 +12,8 @@
 | 7 · Marca e textos | ✅ Publicado em produção | 2026-10-16 | `fase1/marca` (PR #7) |
 | 8 · Contraste e alvos de toque | ✅ Publicado em produção | 2026-10-16 | `fase1/contraste` (PR #8) |
 | 9 · SEO e imagens | ✅ Publicado em produção | 2026-10-16 | `fase1/seo-imagens` (PR #9) |
-| 10 · Tokens, fontes e escala | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase2/tokens` |
+| 10 · Tokens, fontes e escala | ✅ Publicado em produção | 2026-10-16 | `fase2/tokens` (PR #10) |
+| 11 · Vidro, brilho e luz ambiente | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase2/visual-b` |
 
 ## Prompt 0 · Preparação
 
@@ -338,3 +339,40 @@ Medido com o otimizador local do Next (sem `sharp` instalado); na Vercel os byte
 **Pendências:**
 - [ ] Prompt de componentes: raio da spec (`rounded-lg` 16px etc.) e container `max-w-md`/`max-w-3xl`.
 - [ ] Título "Detalhes do Agendamento" do sheet do admin fica encostado no X em 390px (não sobrepõe); revisar no prompt de componentes.
+
+## Prompt 11 · Vidro, brilho e luz ambiente
+
+**Feito:**
+- `app/globals.css`: classes `.glass` (fundo `--glass-bg`, borda `--glass-border`), `.glass-blur` (`backdrop-filter: blur(12px)`), `.glow-card` (borda `--glow-border` + `--shadow-glow`) e `.ambient-glow` (radial roxo). Usam os tokens do Prompt 10, nenhum novo. Ficam fora de `@layer` para vencer `bg-card`/`border` do `<Card>`; `hover:` continua ganhando.
+- Versão leve: sem suporte a `backdrop-filter` → `.glass-blur` usa fundo sólido `--card`. `prefers-reduced-transparency` → vidro sólido, sem blur, sem brilho. `prefers-reduced-motion` → sem brilho (luz ambiente some, `.glow-card` sem sombra).
+- `app/_components/ambient-glow.tsx`: círculo radial no canto superior direito do header, `aria-hidden`, `pointer-events-none`, `-z-10`; entra com fade de 300ms.
+- Aplicado em: header (`glass` + blur + luz ambiente), card da barbearia na home (`glass glow-card`), card de serviço da barbearia e card de agendamento (`glass`). `ui/card.tsx`, sheets, admin e cards sobre foto não mudaram.
+- Blur só no header: nos cards o fundo atrás é liso, o blur não mudava nada e custava pintura.
+- Header liga a luz ambiente e o blur só depois do `load` (`useAfterLoad` em `header.tsx`), com fade de 300ms.
+- Ícones recomprimidos com `sharp` (PNG com paleta, mesma imagem, mesmo tamanho em pixels, fundo #15161A exato): `app/icon.png` 512×512 de 294.049 → 39.986 bytes; `app/apple-icon.png` 180×180 de 43.434 → 6.951 bytes. Conferidos lado a lado em 32px e 180px, sem diferença visível.
+
+**Decisões:**
+- **Sem feature flag (decisão do dono, 2026-10-16)**, como no Prompt 10.
+- **Efeitos depois do load (decisão do dono, 2026-10-16):** a luz ambiente e o blur atrasavam a primeira pintura uns 100ms. O Lighthouse (simulação "lantern") inclui no cálculo do LCP toda requisição que começou antes da pintura observada; com o atraso, o `icon.png` (294 KB, prioridade alta) passava a começar antes e somava ~1,4s ao LCP simulado de home e `/bookings`. Correlação de 100% nas 30 rodadas.
+
+**Elemento LCP (igual antes e depois):** home = imagem do card da barbearia; barbearia = foto do topo; `/bookings` = nome da marca no header (`font-brand`).
+
+**Lighthouse mobile (local, `next start`, banco Neon "Testes", cliente logado por cookie; antes e depois lado a lado, rodadas intercaladas, mediana de 5):**
+
+| Página | LCP antes | LCP depois | Diferença | Acessibilidade antes → depois |
+|---|---|---|---|---|
+| Home | 2,93s | 3,00s | +0,07s | 100 → 100 |
+| Barbearia | 2,85s | 2,88s | +0,03s | 100 → 100 |
+| `/bookings` | 2,65s | 2,67s | +0,02s | 100 → 100 |
+
+Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Neon pela internet (TTFB 1,1–2,5s). O limite de 2,5s é conferido em produção depois do merge.
+
+**Conferência em 390px (Playwright):** home, barbearia e `/bookings` sem rolagem lateral; `prefers-reduced-motion` confirmado por estilo computado (luz ambiente `display: none`, card sem sombra).
+
+**Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 63 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 15 ✅.
+
+**Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-16.
+
+**Pendências:**
+- [ ] Depois do merge: Lighthouse mobile em produção (home, barbearia, `/bookings`), LCP < 2,5s.
+
