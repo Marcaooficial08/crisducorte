@@ -2,38 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens (docs/redesign-spec.md §2). HSL com uma casa decimal para bater com o HEX. */
 @layer base {
-  .dark {
-    --background: 225 9% 9%;
-    --foreground: 210 40% 98%;
-
-    --card: 228 9% 11%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 228 9% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 252 89% 64%;         /* #7354F5: botões com texto branco (~4,9:1) */
+  :root {
+    --background: 228 10.6% 9.2%;      /* #15161A */
+    --card: 222.9 11.9% 11.6%;         /* #1A1C21 */
+    --surface-2: 233 10% 15%;          /* #22232A */
+    --popover: 222.9 11.9% 11.6%;
+    --foreground: 240 5% 96%;          /* #F4F4F5 */
+    --card-foreground: 240 5% 96%;
+    --popover-foreground: 240 5% 96%;
+    --primary: 251.6 89% 64.5%;        /* #7354F5: botões com texto branco (~4,9:1) */
     --primary-foreground: 0 0% 100%;
+    --accent: 251.8 100% 69.2%;        /* #8162FF: ícones, bordas, destaques (nunca fundo de texto) */
+    --accent-soft: 251.5 100% 82.5%;   /* #B7A6FF: texto roxo sobre fundo escuro */
+    --accent-foreground: 240 5% 96%;
+    --secondary: 233 10% 15%;          /* #22232A */
+    --secondary-foreground: 240 5% 96%;
+    --muted: 230 9% 20%;               /* #2E3038 */
+    --muted-foreground: 240 5% 65%;    /* #A1A1AA: texto secundário (~7:1) */
+    --disabled: 240 4% 46%;            /* #71717A */
+    --border: 230 10% 20%;             /* #2E3038 */
+    --input: 230 10% 20%;
+    --ring: 251.8 100% 69.2%;          /* #8162FF: anel de foco */
+    --warning: 43.3 96.4% 56.3%;       /* #FBBF24 */
+    --destructive: 0 84.2% 60.2%;      /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
 
-    --secondary: 233 10% 15%;       /* #22232A */
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 230 9% 20%;            /* #2E3038 */
-    --muted-foreground: 240 5% 65%; /* #A1A1AA: texto secundário (~7:1) */
-
-    --accent: 252 100% 69%;         /* #8162FF: ícones, bordas, destaques (nunca fundo de texto) */
-    --accent-soft: 253 100% 83%;    /* #B7A6FF: texto roxo sobre fundo escuro */
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 228 6% 16%;
-    --input: 228 6% 16%;
-    --ring: 252 100% 69%;           /* #8162FF: anel de foco */
-
+    /* Raio novo da spec: variáveis prontas, mapeamento do Tailwind muda no prompt de componentes. */
     --radius: 0.5rem;
+    --radius-sm: 0.625rem;             /* 10px: chips de horário */
+    --radius-lg: 1rem;                 /* 16px: cards */
+    --radius-xl: 1.25rem;              /* 20px: card principal */
+
+    --glass-bg: rgba(26, 28, 33, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glow-border: rgba(129, 98, 255, 0.32);
+    --shadow-glow: 0 10px 40px rgba(129, 98, 255, 0.16);
+    --shadow-selected: 0 0 20px rgba(129, 98, 255, 0.22);
+
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --dur-fast: 150ms;
+    --dur-base: 200ms;
+    --dur-slow: 300ms;
   }
 }
 
@@ -44,4 +55,16 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Versão leve do vidro (MEL-006) */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass { background: hsl(var(--card)); }
 }

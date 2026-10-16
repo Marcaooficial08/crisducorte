@@ -21,7 +21,7 @@ const SideMenu = () => {
       </SheetHeader>
 
       {data?.user ? (
-        <div className="flex justify-between px-5 py-6 items-center">
+        <div className="flex justify-between px-page py-6 items-center">
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarImage src={data.user?.image ?? ""} alt={data.user.name ?? ""} />
@@ -35,7 +35,7 @@ const SideMenu = () => {
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col px-5 py-6 gap-3">
+        <div className="flex flex-col px-page py-6 gap-3">
           <div className="flex items-center gap-2">
             <UserIcon size={32} />
             <h2 className="font-bold">Olá, faça seu login!</h2>
@@ -44,7 +44,7 @@ const SideMenu = () => {
             <LogInIcon className="mr-2" size={18} />
             Fazer Login
           </Button>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             Ao entrar, você concorda com a{" "}
             <Link href="/privacidade" className="underline">
               Política de Privacidade
@@ -54,7 +54,7 @@ const SideMenu = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 px-5">
+      <div className="flex flex-col gap-3 px-page">
         <Button variant="outline" className="justify-start" asChild>
           <Link href="/">
             <HomeIcon size={18} className="mr-2" />

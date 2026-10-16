@@ -20,8 +20,8 @@ const ProfilePage = async () => {
     <>
       <Header />
 
-      <div className="px-5 py-6 flex flex-col gap-6">
-        <h1 className="text-xl font-bold">Perfil</h1>
+      <div className="px-page py-6 flex flex-col gap-6">
+        <h1 className="text-title font-bold">Perfil</h1>
 
         <Card>
           <CardContent className="p-5 flex items-center gap-3">
@@ -31,14 +31,14 @@ const ProfilePage = async () => {
             </Avatar>
             <div className="min-w-0">
               <p className="font-bold">{user.name}</p>
-              <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+              <p className="text-body text-muted-foreground truncate">{user.email}</p>
             </div>
           </CardContent>
         </Card>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm uppercase text-muted-foreground font-bold">Privacidade</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-label uppercase text-muted-foreground font-bold">Privacidade</h2>
+          <p className="text-body text-muted-foreground">
             Veja como usamos seus dados na{" "}
             <Link href="/privacidade" className="underline text-foreground">
               Política de Privacidade
@@ -47,7 +47,7 @@ const ProfilePage = async () => {
           </p>
 
           {user.isAdmin ? (
-            <p className="text-sm text-muted-foreground">{ADMIN_DELETE_MESSAGE}.</p>
+            <p className="text-body text-muted-foreground">{ADMIN_DELETE_MESSAGE}.</p>
           ) : (
             <DeleteAccountButton />
           )}

@@ -89,29 +89,29 @@ const BookingItem = ({ booking }: BookingItemProps) => {
                     {booking.barbershop.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-body text-muted-foreground">
                   {booking.barbershop.name}
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col items-center justify-center flex-1 border-l border-solid border-secondary px-3">
-              <p className="text-sm capitalize">
+              <p className="text-body capitalize">
                 {format(booking.date, "MMMM", { locale: ptBR })}
               </p>
-              <p className="text-2xl font-bold">{format(booking.date, "dd")}</p>
-              <p className="text-sm text-muted-foreground">{format(booking.date, "HH:mm")}</p>
+              <p className="text-display font-bold">{format(booking.date, "dd")}</p>
+              <p className="text-body text-muted-foreground">{format(booking.date, "HH:mm")}</p>
             </div>
           </CardContent>
         </Card>
       </SheetTrigger>
 
       <SheetContent className="px-0">
-        <SheetHeader className="px-5 text-left pb-6 border-b border-solid border-secondary">
+        <SheetHeader className="px-page text-left pb-6 border-b border-solid border-secondary">
           <SheetTitle>Informações da Reserva</SheetTitle>
         </SheetHeader>
 
-        <div className="px-5">
+        <div className="px-page">
           <div className="relative h-[180px] w-full mt-6">
             <Image
               src="/barbershop-map.png"
@@ -119,7 +119,7 @@ const BookingItem = ({ booking }: BookingItemProps) => {
               sizes="(min-width: 640px) 344px, calc(75vw - 40px)"
               alt={booking.barbershop.name}
             />
-            <div className="w-full absolute bottom-4 left-0 px-5">
+            <div className="w-full absolute bottom-4 left-0 px-page">
               <Card>
                 <CardContent className="p-3 flex gap-2 items-center">
                   <Avatar>
@@ -130,7 +130,7 @@ const BookingItem = ({ booking }: BookingItemProps) => {
                   </Avatar>
                   <div>
                     <h2 className="font-bold">{booking.barbershop.name}</h2>
-                    <h3 className="text-xs overflow-hidden text-nowrap text-ellipsis text-muted-foreground">
+                    <h3 className="text-caption overflow-hidden text-nowrap text-ellipsis text-muted-foreground">
                       {booking.barbershop.address}
                     </h3>
                   </div>

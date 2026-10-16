@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Permanent_Marker } from "next/font/google";
+import { Space_Grotesk, Permanent_Marker } from "next/font/google";
 import "./globals.css";
 import Footer from "./_components/footer";
 import AuthProvider from "./_providers/auth";
@@ -8,7 +8,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SHARE_TITLE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./_lib/site";
 
-const inter = Inter({ subsets: ["latin"] });
+const sans = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk", display: "swap" });
 const brand = Permanent_Marker({ subsets: ["latin"], weight: "400", variable: "--font-permanent-marker", display: "swap" });
 
 // Imagem da prévia: app/opengraph-image.png e app/twitter-image.png (convenção de arquivo do Next).
@@ -40,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={`${inter.className} ${brand.variable} dark`}>
+      <body className={`dark ${sans.variable} ${brand.variable} font-sans`}>
         <AuthProvider>
           <div className="flex-1">{children}</div>
           <Toaster />

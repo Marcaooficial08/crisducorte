@@ -57,13 +57,13 @@ const BarbershopInfo  = ({barbershop}: BarbershopInfoProps) => {
                   
 
                 </div>
-                <div className="px-5  py-3 pb-6 border-b border-solid border-secondary">
+                <div className="px-page  py-3 pb-6 border-b border-solid border-secondary">
 
-              <h1 className="text-xl font-bold  ">{barbershop.name}</h1>
+              <h1 className="text-title font-bold  ">{barbershop.name}</h1>
              
                  <div className="flex items-center gap-1 mt-2">
                     <MapPinIcon className="text-accent" size={18} aria-hidden="true"/>
-                 <p className="text-sm">{barbershop.address}</p>
+                 <p className="text-body">{barbershop.address}</p>
                  </div>
               </div>
 
