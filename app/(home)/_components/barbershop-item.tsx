@@ -10,12 +10,14 @@ import { useRouter } from "next/navigation";
 
 interface BarbershopItemProps{
 barbershop:Barbershop;
-    
+// Largura real exibida: card até 384px (uma barbearia) ou 167px (várias).
+sizes?: string;
+priority?: boolean;
 }
 
 
 
-const BarbershopItem  = ({barbershop}:BarbershopItemProps) => {
+const BarbershopItem  = ({barbershop, sizes = "(min-width: 424px) 384px, calc(100vw - 40px)", priority = false}:BarbershopItemProps) => {
     
 const router = useRouter();
   
@@ -32,7 +34,8 @@ const router = useRouter();
 alt={barbershop.name}
  src="/brand/logo-card.jpg"
 fill
-sizes="(min-width: 640px) 384px, 100vw"
+sizes={sizes}
+priority={priority}
 className="rounded-2xl object-contain" />
 </div>
             

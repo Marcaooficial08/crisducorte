@@ -51,7 +51,7 @@ const BarbershopInfo  = ({barbershop}: BarbershopInfoProps) => {
         </Sheet>
                  
                     <div className="relative mx-auto aspect-square w-full max-w-sm">
-                      <Image src="/brand/logo-card.jpg" fill alt={barbershop.name} priority sizes="(min-width: 640px) 384px, 100vw" className="object-contain" />
+                      <Image src="/brand/logo-card.jpg" fill alt={barbershop.name} priority sizes="(min-width: 384px) 384px, 100vw" className="object-contain" />
                     </div>
 
                   

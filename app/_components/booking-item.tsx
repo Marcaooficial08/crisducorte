@@ -116,6 +116,7 @@ const BookingItem = ({ booking }: BookingItemProps) => {
             <Image
               src="/barbershop-map.png"
               fill
+              sizes="(min-width: 640px) 344px, calc(75vw - 40px)"
               alt={booking.barbershop.name}
             />
             <div className="w-full absolute bottom-4 left-0 px-5">
