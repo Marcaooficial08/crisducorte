@@ -82,20 +82,20 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
                 </Badge>
               </div>
 
-              <h2 className="font-bold text-sm">{booking.service.name}</h2>
+              <h2 className="font-bold text-body">{booking.service.name}</h2>
 
               <div className="flex items-center gap-2">
                 <Avatar className="h-7 w-7">
                   <AvatarImage src={booking.user?.image ?? ""} alt="" />
-                  <AvatarFallback className="text-xs">
+                  <AvatarFallback className="text-caption">
                     {booking.user?.name?.charAt(0).toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium leading-tight">
+                  <span className="text-body font-medium leading-tight">
                     {customerName}
                   </span>
-                  <span className="text-xs text-muted-foreground leading-tight truncate max-w-[160px]">
+                  <span className="text-caption text-muted-foreground leading-tight truncate max-w-[160px]">
                     {booking.user?.email ?? ""}
                   </span>
                 </div>
@@ -103,22 +103,22 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
             </div>
 
             <div className="flex flex-col items-center justify-center flex-1 border-l border-solid border-secondary px-3">
-              <p className="text-sm capitalize">
+              <p className="text-body capitalize">
                 {format(booking.date, "MMMM", { locale: ptBR })}
               </p>
-              <p className="text-2xl font-bold">{format(booking.date, "dd")}</p>
-              <p className="text-sm text-muted-foreground">{format(booking.date, "HH:mm")}</p>
+              <p className="text-display font-bold">{format(booking.date, "dd")}</p>
+              <p className="text-body text-muted-foreground">{format(booking.date, "HH:mm")}</p>
             </div>
           </CardContent>
         </Card>
       </SheetTrigger>
 
       <SheetContent className="px-0">
-        <SheetHeader className="px-5 text-left pb-6 border-b border-solid border-secondary">
+        <SheetHeader className="px-page text-left pb-6 border-b border-solid border-secondary">
           <SheetTitle>Detalhes do Agendamento</SheetTitle>
         </SheetHeader>
 
-        <div className="px-5 mt-6 flex flex-col gap-4">
+        <div className="px-page mt-6 flex flex-col gap-4">
           {/* Cliente */}
           <Card>
             <CardContent className="p-3 flex items-center gap-3">
@@ -129,8 +129,8 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-bold text-sm">{customerName}</p>
-                <p className="text-xs text-muted-foreground">{booking.user?.email ?? ""}</p>
+                <p className="font-bold text-body">{customerName}</p>
+                <p className="text-caption text-muted-foreground">{booking.user?.email ?? ""}</p>
               </div>
             </CardContent>
           </Card>
@@ -146,26 +146,26 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
               </div>
 
               <div className="flex justify-between">
-                <span className="text-muted-foreground text-sm">Data</span>
-                <span className="text-sm">
+                <span className="text-muted-foreground text-body">Data</span>
+                <span className="text-body">
                   {format(booking.date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </span>
               </div>
 
               <div className="flex justify-between">
-                <span className="text-muted-foreground text-sm">Horário</span>
-                <span className="text-sm font-medium">{format(booking.date, "HH:mm")}</span>
+                <span className="text-muted-foreground text-body">Horário</span>
+                <span className="text-body font-medium">{format(booking.date, "HH:mm")}</span>
               </div>
 
               <div className="flex justify-between">
-                <span className="text-muted-foreground text-sm">Barbearia</span>
-                <span className="text-sm">{booking.barbershop.name}</span>
+                <span className="text-muted-foreground text-body">Barbearia</span>
+                <span className="text-body">{booking.barbershop.name}</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <SheetFooter className="px-5 mt-6 flex-row gap-3">
+        <SheetFooter className="px-page mt-6 flex-row gap-3">
           <SheetClose asChild>
             <Button className="w-full" variant="secondary">
               Voltar

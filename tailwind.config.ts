@@ -19,9 +19,29 @@ const config = {
     },
     extend: {
       fontFamily: {
+        sans: ["var(--font-space-grotesk)", "system-ui", "sans-serif"],
         brand: ["var(--font-permanent-marker)", "cursive"],
       },
+      fontSize: {
+        caption: ["0.75rem", { lineHeight: "1rem" }], // 12px
+        label: ["0.8125rem", { lineHeight: "1.125rem", letterSpacing: "0.06em" }], // 13px caixa alta
+        body: ["0.9375rem", { lineHeight: "1.4rem" }], // 15px
+        title: ["1.125rem", { lineHeight: "1.5rem" }], // 18px
+        display: ["1.625rem", { lineHeight: "2rem", letterSpacing: "-0.02em" }], // 26px
+      },
+      spacing: {
+        tap: "2.75rem", // 44px: alvo de toque mínimo
+        page: "1.25rem", // 20px: margem lateral da página (px-page)
+      },
+      boxShadow: {
+        glow: "var(--shadow-glow)",
+        selected: "var(--shadow-selected)",
+      },
+      transitionTimingFunction: { out: "var(--ease-out)" },
       colors: {
+        surface2: "hsl(var(--surface-2))",
+        disabled: "hsl(var(--disabled))",
+        warning: "hsl(var(--warning))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

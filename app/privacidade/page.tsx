@@ -22,8 +22,8 @@ const WhatsAppLink = () => (
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="flex flex-col gap-2">
-    <h2 className="text-lg font-bold">{title}</h2>
-    <div className="flex flex-col gap-2 text-sm text-gray-300 leading-relaxed">{children}</div>
+    <h2 className="text-title font-bold">{title}</h2>
+    <div className="flex flex-col gap-2 text-body text-gray-300 leading-relaxed">{children}</div>
   </section>
 );
 
@@ -32,13 +32,13 @@ const PrivacyPage = () => {
     <>
       <Header />
 
-      <main className="px-5 py-6 flex flex-col gap-6 max-w-2xl">
+      <main className="px-page py-6 flex flex-col gap-6 max-w-2xl">
         <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-bold">Política de Privacidade</h1>
-          <p className="text-xs text-muted-foreground">Última atualização: {LAST_UPDATED}</p>
+          <h1 className="text-title font-bold">Política de Privacidade</h1>
+          <p className="text-caption text-muted-foreground">Última atualização: {LAST_UPDATED}</p>
         </div>
 
-        <p className="text-sm text-gray-300 leading-relaxed">
+        <p className="text-body text-gray-300 leading-relaxed">
           Esta política explica, em linguagem simples, quais dados o app de agendamento da barbearia Cris du Corte
           usa, para quê e como você pode pedir que eles sejam apagados, conforme a Lei Geral de Proteção de Dados
           (LGPD — Lei nº 13.709/2018).

@@ -34,7 +34,7 @@ Pendências: logo em PNG sem fundo; revisão jurídica da Política de Privacida
 
 ## 2. Design tokens (MEL-002, MEL-005, MEL-006)
 
-Os tokens substituem as variáveis atuais de `app/globals.css`, mantendo os nomes do shadcn para não quebrar componentes. Todo texto passa em contraste 4,5:1 sobre `--background` e `--card`.
+Os tokens substituem as variáveis atuais de `app/globals.css`, mantendo os nomes do shadcn para não quebrar componentes. HSL com uma casa decimal: com números inteiros sete cores arredondavam para outro HEX (corrigido no Prompt 10). Todo texto passa em contraste 4,5:1 sobre `--background` e `--card`.
 
 | Token | HEX | Uso |
 | --- | --- | --- |
@@ -56,17 +56,17 @@ Os tokens substituem as variáveis atuais de `app/globals.css`, mantendo os nome
 ```css
 @layer base {
   :root {
-    --background: 228 10% 9%;      /* #15161A */
-    --card: 225 11% 12%;           /* #1A1C21 */
+    --background: 228 10.6% 9.2%;  /* #15161A */
+    --card: 222.9 11.9% 11.6%;     /* #1A1C21 */
     --surface-2: 233 10% 15%;      /* #22232A */
-    --popover: 225 11% 12%;
+    --popover: 222.9 11.9% 11.6%;
     --foreground: 240 5% 96%;      /* #F4F4F5 */
     --card-foreground: 240 5% 96%;
     --popover-foreground: 240 5% 96%;
-    --primary: 252 89% 64%;        /* #7354F5 */
+    --primary: 251.6 89% 64.5%;    /* #7354F5 */
     --primary-foreground: 0 0% 100%;
-    --accent: 252 100% 69%;        /* #8162FF */
-    --accent-soft: 253 100% 83%;   /* #B7A6FF */
+    --accent: 251.8 100% 69.2%;    /* #8162FF */
+    --accent-soft: 251.5 100% 82.5%; /* #B7A6FF */
     --accent-foreground: 240 5% 96%;
     --secondary: 233 10% 15%;
     --secondary-foreground: 240 5% 96%;
@@ -75,9 +75,9 @@ Os tokens substituem as variáveis atuais de `app/globals.css`, mantendo os nome
     --disabled: 240 4% 46%;        /* #71717A */
     --border: 230 10% 20%;         /* #2E3038 */
     --input: 230 10% 20%;
-    --ring: 252 100% 69%;
-    --warning: 43 96% 56%;         /* #FBBF24 */
-    --destructive: 0 84% 60%;      /* #EF4444 */
+    --ring: 251.8 100% 69.2%;
+    --warning: 43.3 96.4% 56.3%;   /* #FBBF24 */
+    --destructive: 0 84.2% 60.2%;  /* #EF4444 */
     --destructive-foreground: 0 0% 100%;
 
     --radius: 0.75rem;             /* 12px */

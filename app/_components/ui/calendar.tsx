@@ -25,7 +25,7 @@ function Calendar({
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center relative items-center min-h-11",
-        caption_label: "text-sm font-medium",
+        caption_label: "text-body font-medium",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -38,7 +38,7 @@ function Calendar({
         head_cell:
           "text-muted-foreground rounded-md min-w-11 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
-        cell: "h-11 min-w-11 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+        cell: "h-11 min-w-11 text-center text-body p-0 relative focus-within:relative focus-within:z-20",
         day: cn(
           buttonVariants({ variant: "ghost" }),
           "h-11 min-w-11 p-0 font-normal aria-selected:opacity-100"

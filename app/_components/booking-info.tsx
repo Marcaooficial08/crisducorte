@@ -19,7 +19,7 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
       <CardContent className="p-3 gap-3 flex flex-col">
         <div className="flex justify-between">
           <h2 className="font-bold">{booking.service.name}</h2>
-          <h3 className="font-bold text-sm">
+          <h3 className="font-bold text-body">
             {Intl.NumberFormat("pt-BR", {
               style: "currency",
               currency: "BRL",
@@ -30,8 +30,8 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
         {booking.date && (
           <>
             <div className="flex justify-between">
-              <h3 className="text-muted-foreground text-sm">Data</h3>
-              <h4 className="text-sm">
+              <h3 className="text-muted-foreground text-body">Data</h3>
+              <h4 className="text-body">
                 {format(booking.date, "dd 'de' MMMM", {
                   locale: ptBR,
                 })}
@@ -39,15 +39,15 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
             </div>
 
             <div className="flex justify-between">
-              <h3 className="text-muted-foreground text-sm">Horário</h3>
-              <h4 className="text-sm">{format(booking.date, "HH:mm")}</h4>
+              <h3 className="text-muted-foreground text-body">Horário</h3>
+              <h4 className="text-body">{format(booking.date, "HH:mm")}</h4>
             </div>
           </>
         )}
 
         <div className="flex justify-between">
-          <h3 className="text-muted-foreground text-sm">Cliente</h3>
-          <h4 className="text-sm">{booking.user ? booking.user.name : DELETED_ACCOUNT_LABEL}</h4>
+          <h3 className="text-muted-foreground text-body">Cliente</h3>
+          <h4 className="text-body">{booking.user ? booking.user.name : DELETED_ACCOUNT_LABEL}</h4>
         </div>
       </CardContent>
     </Card>
