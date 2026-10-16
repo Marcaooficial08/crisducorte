@@ -7,8 +7,8 @@ import { Card, CardContent } from "@/app/_components/ui/card";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/app/_components/ui/sheet";
 import { Barbershop, Booking, Service } from "@prisma/client";
 import { ptBR } from "date-fns/locale";
-import { generateDayTimeList } from "../_helpers/hours";
 import { format, setHours, setMinutes } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { saveBooking } from "../_actions/save-booking";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,14 +18,17 @@ import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { track } from "@/app/_lib/track";
+import { AGENDA_CLOSED_MESSAGE, SLOT_UNAVAILABLE_MESSAGE, ServiceDay, TIME_GRID, TIME_ZONE } from "@/app/_lib/schedule";
 
 interface ServiceItemProps {
   barbershop: Barbershop;
   service: Service;
   isAuthenticated: boolean;
+  // Agenda nova (flag AGENDA_V2): dias liberados calculados no servidor. null = agenda antiga.
+  serviceDays: ServiceDay[] | null;
 }
 
-const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps) => {
+const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: ServiceItemProps) => {
   const router = useRouter();
   const { data } = useSession();
   const [date, setDate] = useState<Date | undefined>(undefined);
@@ -33,6 +36,10 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
   const [submitIsLoading, setSubmitIsLoading] = useState(false);
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const [dayBookings, setDayBookings] = useState<Booking[]>([]);
+  const [bookingsVersion, setBookingsVersion] = useState(0);
+
+  // Dia selecionado no calendário ("yyyy-MM-dd").
+  const selectedDay = date ? format(date, "yyyy-MM-dd") : undefined;
 
   useEffect(() => {
     if (!date) {
@@ -43,7 +50,15 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       setDayBookings(_dayBookings);
     };
     refreshAvailableHours();
-  }, [date, barbershop.id]);
+  }, [date, barbershop.id, bookingsVersion]);
+
+  // Depois de recarregar a grade, o dia selecionado pode ter saído da lista.
+  useEffect(() => {
+    if (serviceDays && selectedDay && !serviceDays.some((day) => day.date === selectedDay)) {
+      setDate(undefined);
+      setHour(undefined);
+    }
+  }, [serviceDays, selectedDay]);
 
   const handleDateClick = (date: Date | undefined) => {
     setDate(date);
@@ -69,7 +84,9 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       if (!hour || !date || !data?.user) {
         return;
       }
-      const newDate = setMinutes(setHours(date, Number(hour.split(":")[0])), Number(hour.split(":")[1]));
+      const newDate = serviceDays
+        ? fromZonedTime(`${format(date, "yyyy-MM-dd")}T${hour}:00`, TIME_ZONE)
+        : setMinutes(setHours(date, Number(hour.split(":")[0])), Number(hour.split(":")[1]));
 
       const result = await saveBooking({
         serviceId: service.id,
@@ -80,6 +97,12 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       if (!result.success) {
         track("booking_failed", { service: service.name, reason: "rejected" });
         toast(result.error ?? "Erro ao criar reserva.", { description: "Escolha outro horário." });
+        if (result.error === SLOT_UNAVAILABLE_MESSAGE) {
+          // Recarrega dias/horários do servidor e as reservas do dia: o horário vencido some.
+          setHour(undefined);
+          setBookingsVersion((version) => version + 1);
+          router.refresh();
+        }
         return;
       }
 
@@ -90,9 +113,11 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       setDate(undefined);
 
       toast("Reserva realizada com sucesso!", {
-        description: format(newDate, "'Para' dd 'de' MMMM 'às' HH':'mm'.'", {
-          locale: ptBR,
-        }),
+        description: serviceDays
+          ? formatInTimeZone(newDate, TIME_ZONE, "'Para' dd 'de' MMMM 'às' HH':'mm'.'", { locale: ptBR })
+          : format(newDate, "'Para' dd 'de' MMMM 'às' HH':'mm'.'", {
+              locale: ptBR,
+            }),
         action: {
           label: "Visualizar",
           onClick: () => router.push("/bookings"),
@@ -107,6 +132,11 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
   };
 
   const tileDisabled = (date: Date) => {
+    if (serviceDays) {
+      const day = format(date, "yyyy-MM-dd");
+      return !serviceDays.some((serviceDay) => serviceDay.date === day);
+    }
+
     const currentDate = new Date();
     const currentDay = currentDate.getDay();
     const currentWeekMonday = new Date(currentDate);
@@ -131,7 +161,16 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
       return [];
     }
 
-    return generateDayTimeList(date).filter((time) => {
+    if (serviceDays) {
+      const serviceDay = serviceDays.find((day) => day.date === selectedDay);
+      if (!serviceDay) {
+        return [];
+      }
+      const booked = new Set(dayBookings.map((booking) => formatInTimeZone(booking.date, TIME_ZONE, "HH:mm")));
+      return serviceDay.times.filter((time) => !booked.has(time));
+    }
+
+    return TIME_GRID.filter((time) => {
       const [timeHour, timeMinutes] = time.split(":").map(Number);
 
       return !dayBookings.find((booking) => {
@@ -141,7 +180,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
         return bookingHour === timeHour && bookingMinutes === timeMinutes;
       });
     });
-  }, [date, dayBookings]);
+  }, [date, dayBookings, serviceDays, selectedDay]);
 
   return (
     <Card>
@@ -173,8 +212,12 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
                     <SheetTitle>Fazer Reserva</SheetTitle>
                   </SheetHeader>
                   <div className="py-6 overflow-auto"> {/* Adicionado overflow-auto */}
+                    {serviceDays && serviceDays.length === 0 ? (
+                      <p className="px-5 text-center text-sm text-gray-400">{AGENDA_CLOSED_MESSAGE}</p>
+                    ) : (
                     <Calendar
                       mode="single"
+                      defaultMonth={serviceDays?.[0] ? new Date(`${serviceDays[0].date}T00:00:00`) : undefined}
                       selected={date}
                       onSelect={handleDateClick}
                       locale={ptBR}
@@ -202,6 +245,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated }: ServiceItemProps)
                         },
                       }}
                     />
+                    )}
                   </div>
                   {date && (
                     <div className="flex gap-3 overflow-auto py-6 px-5 border-t border-solid border-secondary [&::-webkit-scrollbar]:hidden">

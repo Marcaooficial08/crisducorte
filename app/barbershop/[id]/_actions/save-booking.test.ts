@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getServerSession: vi.fn(),
@@ -18,6 +18,7 @@ vi.mock("@/app/_lib/prisma", () => ({
 
 import { saveBooking } from "./save-booking";
 import { RATE_LIMIT_MESSAGE, resetRateLimit } from "@/app/_lib/rate-limit";
+import { SLOT_UNAVAILABLE_MESSAGE } from "@/app/_lib/schedule";
 
 const params = {
   barbershopId: "shop-1",
@@ -25,8 +26,8 @@ const params = {
   date: "2026-10-16T12:00:00.000Z",
 };
 
-const sessionOf = (id: string) => ({
-  user: { id, name: "Teste", email: "teste@example.com", isAdmin: false },
+const sessionOf = (id: string, isAdmin = false) => ({
+  user: { id, name: "Teste", email: "teste@example.com", isAdmin },
   expires: "2999-01-01T00:00:00.000Z",
 });
 
@@ -79,5 +80,48 @@ describe("saveBooking", () => {
 
     expect(result).toEqual({ success: false, error: RATE_LIMIT_MESSAGE });
     expect(mocks.create).toHaveBeenCalledTimes(10);
+  });
+
+  describe("flag AGENDA_V2", () => {
+    // Quarta 14/10/2026 12:00 em São Paulo: liberados sexta 16 e sábado 17.
+    const outOfRule = { ...params, date: "2026-10-24T12:00:00.000Z" }; // sábado seguinte, 09:00 SP
+    const valid = { ...params, date: "2026-10-16T12:00:00.000Z" }; // sexta 16, 09:00 SP
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-14T15:00:00.000Z"));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+    });
+
+    it("off: aceita como hoje, mesmo fora da regra nova", async () => {
+      vi.stubEnv("AGENDA_V2", "off");
+      mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
+
+      expect(await saveBooking(outOfRule)).toEqual({ success: true });
+    });
+
+    it("admin: valida para o admin e não para o cliente comum", async () => {
+      vi.stubEnv("AGENDA_V2", "admin");
+
+      mocks.getServerSession.mockResolvedValueOnce(sessionOf("admin-1", true));
+      expect(await saveBooking(outOfRule)).toEqual({ success: false, error: SLOT_UNAVAILABLE_MESSAGE });
+
+      mocks.getServerSession.mockResolvedValueOnce(sessionOf("user-1"));
+      expect(await saveBooking(outOfRule)).toEqual({ success: true });
+      expect(mocks.create).toHaveBeenCalledTimes(1);
+    });
+
+    it("all: recusa fora da regra e aceita horário liberado", async () => {
+      vi.stubEnv("AGENDA_V2", "all");
+      mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
+
+      expect(await saveBooking(outOfRule)).toEqual({ success: false, error: SLOT_UNAVAILABLE_MESSAGE });
+      expect(mocks.create).not.toHaveBeenCalled();
+      expect(await saveBooking(valid)).toEqual({ success: true });
+    });
   });
 });

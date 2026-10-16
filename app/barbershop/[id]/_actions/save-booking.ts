@@ -6,6 +6,8 @@ import { db } from "@/app/_lib/prisma";
 import { authOptions } from "@/app/_lib/auth";
 import { AuthError, assertUser } from "@/app/_lib/auth-guards";
 import { RATE_LIMIT_MESSAGE, checkRateLimit } from "@/app/_lib/rate-limit";
+import { isAgendaV2Enabled } from "@/app/_lib/flags";
+import { SLOT_UNAVAILABLE_MESSAGE, isBookableSlot } from "@/app/_lib/schedule";
 import { revalidatePath } from "next/cache";
 
 interface SaveBookingParams {
@@ -19,10 +21,16 @@ export const saveBooking = async (params: SaveBookingParams): Promise<{ success:
 
   try {
     // userId sempre da sessão, nunca do navegador.
-    const user = assertUser(await getServerSession(authOptions));
+    const session = await getServerSession(authOptions);
+    const user = assertUser(session);
 
     if (!checkRateLimit(`save-booking:${user.id}`)) {
       return { success: false, error: RATE_LIMIT_MESSAGE };
+    }
+
+    // Agenda nova: só dias liberados, horários da grade e ainda por vir.
+    if (isAgendaV2Enabled(session) && !isBookableSlot(bookingDate, new Date())) {
+      return { success: false, error: SLOT_UNAVAILABLE_MESSAGE };
     }
 
     await db.$transaction(async (tx) => {

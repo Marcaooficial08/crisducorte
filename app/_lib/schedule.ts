@@ -34,7 +34,7 @@ const addDays = (isoDate: string, days: number) => {
  * a agenda abre na segunda-feira só para a sexta e o sábado daquela semana.
  * Seg–qui: sexta e sábado. Sexta: sexta (horários futuros) e sábado. Sábado: só o sábado
  * (horários futuros). Domingo: nenhum dia. Dia sem horário futuro sai da lista.
- * Ainda não usada na tela (Prompt 6, atrás de feature flag).
+ * Usada na tela e no saveBooking quando a flag AGENDA_V2 está ligada.
  */
 export const getNextServiceDays = (now: Date): ServiceDay[] => {
   const today = formatInTimeZone(now, TIME_ZONE, "yyyy-MM-dd");
@@ -55,4 +55,16 @@ export const getNextServiceDays = (now: Date): ServiceDay[] => {
       times: TIME_GRID.filter((time) => date > today || time > currentTime),
     }))
     .filter((day) => day.times.length > 0);
+};
+
+export const SLOT_UNAVAILABLE_MESSAGE = "Esse horário não está mais disponível.";
+
+// O horário pedido é um dos liberados agora? (dia liberado, horário da grade, ainda por vir)
+export const isBookableSlot = (slot: Date, now: Date): boolean => {
+  if (Number.isNaN(slot.getTime()) || slot.getUTCSeconds() !== 0 || slot.getUTCMilliseconds() !== 0) {
+    return false;
+  }
+  const date = formatInTimeZone(slot, TIME_ZONE, "yyyy-MM-dd");
+  const time = formatInTimeZone(slot, TIME_ZONE, "HH:mm");
+  return getNextServiceDays(now).some((day) => day.date === date && day.times.includes(time));
 };
