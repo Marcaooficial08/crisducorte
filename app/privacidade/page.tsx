@@ -1,11 +1,5 @@
 /*
- * ATENÇÃO — MODELO, NÃO PUBLICAR SEM REVISAR.
- * 1. Revisar com advogado antes de publicar.
- * 2. Preencher os campos entre colchetes:
- *    - [NOME DO CRIS OU DA EMPRESA, e CNPJ se houver] — responsável pelos dados
- *    - [E-MAIL OU WHATSAPP] — contato para pedidos de privacidade
- *    - [CIDADE/UF] — complemento do endereço
- *    - [DATA DA ÚLTIMA ATUALIZAÇÃO]
+ * ATENÇÃO: este texto deve passar por revisão jurídica (advogado) antes de ser divulgado.
  */
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -15,9 +9,16 @@ export const metadata: Metadata = {
   title: "Política de Privacidade",
 };
 
-const CONTROLLER = "[NOME DO CRIS OU DA EMPRESA, e CNPJ se houver]";
-const CONTACT = "[E-MAIL OU WHATSAPP]";
-const ADDRESS = "Ns de Fátima, 3855 — [CIDADE/UF]";
+const CONTROLLER = "Cris du Corte";
+const WHATSAPP_LABEL = "WhatsApp (31) 97357-6347";
+const WHATSAPP_URL = "https://wa.me/5531973576347";
+const LAST_UPDATED = "16/10/2026";
+
+const WhatsAppLink = () => (
+  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline text-foreground">
+    {WHATSAPP_LABEL}
+  </a>
+);
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="flex flex-col gap-2">
@@ -34,7 +35,7 @@ const PrivacyPage = () => {
       <main className="px-5 py-6 flex flex-col gap-6 max-w-2xl">
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-bold">Política de Privacidade</h1>
-          <p className="text-xs text-gray-400">Última atualização: [DATA DA ÚLTIMA ATUALIZAÇÃO]</p>
+          <p className="text-xs text-gray-400">Última atualização: {LAST_UPDATED}</p>
         </div>
 
         <p className="text-sm text-gray-300 leading-relaxed">
@@ -45,8 +46,9 @@ const PrivacyPage = () => {
 
         <Section title="1. Quem cuida dos seus dados">
           <p>Responsável (controlador): {CONTROLLER}</p>
-          <p>Endereço: {ADDRESS}</p>
-          <p>Contato para assuntos de privacidade: {CONTACT}</p>
+          <p>
+            Contato sobre dados pessoais: <WhatsAppLink />
+          </p>
         </Section>
 
         <Section title="2. Quais dados usamos">
@@ -114,7 +116,9 @@ const PrivacyPage = () => {
             e depois em &quot;Excluir minha conta&quot;. Na hora, suas reservas futuras são canceladas e seu nome,
             e-mail e foto são apagados.
           </p>
-          <p>Se preferir, peça pelo contato {CONTACT}.</p>
+          <p>
+            Se preferir, peça pelo <WhatsAppLink />.
+          </p>
         </Section>
 
         <Section title="9. Mudanças nesta política">

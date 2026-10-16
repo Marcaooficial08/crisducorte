@@ -144,7 +144,7 @@
 ## Prompt 5 · LGPD básica (MEL-016)
 
 **Feito:**
-- `/privacidade`: **modelo** de Política de Privacidade em português simples (responsável, dados coletados, finalidade, base legal, compartilhamento, prazo de guarda, direitos e como excluir a conta). Aviso no topo do arquivo: revisar com advogado e preencher os campos entre colchetes.
+- `/privacidade`: Política de Privacidade em português simples (responsável, dados coletados, finalidade, base legal, compartilhamento, prazo de guarda, direitos e como excluir a conta). Responsável: Cris du Corte; contato: WhatsApp (31) 97357-6347 (`wa.me`); atualizada em 16/10/2026. Comentário no topo do arquivo: revisão jurídica antes de divulgar.
 - Login pelo menu: "Ao entrar, você concorda com a Política de Privacidade" com link.
 - Link "Privacidade" no rodapé e no menu; item "Perfil" no menu (logado).
 - `/perfil` (só logado): avatar, nome, e-mail e "Excluir minha conta" com AlertDialog.
@@ -156,14 +156,21 @@
 **Decisões:**
 - **A1 (dono, 2026-10-16):** reservas passadas ficam no histórico sem dono, em vez de apagadas — métricas do Cris preservadas, sem dado pessoal.
 - **B1 (dono, 2026-10-16):** sem feature flag (exceção à regra): é exigência legal e as flags só chegam no Prompt 14.
-- Dados da política ainda pendentes: responsável/CNPJ, contato, cidade/UF e data — ficam entre colchetes.
+- Política sem CPF/CNPJ, endereço e cidade/UF (decisão do dono): não aparecem no texto.
 - Aviso de consentimento ao reservar sem login (botão "Reservar" chama o Google direto) → Prompt 15.
 - Sem `signOut()` depois de excluir: a sessão já não existe e o NextAuth registraria `SIGNOUT_ERROR`; a action apaga o cookie e a tela recarrega a home.
 - Banco: só Neon (dev e "Testes"). Produção não foi tocada.
 
 **Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 44 ✅ · `npm run test:int` 8 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 7 ✅.
 
+**Teste de aceite (localhost, banco Neon) ✅:** conta comum exclui a própria conta; admin vê o bloqueio e não exclui.
+
+**Migração em produção (2026-10-16) ✅** — a Vercel não roda `prisma migrate deploy` no build, então foi feito à mão:
+- Backup `pg_dump` de produção feito antes, fora do Git.
+- `ALTER TABLE "Booking" ALTER COLUMN "userId" DROP NOT NULL;` aplicado pelo dono no SQL Editor do Supabase.
+- Conferido: `is_nullable = YES`; 2781 reservas intactas.
+- Registrada no histórico com `npx prisma migrate resolve --applied 20261016000000_booking_user_optional`; `migrate status` → "Database schema is up to date!".
+
 **Pendências:**
-- [ ] Preencher os colchetes da política e revisar com advogado antes de divulgar o link.
-- [ ] Aplicar a migração no Neon dev (`npx prisma migrate deploy`) para o teste manual.
-- [ ] Antes do merge: backup de produção e plano de aplicação da migração (a Vercel não roda `prisma migrate deploy` no build).
+- [ ] Revisão jurídica da política antes de divulgar o link.
+- [ ] Depois do merge: testar a exclusão no site real com uma conta de teste (nunca a do Cris).
