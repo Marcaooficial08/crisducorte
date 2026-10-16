@@ -26,7 +26,7 @@ const router = useRouter();
         router.push(`/barbershop/${barbershop.id}`);
     }
     return ( 
-        <Card className="min-w-full max-w-full rounded-2xl">
+        <Card className="glass glow-card min-w-full max-w-full rounded-2xl">
         <CardContent className="px-1 py-0 pt-1">
         <div className="w-full aspect-square relative rounded-2xl bg-[#15161A]">
 
