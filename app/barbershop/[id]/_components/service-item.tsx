@@ -187,7 +187,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
       <CardContent className="p-3 w-full">
         <div className="flex gap-4 items-center w-full">
           <div className="relative min-h-[110px] min-w-[110px] max-h-[110px] max-w-[110px]">
-            <Image className="rounded-lg" src={service.imageUrl} fill style={{ objectFit: "contain" }} alt={service.name} />
+            <Image className="rounded-lg" src={service.imageUrl} fill sizes="110px" style={{ objectFit: "contain" }} alt={service.name} />
           </div>
           <div className="flex flex-col w-full">
             <h2 className="font-bold">{service.name}</h2>

@@ -9,6 +9,7 @@ import { visibleBarbershopWhere } from "../_lib/barbershops";
 import BarbershopItem from "./_components/barbershop-item";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
+import { hairSalonJsonLd } from "../_lib/json-ld";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
@@ -44,6 +45,10 @@ export default async function Home() {
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(hairSalonJsonLd) }}
+      />
       <Header />
 
       <div className="px-5 pt-5">
@@ -79,12 +84,12 @@ export default async function Home() {
         <div className="flex px-5 gap-4 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {barbershops.length === 1 ? (
             <div className="w-full max-w-sm">
-              <BarbershopItem key={barbershops[0].id} barbershop={barbershops[0]} />
+              <BarbershopItem key={barbershops[0].id} barbershop={barbershops[0]} priority />
             </div>
           ) : (
-            barbershops.map((barbershop) => (
+            barbershops.map((barbershop, index) => (
               <div key={barbershop.id} className="min-w-[167px] max-w-[167px]">
-                <BarbershopItem key={barbershop.id} barbershop={barbershop} />
+                <BarbershopItem key={barbershop.id} barbershop={barbershop} sizes="167px" priority={index === 0} />
               </div>
             ))
           )}
@@ -98,7 +103,11 @@ export default async function Home() {
         <div className="flex px-5 gap-4 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {recommendedBarbershops.map((barbershop) => (
             <div key={barbershop.id} className={barbershops.length === 1 ? "w-full max-w-sm" : "min-w-[167px] max-w-[167px]"}>
-              <BarbershopItem key={barbershop.id} barbershop={barbershop} />
+              <BarbershopItem
+                key={barbershop.id}
+                barbershop={barbershop}
+                sizes={barbershops.length === 1 ? undefined : "167px"}
+              />
             </div>
           ))}
         </div>
