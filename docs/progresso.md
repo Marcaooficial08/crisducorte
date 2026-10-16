@@ -10,7 +10,8 @@
 | 5 · LGPD básica | ✅ Publicado em produção | 2026-10-16 | `fase1/lgpd` |
 | 6 · Dias e grade (AGENDA_V2) | ✅ Publicado em produção | 2026-10-16 | `fase1/dias-grade` |
 | 7 · Marca e textos | ✅ Publicado em produção | 2026-10-16 | `fase1/marca` (PR #7) |
-| 8 · Contraste e alvos de toque | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/contraste` |
+| 8 · Contraste e alvos de toque | ✅ Publicado em produção | 2026-10-16 | `fase1/contraste` (PR #8) |
+| 9 · SEO e imagens | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/seo-imagens` |
 
 ## Prompt 0 · Preparação
 
@@ -256,5 +257,44 @@
 
 **Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 60 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 10 ✅.
 
+**Produção (2026-10-16) ✅:** PR #8 mergeado na `main` (`9e452a5`) e publicado pela Vercel. Validado pelo dono no site real.
+
 **Pendências:**
 - [ ] Prompt 14: a seção "Agendamentos" da home (NextBookingCard) deve mostrar só reservas futuras. Hoje ela busca desde a segunda-feira da semana (`gte: startOfWeek`, `app/(home)/page.tsx`), então uma reserva de hoje já passada aparece como "Finalizado". Já acontecia na `main` antes deste prompt; não alterado aqui.
+
+## Prompt 9 · SEO e imagens
+
+**Feito:**
+- `sizes` pelo tamanho exibido: card da home `(min-width: 424px) 384px, calc(100vw - 40px)` (ou `167px` com várias barbearias, nova prop do `BarbershopItem`); topo da barbearia `(min-width: 384px) 384px, 100vw`; serviços (utfs.io) `110px` (antes sem `sizes` = 100vw); mapa do sheet da reserva `(min-width: 640px) 344px, calc(75vw - 40px)`. Primeiro card da home com `priority` (preload com `fetchPriority="high"`).
+- `app/layout.tsx`: `metadataBase` https://crisducorte.vercel.app, título `Cris du Corte` com modelo `%s · Cris du Corte`, descrição nova, `openGraph` (`pt_BR`, `website`) e `twitter` (`summary_large_image`). Constantes em `app/_lib/site.ts`.
+- `app/opengraph-image.png` e `app/twitter-image.png` (iguais, 1200×630, 141 KB): `logo-card.jpg` centralizado em 560px sobre #15161A, sem a ✦. PNG com paleta: o PNG cheio dava 455 KB, acima do limite de ~300 KB do WhatsApp. Gerado com sharp fora do projeto. Alt em `*.alt.txt`.
+- `app/robots.ts` (bloqueia `/adm`, `/perfil`, `/bookings`, `/api`) e `app/sitemap.ts` (home, `/privacidade` e `/barbershop/[id]` das barbearias visíveis, lidas do banco a cada pedido).
+- JSON-LD `HairSalon` na home (`app/_lib/json-ld.ts`): nome, url, imagem og, telefone, endereço e sex/sáb 09:00–20:30.
+- Teste: `e2e/seo.spec.ts` (tags og/twitter, imagem 1200×630 servida, modelo de título, JSON-LD, robots, sitemap).
+
+**Decisões:**
+- Título da aba `Cris du Corte`; título da prévia (og e twitter) `Cris du Corte — Agende seu horário`, como na spec §4.8 (decisão do dono).
+- Endereço e telefone fixos no JSON-LD; o endereço do banco não foi lido nem alterado.
+- Sitemap com `force-dynamic`: o build não consulta o banco.
+- `og:url` não definido no layout para não apontar todas as páginas para a home.
+- Sem feature flag: só metadados e tamanho de imagem, nada muda na tela.
+- `manifest.ts` e `.ics` (resto da §4.8) ficam para depois.
+- Agenda, marca, cores do Prompt 8 e banco não foram tocados.
+
+**Imagens da home (`next build` + `next start`, deslogado, bytes recebidos):**
+
+| Perfil | Total | Arquivo |
+|---|---|---|
+| Celular 390px DPR 3 | 49,2 KB | `logo-card.jpg` → webp w=1080 |
+| Desktop 1440px DPR 1 | 23,5 KB | `logo-card.jpg` → webp w=384 |
+
+Medido com o otimizador local do Next (sem `sharp` instalado); na Vercel os bytes podem variar um pouco.
+
+**JSON-LD:** validator.schema.org → HairSalon, PostalAddress e OpeningHoursSpecification reconhecidos, 0 erros e 0 avisos.
+
+**Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 60 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 15 ✅. Depois da correção do número do endereço (2255): lint ✅, build ✅, e2e 15 ✅. Numa execução intermediária, os 2 testes de reserva de `fluxos.spec.ts` falharam uma vez e passaram isolados e na suíte seguinte (instável, sem relação com este prompt).
+
+**Pendências:**
+- [ ] Depois do deploy: dono testa a prévia no WhatsApp (link novo ou com `?v=1`, por causa do cache).
+- [ ] Opcional: Google Rich Results Test na URL de produção.
+
