@@ -7,8 +7,9 @@
 | 2 · Admin pelo isAdmin | ✅ Publicado em produção | 2026-10-15 | `fase1/is-admin` (PR #2) |
 | 3 · Reservas seguras e leves | ✅ Publicado em produção | 2026-10-15 | `fase1/bookings-seguros` (PR #3) |
 | 4 · Testes automáticos | ✅ Publicado em produção | 2026-10-15 | `fase1/testes` (PR #4) |
-| 5 · LGPD básica | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/lgpd` |
-| 6 · Dias e grade (AGENDA_V2) | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/dias-grade` |
+| 5 · LGPD básica | ✅ Publicado em produção | 2026-10-16 | `fase1/lgpd` |
+| 6 · Dias e grade (AGENDA_V2) | ✅ Publicado em produção | 2026-10-16 | `fase1/dias-grade` |
+| 7 · Marca e textos | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase1/marca` |
 
 ## Prompt 0 · Preparação
 
@@ -201,3 +202,27 @@
 
 **Pendências:**
 - [ ] Vercel: criar `AGENDA_V2` (Production e Preview); começar com `admin`, depois `all`.
+
+## Prompt 7 · Marca e textos
+
+**Feito:**
+- Header: tesoura (lucide `Scissors`) em quadrado de 36px com borda `#8162FF` + "Cris du Corte" em Permanent Marker (`next/font`, `font-brand` no Tailwind); link com `aria-label="Cris du Corte — início"`.
+- Ícones `app/icon.png` (512) e `app/apple-icon.png` (180) recortados do brasão de `public/brand/logo.jpeg` (sem a marca ✦), fundo `#15161A`, gerados com sharp fora do projeto. `logo.jpeg` original intacto.
+- Removidos: `public/Logo.png` (imagem do template antigo), `app/favicon.ico`, `public/favicon.ico`, `public/ico16.png`, `public/icon.tsx` e o `<link rel="icon">` manual do layout. `public/icon.png` mantido.
+- Textos: "Olá, vamos agendar um corte?" / "Olá, [nome]!"; rodapé `© {ano atual} Cris du Corte`; "Agendamentos dos clientes" no `/adm` e no menu.
+- Sem avaliação inventada: saiu o selo "5,0" do card e "5,0 (1254 avaliações)" da página da barbearia.
+- Barbearia "Indisponivel" fora da home (`visibleBarbershopWhere` em `app/_lib/barbershops.ts`); continua no banco com as reservas e `/barbershop/[id]` dela abre.
+- Home com uma barbearia só: card de Recomendados/Populares limitado a `max-w-sm` (384px) no computador; no celular fica igual. Imagem segue com altura fixa e `object-cover` (sem esticar).
+- Card da home e topo de `/barbershop/[id]` usam `public/brand/logo-card.jpg` (recorte quadrado do logo oficial `logo.jpeg` no brasão, sem a ✦, com o fundo da foto; gerado com sharp; next/image, `object-contain`, quadrado até `max-w-sm`, fundo `#15161A`) no lugar do `imageUrl` do banco; o `imageUrl` não foi alterado.
+- `tmp/` no `.gitignore` (prints de referência locais).
+- Testes: `barbershops.test.ts`, `tests/integration/barbershops.int.test.ts`, `e2e/marca.spec.ts` (header, saudação, rodapé com o ano atual, sem "5,0").
+
+**Decisões:**
+- Rebrand sem feature flag (decisão do dono).
+- "Indisponivel" escondida pelo nome (sem coluna nova: banco não foi alterado).
+- Busca quebrada (`/barbershop?search=`) mantida; sai no Prompt 14.
+- Imagens de Barbershop/Service são todas URLs `utfs.io` (conferido em produção, só leitura, e no Neon dev): nada em `public/` era usado pelo banco.
+- `/privacidade` é estática: o ano do rodapé lá é o do build (atualiza no próximo deploy).
+- Agenda (`schedule.ts`, `AGENDA_V2`) e banco não foram tocados.
+
+**Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 60 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 8 ✅ · busca pelo nome do template antigo no repositório: nada.

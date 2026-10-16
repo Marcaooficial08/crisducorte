@@ -4,7 +4,7 @@ import SideMenu from "@/app/_components/side-menu";
 import { Button } from "@/app/_components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/app/_components/ui/sheet";
 import { Barbershop } from "@prisma/client";
-import { ChevronLeftIcon, MapPinIcon, MenuIcon, StarIcon } from "lucide-react";
+import { ChevronLeftIcon, MapPinIcon, MenuIcon } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Router } from "next/router";
@@ -25,7 +25,7 @@ const BarbershopInfo  = ({barbershop}: BarbershopInfoProps) => {
     return ( 
         <div>
 
-                <div className="h-[250px] w-full relative">
+                <div className="w-full relative bg-[#15161A]">
                      
 
 
@@ -50,13 +50,9 @@ const BarbershopInfo  = ({barbershop}: BarbershopInfoProps) => {
           </SheetContent>
         </Sheet>
                  
-                    <Image src={barbershop.imageUrl} fill alt={barbershop.name} style={{
-                        objectFit: "cover",
-
-                    }}
-                    className="opacity-75"
-                    
-                    />
+                    <div className="relative mx-auto aspect-square w-full max-w-sm">
+                      <Image src="/brand/logo-card.jpg" fill alt={barbershop.name} priority sizes="(min-width: 640px) 384px, 100vw" className="object-contain" />
+                    </div>
 
                   
 
@@ -68,10 +64,6 @@ const BarbershopInfo  = ({barbershop}: BarbershopInfoProps) => {
                  <div className="flex items-center gap-1 mt-2">
                     <MapPinIcon className="text-primary" size={18}/>
                  <p className="text-sm">{barbershop.address}</p>
-                 </div>
-                 <div className="flex items-center gap-1 mt-2">
-                    <StarIcon className="text-primary" size={18}/>
-                 <p className="text-sm">5,0 (1254 avaliações )</p>
                  </div>
               </div>
 

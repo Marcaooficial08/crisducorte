@@ -188,7 +188,7 @@ Componentes do shadcn mantidos sem mudança de API: Sheet, AlertDialog, Avatar, 
 
 Substitui busca, "Recomendados" e "Populares". Ordem de cima para baixo, referência: tela ✔ Escolhida.
 
-1. Header: tesoura + "Cris du Corte" (Permanent Marker) à esquerda, botão de menu à direita; `alt` correto, sem "FSW".
+1. Header: tesoura + "Cris du Corte" (Permanent Marker) à esquerda, botão de menu à direita; link com `aria-label` correto, sem o nome do template antigo.
 2. Título "Olá, vamos agendar um corte?" (logado: "Olá, [primeiro nome]!") + "Atendimento às sextas e sábados".
 3. ShopCard horizontal com o logo.
 4. "Escolha o dia": 2 DayChips (próxima sexta e próximo sábado). Abre selecionado o primeiro dia com horário livre.

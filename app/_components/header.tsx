@@ -1,11 +1,8 @@
 "use client";
-import Image from "next/image";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
-import { CalendarIcon, HomeIcon,  LogOutIcon, MenuIcon, UserIcon } from "lucide-react";
-import { signIn, signOut, useSession } from 'next-auth/react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
-import { Avatar, AvatarImage } from "./ui/avatar";
+import { MenuIcon, ScissorsIcon } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import SideMenu from "./side-menu";
 import Link from "next/link";
 
@@ -14,15 +11,18 @@ import Link from "next/link";
 
 
 const Header = () => {
- 
+
 
   return (
     <header>
     <Card>
       <CardContent className="p-5 justify-between items-center flex flex-row">
-       
-       <Link href="/">
-        <Image src="/Logo.png" alt="FSW BARBER" height={18} width={120} />
+
+       <Link href="/" aria-label="Cris du Corte — início" className="flex items-center gap-2 min-h-11">
+        <span className="flex h-9 w-9 items-center justify-center rounded-md border border-[#8162FF]">
+          <ScissorsIcon size={18} className="text-[#8162FF]" aria-hidden="true" />
+        </span>
+        <span className="font-brand text-lg leading-none">Cris du Corte</span>
         </Link>
         <Sheet>
           <SheetTrigger asChild>
@@ -32,7 +32,7 @@ const Header = () => {
           </SheetTrigger>
           <SheetContent className="p-0">
             <SideMenu/>
-            
+
           </SheetContent>
         </Sheet>
       </CardContent>
