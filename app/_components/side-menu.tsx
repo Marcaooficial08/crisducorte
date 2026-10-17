@@ -1,18 +1,38 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
-import { SheetHeader, SheetTitle } from "./ui/sheet";
+import { usePathname } from "next/navigation";
+import { SheetClose, SheetHeader, SheetTitle } from "./ui/sheet";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
-import { CalendarIcon, HomeIcon, LogInIcon, LogOutIcon, ShieldIcon, UserIcon } from "lucide-react";
+import { CalendarIcon, HomeIcon, LogInIcon, LogOutIcon, LucideIcon, ShieldCheckIcon, ShieldIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/app/_lib/utils";
+
+type MenuItem = { href: string; label: string; icon: LucideIcon };
+
+const isCurrent = (pathname: string, href: string) =>
+  href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
 const SideMenu = () => {
   const { data } = useSession();
+  const pathname = usePathname() ?? "";
 
   const handleLogoutClick = () => signOut();
 
   const handleLoginClick = () => signIn("google");
+
+  const items: MenuItem[] = [
+    { href: "/", label: "Início", icon: HomeIcon },
+    ...(data?.user
+      ? [
+          { href: "/bookings", label: "Meus agendamentos", icon: CalendarIcon },
+          { href: "/perfil", label: "Perfil", icon: UserIcon },
+        ]
+      : []),
+    ...(data?.user?.isAdmin ? [{ href: "/adm", label: "Admin", icon: ShieldCheckIcon }] : []),
+    { href: "/privacidade", label: "Privacidade", icon: ShieldIcon },
+  ];
 
   return (
     <>
@@ -21,84 +41,63 @@ const SideMenu = () => {
       </SheetHeader>
 
       {data?.user ? (
-        <div className="flex justify-between px-page py-6 items-center">
-          <div className="flex items-center gap-3">
-            <Avatar>
-              <AvatarImage src={data.user?.image ?? ""} alt={data.user.name ?? ""} />
-            </Avatar>
+        <div className="flex px-page py-6 items-center gap-3">
+          <Avatar>
+            <AvatarImage src={data.user?.image ?? ""} alt={data.user.name ?? ""} />
+          </Avatar>
 
-            <h2 className="font-bold">{data.user.name}</h2>
-          </div>
-
-          <Button variant="secondary" size="icon" aria-label="Sair" onClick={handleLogoutClick}>
-            <LogOutIcon aria-hidden="true" />
-          </Button>
+          <h2 className="font-bold">{data.user.name}</h2>
         </div>
       ) : (
-        <div className="flex flex-col px-page py-6 gap-3">
-          <div className="flex items-center gap-2">
-            <UserIcon size={32} />
-            <h2 className="font-bold">Olá, faça seu login!</h2>
-          </div>
-          <Button variant="secondary" className="w-full justify-start" onClick={handleLoginClick}>
-            <LogInIcon className="mr-2" size={18} />
-            Fazer Login
-          </Button>
-          <p className="text-caption text-muted-foreground">
-            Ao entrar, você concorda com a{" "}
-            <Link href="/privacidade" className="underline">
-              Política de Privacidade
-            </Link>
-            .
-          </p>
+        <div className="flex items-center gap-2 px-page py-6">
+          <UserIcon size={32} aria-hidden="true" />
+          <h2 className="font-bold">Olá, faça seu login!</h2>
         </div>
       )}
 
-      <div className="flex flex-col gap-3 px-page">
-        <Button variant="outline" className="justify-start" asChild>
-          <Link href="/">
-            <HomeIcon size={18} className="mr-2" />
-            Início
-          </Link>
-        </Button>
+      <nav aria-label="Menu principal" className="flex flex-col gap-3 px-page">
+        {items.map(({ href, label, icon: Icon }) => {
+          const current = isCurrent(pathname, href);
+          return (
+            <Button
+              key={href}
+              variant="outline"
+              className={cn("justify-start", current && "border-accent text-accent-soft")}
+              asChild
+            >
+              <SheetClose asChild>
+                <Link href={href} aria-current={current ? "page" : undefined}>
+                  <Icon size={18} className="mr-2" aria-hidden="true" />
+                  {label}
+                </Link>
+              </SheetClose>
+            </Button>
+          );
+        })}
 
-        {data?.user && !data.user.isAdmin && (
-          <Button variant="outline" className="justify-start" asChild>
-            <Link href="/bookings">
-              <CalendarIcon size={18} className="mr-2" />
-              Agendamentos
-            </Link>
+        {data?.user ? (
+          <Button type="button" variant="secondary" className="justify-start" onClick={handleLogoutClick}>
+            <LogOutIcon size={18} className="mr-2" aria-hidden="true" />
+            Sair
           </Button>
+        ) : (
+          <>
+            <Button type="button" variant="secondary" className="justify-start" onClick={handleLoginClick}>
+              <LogInIcon size={18} className="mr-2" aria-hidden="true" />
+              Fazer login
+            </Button>
+            <p className="text-caption text-muted-foreground">
+              Ao entrar, você concorda com a{" "}
+              <Link href="/privacidade" className="underline">
+                Política de Privacidade
+              </Link>
+              .
+            </p>
+          </>
         )}
-
-        {data?.user?.isAdmin && (
-          <Button variant="outline" className="justify-start" asChild>
-            <Link href="/adm">
-              <CalendarIcon size={18} className="mr-2" />
-              Agendamentos dos clientes
-            </Link>
-          </Button>
-        )}
-
-        {data?.user && (
-          <Button variant="outline" className="justify-start" asChild>
-            <Link href="/perfil">
-              <UserIcon size={18} className="mr-2" />
-              Perfil
-            </Link>
-          </Button>
-        )}
-
-        <Button variant="outline" className="justify-start" asChild>
-          <Link href="/privacidade">
-            <ShieldIcon size={18} className="mr-2" />
-            Privacidade
-          </Link>
-        </Button>
-      </div>
+      </nav>
     </>
   );
 };
 
 export default SideMenu;
-

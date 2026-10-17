@@ -9,6 +9,10 @@ export const E2E = {
   clienteC: { id: "test-cliente-c", name: "Cliente C", email: "cliente-c@teste.local", sessionToken: "e2e-session-cliente-c" },
   // Reserva passada do cliente C: o admin sempre tem o que ver em /adm.
   pastBookingDate: new Date("2026-01-02T15:00:00.000Z"),
+  // Sessão extra do cliente C, criada pelo teste do "Sair" (o signOut apaga a sessão no banco).
+  logoutSessionToken: "e2e-session-cliente-c-sair",
+  // Reserva passada do próprio admin, criada só no teste do menu (o estados.spec usa o admin sem reservas).
+  adminBookingDate: new Date("2026-01-03T15:00:00.000Z"),
 } as const;
 
 export const testDb = () => {
