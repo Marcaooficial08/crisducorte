@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { fromZonedTime } from "date-fns-tz";
@@ -16,6 +16,13 @@ import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
 import { BOOKING_ERROR_MESSAGES, clientBookingErrorCode, shouldReloadSlots } from "@/app/_lib/booking-errors";
 import { DaySlots, TIME_ZONE } from "@/app/_lib/schedule";
 import { track } from "@/app/_lib/track";
+import {
+  RESUME_CALLBACK_URL,
+  RESUME_PARAM,
+  RESUME_UNAVAILABLE_MESSAGE,
+  saveBookingResume,
+  takeBookingResume,
+} from "@/app/_lib/booking-resume";
 import { cn } from "@/app/_lib/utils";
 
 export interface PickerService {
@@ -48,6 +55,7 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated }: BookingP
   const [serviceId, setServiceId] = useState(services[0]?.id);
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const resumeChecked = useRef(false);
 
   const day = days.find((d) => d.date === selectedDate);
   const service = services.find((s) => s.id === serviceId);
@@ -64,6 +72,42 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated }: BookingP
       setTime(undefined);
     }
   }, [days, selectedDate, time]);
+
+  // Volta do login (?resume=1, MEL-009): retoma a seleção salva antes do signIn, se o horário ainda estiver
+  // livre na grade do servidor (que já segue a regra da agenda). Roda uma vez, só no navegador.
+  useEffect(() => {
+    if (resumeChecked.current) {
+      return;
+    }
+    resumeChecked.current = true;
+    if (new URLSearchParams(window.location.search).get(RESUME_PARAM) !== "1") {
+      return;
+    }
+    const resume = takeBookingResume();
+    router.replace("/", { scroll: false });
+    if (!resume) {
+      return;
+    }
+
+    const resumedDay = days.find((d) => d.date === resume.date);
+    const stillFree = resumedDay?.slots.some((slot) => slot.time === resume.time && !slot.booked) ?? false;
+    if (!resumedDay || !stillFree) {
+      if (resumedDay) {
+        setSelectedDate(resumedDay.date);
+      }
+      toast(RESUME_UNAVAILABLE_MESSAGE);
+      return;
+    }
+
+    const resumedService = services.some((s) => s.id === resume.serviceId) ? resume.serviceId : services[0]?.id;
+    setSelectedDate(resumedDay.date);
+    setTime(resume.time);
+    setServiceId(resumedService);
+    // Com mais de 1 serviço abre o Sheet com o serviço marcado; com 1, o CTA fica pronto. Nunca confirma sozinho.
+    if (isAuthenticated && services.length > 1) {
+      setSheetIsOpen(true);
+    }
+  }, [days, services, isAuthenticated, router]);
 
   const selectDay = (date: string) => {
     setSelectedDate(date);
@@ -115,10 +159,13 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated }: BookingP
   };
 
   const handleCTAClick = () => {
-    // Sessão vinda do servidor. Voltar com a seleção depois do login (MEL-009) fica para o Prompt 15.
+    // Sessão vinda do servidor. Guarda a seleção para retomar depois do login (MEL-009).
     if (!isAuthenticated) {
+      if (day && time && serviceId) {
+        saveBookingResume({ serviceId, date: day.date, time });
+      }
       track("login_from_booking", { service: service?.name ?? "" });
-      signIn("google");
+      signIn("google", { callbackUrl: RESUME_CALLBACK_URL });
       return;
     }
     track("booking_started", { service: service?.name ?? "" });

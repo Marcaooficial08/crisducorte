@@ -3,7 +3,7 @@ import { FIXTURES } from "../tests/setup/fixtures";
 import { E2E, testDb } from "./db";
 import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs, waitForServerActions } from "./helpers";
 
-// e2e roda com NEW_HOME=admin e o relógio do servidor (SCHEDULE_NOW) numa quarta futura.
+// e2e roda com NEW_HOME=all e o relógio do servidor (SCHEDULE_NOW) numa quarta futura.
 const { barbershop, service, clienteA, admin } = FIXTURES;
 const { clienteC } = E2E;
 
@@ -27,14 +27,16 @@ const cleanUp = async () => {
 
 test.afterAll(cleanUp);
 
-test("cliente comum continua vendo a home antiga; /classic leva para /", async ({ page, context }) => {
+test("cliente comum vê a home nova e a antiga em /classic", async ({ page, context }) => {
   await loginAs(context, clienteA.sessionToken);
   await gotoLoggedIn(page, "/", clienteA.id);
-  await expect(page.getByRole("heading", { name: "Recomendados" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Escolha o dia" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: "Olá, Cliente!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Escolha o dia" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recomendados" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Reservas da semana (admin)" })).toHaveCount(0);
 
   await page.goto("/classic");
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/classic$/);
   await expect(page.getByRole("heading", { name: "Recomendados" })).toBeVisible();
 });
 
