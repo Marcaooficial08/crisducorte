@@ -59,7 +59,7 @@ describe("reservas no banco real", () => {
 
     expect(results.filter((r) => r.success)).toHaveLength(1);
     expect(results.filter((r) => !r.success)).toEqual([
-      { success: false, error: "Horário já reservado. Escolha outro." },
+      { success: false, code: "SLOT_TAKEN", error: "Esse horário acabou de ser reservado por outra pessoa. Escolha outro." },
     ]);
     expect(await db.booking.count()).toBe(1);
   });
@@ -68,7 +68,7 @@ describe("reservas no banco real", () => {
     await as(clienteA, () => saveBooking(params));
     const result = await as(clienteB, () => saveBooking(params));
 
-    expect(result).toEqual({ success: false, error: "Horário já reservado. Escolha outro." });
+    expect(result).toEqual({ success: false, code: "SLOT_TAKEN", error: "Esse horário acabou de ser reservado por outra pessoa. Escolha outro." });
   });
 
   it("cancelar a própria reserva funciona", async () => {

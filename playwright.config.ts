@@ -39,6 +39,8 @@ export default defineConfig({
       NEXTAUTH_SECRET: "e2e-secret-nao-usar-em-producao",
       GOOGLE_CLIENT_ID: "e2e-google-client-id",
       GOOGLE_CLIENT_SECRET: "e2e-google-client-secret",
+      // O `next start` também lê o .env local; fixa a flag para o e2e dar igual local e no CI.
+      AGENDA_V2: "off",
     },
   },
 });

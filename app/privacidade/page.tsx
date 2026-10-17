@@ -32,7 +32,7 @@ const PrivacyPage = () => {
     <>
       <Header />
 
-      <main className="px-page py-6 flex flex-col gap-6 max-w-2xl">
+      <div className="px-page py-6 flex flex-col gap-6 max-w-2xl">
         <div className="flex flex-col gap-1">
           <h1 className="text-title font-bold">Política de Privacidade</h1>
           <p className="text-caption text-muted-foreground">Última atualização: {LAST_UPDATED}</p>
@@ -124,7 +124,7 @@ const PrivacyPage = () => {
         <Section title="9. Mudanças nesta política">
           <p>Se esta política mudar, a data no topo desta página será atualizada.</p>
         </Section>
-      </main>
+      </div>
     </>
   );
 };

@@ -1,6 +1,6 @@
 import { expect, Locator, test } from "@playwright/test";
 import { FIXTURES } from "../tests/setup/fixtures";
-import { futureWednesdayNoon, loginAs } from "./helpers";
+import { futureWednesdayNoon, gotoLoggedIn, loginAs } from "./helpers";
 
 const { barbershop, clienteA } = FIXTURES;
 
@@ -12,7 +12,8 @@ const expectTouchTarget = async (locator: Locator) => {
 
 test("botões só de ícone têm nome acessível e 44px", async ({ page, context }) => {
   await loginAs(context, clienteA.sessionToken);
-  await page.goto(`/barbershop/${barbershop.id}`);
+  // Espera hidratar e carregar a sessão: antes disso o clique no menu se perde e o menu mostra o login.
+  await gotoLoggedIn(page, `/barbershop/${barbershop.id}`, clienteA.id);
 
   await expectTouchTarget(page.getByRole("button", { name: "Voltar" }));
   const menu = page.getByRole("button", { name: "Abrir menu" });
@@ -34,11 +35,7 @@ test("calendário e horários com 44px cabem em 390px sem rolagem horizontal", a
   const friday = new Date(wednesday);
   friday.setUTCDate(friday.getUTCDate() + 2);
 
-  const sessionLoaded = page.waitForResponse(
-    async (res) => res.url().endsWith("/api/auth/session") && (await res.json())?.user?.id === clienteA.id,
-  );
-  await page.goto(`/barbershop/${barbershop.id}`);
-  await sessionLoaded;
+  await gotoLoggedIn(page, `/barbershop/${barbershop.id}`, clienteA.id);
   await page.getByRole("button", { name: "Reservar" }).first().click();
 
   const sheet = page.getByRole("dialog");
@@ -59,7 +56,8 @@ test("calendário e horários com 44px cabem em 390px sem rolagem horizontal", a
   await expectTouchTarget(day);
   await day.click();
 
-  const hour = sheet.getByRole("button", { name: "10:30" });
+  // 19:30: nenhum outro teste reserva esse horário.
+  const hour = sheet.getByRole("button", { name: "19:30" });
   await expectTouchTarget(hour);
   await hour.click();
 

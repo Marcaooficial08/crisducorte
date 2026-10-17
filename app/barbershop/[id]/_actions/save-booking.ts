@@ -5,9 +5,10 @@ import { getServerSession } from "next-auth";
 import { db } from "@/app/_lib/prisma";
 import { authOptions } from "@/app/_lib/auth";
 import { AuthError, assertUser } from "@/app/_lib/auth-guards";
-import { RATE_LIMIT_MESSAGE, checkRateLimit } from "@/app/_lib/rate-limit";
+import { checkRateLimit } from "@/app/_lib/rate-limit";
 import { isAgendaV2Enabled } from "@/app/_lib/flags";
-import { SLOT_UNAVAILABLE_MESSAGE, isBookableSlot } from "@/app/_lib/schedule";
+import { isBookableSlot } from "@/app/_lib/schedule";
+import { BOOKING_ERROR_MESSAGES, BookingErrorCode } from "@/app/_lib/booking-errors";
 import { revalidatePath } from "next/cache";
 
 interface SaveBookingParams {
@@ -16,7 +17,11 @@ interface SaveBookingParams {
   date: string;
 }
 
-export const saveBooking = async (params: SaveBookingParams): Promise<{ success: boolean; error?: string }> => {
+type SaveBookingResult = { success: true } | { success: false; code: BookingErrorCode; error: string };
+
+const fail = (code: BookingErrorCode): SaveBookingResult => ({ success: false, code, error: BOOKING_ERROR_MESSAGES[code] });
+
+export const saveBooking = async (params: SaveBookingParams): Promise<SaveBookingResult> => {
   const bookingDate = new Date(params.date);
 
   try {
@@ -25,12 +30,12 @@ export const saveBooking = async (params: SaveBookingParams): Promise<{ success:
     const user = assertUser(session);
 
     if (!checkRateLimit(`save-booking:${user.id}`)) {
-      return { success: false, error: RATE_LIMIT_MESSAGE };
+      return fail("RATE_LIMIT");
     }
 
     // Agenda nova: só dias liberados, horários da grade e ainda por vir.
     if (isAgendaV2Enabled(session) && !isBookableSlot(bookingDate, new Date())) {
-      return { success: false, error: SLOT_UNAVAILABLE_MESSAGE };
+      return fail("SLOT_UNAVAILABLE");
     }
 
     await db.$transaction(async (tx) => {
@@ -62,18 +67,16 @@ export const saveBooking = async (params: SaveBookingParams): Promise<{ success:
     return { success: true };
   } catch (error) {
     if (error instanceof AuthError) {
-      return { success: false, error: "Faça login para agendar." };
+      return fail("UNAUTHENTICATED");
     }
-    if (error instanceof Error && error.message === "SLOT_TAKEN") {
-      return { success: false, error: "Horário já reservado. Escolha outro." };
-    }
+    // Horário tomado: achado na consulta ou barrado pelo @@unique (P2002) quando os dois gravam juntos.
     if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
+      (error instanceof Error && error.message === "SLOT_TAKEN") ||
+      (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
     ) {
-      return { success: false, error: "Horário já reservado. Escolha outro." };
+      return fail("SLOT_TAKEN");
     }
     console.error("Erro ao criar reserva:", error);
-    return { success: false, error: "Erro ao criar reserva. Tente novamente." };
+    return fail("GENERIC");
   }
 };

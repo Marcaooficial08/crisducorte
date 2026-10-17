@@ -65,14 +65,14 @@ describe("saveBooking com AGENDA_V2=all (banco real, relógio fixo)", () => {
   it("recusa o sábado da semana seguinte", async () => {
     const result = await book(sp("2030-01-12T09:00:00"));
 
-    expect(result).toEqual({ success: false, error: SLOT_UNAVAILABLE_MESSAGE });
+    expect(result).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: SLOT_UNAVAILABLE_MESSAGE });
     await expectOnlyLegacyBooking();
   });
 
   it("recusa horário fora da grade", async () => {
     const result = await book(sp("2030-01-04T10:00:00"));
 
-    expect(result).toEqual({ success: false, error: SLOT_UNAVAILABLE_MESSAGE });
+    expect(result).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: SLOT_UNAVAILABLE_MESSAGE });
     await expectOnlyLegacyBooking();
   });
 
@@ -81,7 +81,7 @@ describe("saveBooking com AGENDA_V2=all (banco real, relógio fixo)", () => {
 
     const result = await book(sp("2030-01-04T09:00:00"));
 
-    expect(result).toEqual({ success: false, error: SLOT_UNAVAILABLE_MESSAGE });
+    expect(result).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: SLOT_UNAVAILABLE_MESSAGE });
     await expectOnlyLegacyBooking();
   });
 

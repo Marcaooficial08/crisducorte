@@ -13,7 +13,8 @@
 | 8 · Contraste e alvos de toque | ✅ Publicado em produção | 2026-10-16 | `fase1/contraste` (PR #8) |
 | 9 · SEO e imagens | ✅ Publicado em produção | 2026-10-16 | `fase1/seo-imagens` (PR #9) |
 | 10 · Tokens, fontes e escala | ✅ Publicado em produção | 2026-10-16 | `fase2/tokens` (PR #10) |
-| 11 · Vidro, brilho e luz ambiente | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase2/visual-b` |
+| 11 · Vidro, brilho e luz ambiente | ✅ Publicado em produção | 2026-10-16 | `fase2/visual-b` (PR #11) |
+| 12 · Estados (vazio, erro, carregando) | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase2/estados` |
 
 ## Prompt 0 · Preparação
 
@@ -373,6 +374,41 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-16.
 
-**Pendências:**
-- [ ] Depois do merge: Lighthouse mobile em produção (home, barbearia, `/bookings`), LCP < 2,5s.
+**Produção (2026-10-16) ✅:** PR #11 mergeado na `main` (`b5f8b70`) e publicado pela Vercel.
 
+**PageSpeed Insights em produção (celular, home, deslogado, medido pelo dono):** Desempenho 97 · Acessibilidade 98 · Práticas recomendadas 100 · SEO 100. A acessibilidade 98 é investigada no Prompt 12.
+
+**Pendências:**
+- [x] Depois do merge: Lighthouse mobile em produção — feito pelo PageSpeed (acima).
+
+
+## Prompt 12 · Estados (vazio, erro, carregando) (MEL-012)
+
+**Feito:**
+- `app/_components/`: `empty-state.tsx` (ícone + título + texto + ação), `error-state.tsx` (borda destructive 40% + "Tentar de novo", `role="alert"`), `skeleton.tsx` (surface-2, pulso de 1,5s, parado com reduzir movimento). Apoio: `route-error.tsx` (conteúdo dos `error.tsx`: `router.refresh()` + `reset()`) e `bookings-skeleton.tsx`.
+- `loading.tsx` e `error.tsx` em `/` (`app/(home)`), `/bookings` e `/adm`. Esqueletos com `min-h-screen` para o rodapé não pular quando o conteúdo chega (sem isso o CLS da home ia a 0,3).
+- Erros da reserva (`app/_lib/booking-errors.ts`, spec §4.2): `saveBooking` devolve `code` + mensagem. P2002 e horário achado na consulta → "Esse horário acabou de ser reservado por outra pessoa. Escolha outro." + grade recarregada (reservas do dia + `router.refresh()`); sem internet ou fetch que caiu → "Sem conexão. Verifique a internet e tente de novo."; rate limit → "Muitas tentativas seguidas. Aguarde 1 minuto."; resto → "Não conseguimos reservar agora. Tente de novo em instantes."
+- Estados vazios: `/bookings` "Você ainda não tem horários marcados." + [Agendar agora]; `/adm` "Nenhum agendamento por enquanto."; home sem barbearia "Nenhuma barbearia disponível agora." (seção Agendamentos continua sumindo quando vazia, como o NextBookingCard da spec); painel de reserva com o dia lotado: "Todos os horários de sábado já foram reservados." + "Que tal sexta?" [Ver sexta] (e o inverso), só se o outro dia estiver liberado.
+- "Reservar" decide o login pela sessão do servidor (`isAuthenticated`), não pelo `useSession` ainda carregando: antes, um toque rápido mandava um cliente logado para o Google.
+- Acessibilidade em produção 98: o PageSpeed usa o Lighthouse 13.5, que reprova `landmark-one-main` (o 12.8 usado até aqui não). `app/layout.tsx` passa a envolver as páginas em `<main>`; o `<main>` interno de `/privacidade` virou `<div>`.
+
+**E2e instável — causa:**
+- No CI os 15 testes nunca falharam (sem retry nos últimos 10 runs, ~10s). Localmente a suíte leva ~1 min porque o servidor fala com o Neon "Testes" (us-east-2) pela internet: a 1ª confirmação de reserva levou ~2,9s e as seguintes ~1,4s, contra os 5s do `expect`. Somado à oscilação da rede, passava do limite. A dependência entre testes fazia uma falha virar duas (o teste do admin só via a reserva criada pelo teste anterior).
+- Um `npm run dev` aberto grava na mesma `.next` do `next start` do e2e e corrompe o build (`Cannot find module './vendor-chunks/@swc.js'`). Rodar e2e com o dev server parado.
+- Correções (sem aumentar timeout): `globalSetup` aquece o servidor (carrega as rotas e abre a conexão do Prisma) antes do 1º teste; os testes esperam a resposta da server action (`waitForServerActions`) e a sessão carregada (`gotoLoggedIn`) antes de afirmar; cada teste usa os próprios dados (`e2e/db.ts`: cliente C, reserva passada para o admin, `freeSlot` antes de reservar); o teste de 390px usa 19:30, que ninguém reserva; `AGENDA_V2=off` fixo no e2e (o `next start` lia o `.env` local).
+- Testes novos: dois clientes no mesmo horário (o segundo vê a mensagem do P2002 e o horário some), `/bookings` vazio, sábado lotado sugere a sexta; unit `booking-errors.test.ts` e P2002/genérico em `save-booking.test.ts`.
+
+**Decisões:**
+- **Sem feature flag (decisão do dono, 2026-10-16).**
+- Texto do `/adm` vazio aprovado pelo dono: "Nenhum agendamento por enquanto."
+- Carregando e erro conferidos na tela com um `next start` apontado para um banco inalcançável: esqueleto da home, de `/bookings` e de `/adm`, depois o ErrorState da home. O erro de `/bookings` e `/adm` não aparece assim (sem banco a sessão some e a rota redireciona para a home); usa o mesmo componente.
+- Agenda (`schedule.ts`, `AGENDA_V2`), marca, banco e o visual do Prompt 11 não foram tocados.
+
+**Lighthouse 13.5 (local, `next start`, banco Neon "Testes", celular):** acessibilidade 100 em home deslogada, home logada, barbearia, `/bookings` e `/privacidade`. Home, desempenho com e sem `loading.tsx` (4 rodadas intercaladas): 84–85 × 84, CLS 0 × 0. LCP local ~4,4s nas duas versões (banco em us-east-2); conferir em produção depois do merge.
+
+**Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 68 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 18 ✅ em 5 rodadas seguidas (5/5).
+
+**Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-16.
+
+**Pendências:**
+- [ ] Depois do merge: PageSpeed em produção (acessibilidade 100 esperada).

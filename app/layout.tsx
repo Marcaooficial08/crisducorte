@@ -42,7 +42,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`dark ${sans.variable} ${brand.variable} font-sans`}>
         <AuthProvider>
-          <div className="flex-1">{children}</div>
+          <main className="flex-1">{children}</main>
           <Toaster />
           <Footer />
         </AuthProvider>

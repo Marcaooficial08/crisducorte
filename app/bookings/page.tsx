@@ -4,6 +4,10 @@ import { db } from "../_lib/prisma";
 import BookingItem from "../_components/booking-item";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
+import EmptyState from "../_components/empty-state";
+import { Button } from "../_components/ui/button";
+import { CalendarIcon } from "lucide-react";
+import Link from "next/link";
 
 const BookingsPage = async () => {
     const session = await getServerSession(authOptions);
@@ -73,7 +77,15 @@ const BookingsPage = async () => {
                     </>
                 )}
                 {confirmedBookings.length === 0 && finishedBookings.length === 0 && (
-                    <p className="text-muted-foreground text-body">Nenhum agendamento encontrado.</p>
+                    <EmptyState
+                        icon={CalendarIcon}
+                        title="Você ainda não tem horários marcados."
+                        action={
+                            <Button asChild>
+                                <Link href="/">Agendar agora</Link>
+                            </Button>
+                        }
+                    />
                 )}
             </div>
         </>
