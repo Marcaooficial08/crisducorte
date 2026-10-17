@@ -57,6 +57,55 @@ export const getNextServiceDays = (now: Date): ServiceDay[] => {
     .filter((day) => day.times.length > 0);
 };
 
+/**
+ * Relógio da agenda no servidor. SCHEDULE_NOW só vale no e2e: exige E2E=1 (setado só no
+ * playwright.config) e VERCEL ausente. Em qualquer outro caso, new Date().
+ */
+export const getNow = (): Date => {
+  const fixed = process.env.SCHEDULE_NOW;
+  if (fixed && process.env.E2E === "1" && process.env.VERCEL === undefined) {
+    const date = new Date(fixed);
+    if (!Number.isNaN(date.getTime())) {
+      return date;
+    }
+  }
+  return new Date();
+};
+
+const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+// "2026-10-16" → "Sex 16"
+export const serviceDayLabel = (isoDate: string): string => {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  return `${WEEKDAY_LABELS[date.getUTCDay()]} ${date.getUTCDate()}`;
+};
+
+export interface DaySlot {
+  time: string;
+  booked: boolean;
+}
+
+export interface DaySlots {
+  date: string;
+  label: string;
+  freeCount: number;
+  slots: DaySlot[];
+}
+
+// Horários de cada dia liberado, marcando os já reservados (comparados no fuso de São Paulo).
+export const buildDaySlots = (days: ServiceDay[], bookedDates: Date[]): DaySlots[] => {
+  const booked = new Set(bookedDates.map((date) => formatInTimeZone(date, TIME_ZONE, "yyyy-MM-dd HH:mm")));
+  return days.map((day) => {
+    const slots = day.times.map((time) => ({ time, booked: booked.has(`${day.date} ${time}`) }));
+    return {
+      date: day.date,
+      label: serviceDayLabel(day.date),
+      freeCount: slots.filter((slot) => !slot.booked).length,
+      slots,
+    };
+  });
+};
+
 export const SLOT_UNAVAILABLE_MESSAGE = "Esse horário não está mais disponível.";
 
 // O horário pedido é um dos liberados agora? (dia liberado, horário da grade, ainda por vir)

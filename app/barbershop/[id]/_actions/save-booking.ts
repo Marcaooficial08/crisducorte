@@ -6,8 +6,8 @@ import { db } from "@/app/_lib/prisma";
 import { authOptions } from "@/app/_lib/auth";
 import { AuthError, assertUser } from "@/app/_lib/auth-guards";
 import { checkRateLimit } from "@/app/_lib/rate-limit";
-import { isAgendaV2Enabled } from "@/app/_lib/flags";
-import { isBookableSlot } from "@/app/_lib/schedule";
+import { isAgendaV2Enabled, isNewHomeEnabled } from "@/app/_lib/flags";
+import { getNow, isBookableSlot } from "@/app/_lib/schedule";
 import { BOOKING_ERROR_MESSAGES, BookingErrorCode } from "@/app/_lib/booking-errors";
 import { revalidatePath } from "next/cache";
 
@@ -33,8 +33,8 @@ export const saveBooking = async (params: SaveBookingParams): Promise<SaveBookin
       return fail("RATE_LIMIT");
     }
 
-    // Agenda nova: só dias liberados, horários da grade e ainda por vir.
-    if (isAgendaV2Enabled(session) && !isBookableSlot(bookingDate, new Date())) {
+    // Agenda nova (AGENDA_V2 ou home nova): só dias liberados, horários da grade e ainda por vir.
+    if ((isAgendaV2Enabled(session) || isNewHomeEnabled(session)) && !isBookableSlot(bookingDate, getNow())) {
       return fail("SLOT_UNAVAILABLE");
     }
 

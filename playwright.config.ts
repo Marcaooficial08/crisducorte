@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import { loadEnv } from "vite";
 import { resolveTestDatabaseUrl } from "./tests/setup/test-database-url";
+import { futureWednesdayNoon } from "./e2e/helpers";
 
 const testDatabaseUrl = resolveTestDatabaseUrl({ ...loadEnv("test", process.cwd(), ""), ...process.env });
 if (!testDatabaseUrl) {
@@ -41,6 +42,11 @@ export default defineConfig({
       GOOGLE_CLIENT_SECRET: "e2e-google-client-secret",
       // O `next start` também lê o .env local; fixa a flag para o e2e dar igual local e no CI.
       AGENDA_V2: "off",
+      // Home nova só para o admin: o admin vê a nova e os clientes a antiga (critério de aceite).
+      NEW_HOME: "admin",
+      // Relógio fixo do servidor (getNow): a mesma quarta futura que o page.clock usa no navegador.
+      E2E: "1",
+      SCHEDULE_NOW: futureWednesdayNoon().toISOString(),
     },
   },
 });

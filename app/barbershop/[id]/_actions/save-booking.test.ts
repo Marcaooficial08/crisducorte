@@ -145,4 +145,34 @@ describe("saveBooking", () => {
       expect(await saveBooking(valid)).toEqual({ success: true });
     });
   });
+
+  describe("flag NEW_HOME", () => {
+    const outOfRule = { ...params, date: "2026-10-24T12:00:00.000Z" }; // sábado seguinte, 09:00 SP
+    const valid = { ...params, date: "2026-10-16T12:00:00.000Z" }; // sexta 16, 09:00 SP
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-14T15:00:00.000Z"));
+      vi.stubEnv("AGENDA_V2", "off");
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+    });
+
+    it("home nova ligada valida a regra mesmo com AGENDA_V2 off", async () => {
+      vi.stubEnv("NEW_HOME", "admin");
+
+      mocks.getServerSession.mockResolvedValueOnce(sessionOf("admin-1", true));
+      expect(await saveBooking(outOfRule)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
+
+      mocks.getServerSession.mockResolvedValueOnce(sessionOf("admin-1", true));
+      expect(await saveBooking(valid)).toEqual({ success: true });
+
+      // Cliente sem a home nova: como antes.
+      mocks.getServerSession.mockResolvedValueOnce(sessionOf("user-1"));
+      expect(await saveBooking(outOfRule)).toEqual({ success: true });
+    });
+  });
 });
