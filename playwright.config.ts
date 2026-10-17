@@ -42,8 +42,8 @@ export default defineConfig({
       GOOGLE_CLIENT_SECRET: "e2e-google-client-secret",
       // O `next start` também lê o .env local; fixa a flag para o e2e dar igual local e no CI.
       AGENDA_V2: "off",
-      // Home nova só para o admin: o admin vê a nova e os clientes a antiga (critério de aceite).
-      NEW_HOME: "admin",
+      // Home nova para todos, como em produção desde 2026-10-17; a antiga continua em /classic.
+      NEW_HOME: "all",
       // Relógio fixo do servidor (getNow): a mesma quarta futura que o page.clock usa no navegador.
       E2E: "1",
       SCHEDULE_NOW: futureWednesdayNoon().toISOString(),
