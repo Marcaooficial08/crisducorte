@@ -70,7 +70,7 @@ const BookingItem = ({ booking }: BookingItemProps) => {
   return (
     <Sheet>
       <SheetTrigger className="min-w-full rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background">
-        <Card className="min-w-full cursor-pointer hover:bg-secondary/40 transition-colors">
+        <Card className="glass min-w-full cursor-pointer hover:bg-secondary/40 transition-colors">
           <CardContent className="py-0 flex px-0">
             <div className="flex flex-col gap-2 py-5 flex-[3] pl-5">
               <Badge

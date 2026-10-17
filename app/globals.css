@@ -64,7 +64,54 @@
   }
 }
 
+/* Vidro e brilho (MEL-006). Fora de @layer para vencer bg-card/border do <Card>; hover: continua ganhando. */
+.glass {
+  background-color: var(--glass-bg);
+  border-color: var(--glass-border);
+}
+
+/* Blur só onde há algo atrás (header sobre o brilho); nos cards o fundo é liso e o blur só custaria pintura. */
+.glass-blur {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* O header liga o brilho e o blur depois do load (header.tsx); entram com fade de 300ms. */
+.glass-fade {
+  transition: -webkit-backdrop-filter var(--dur-slow) var(--ease-out), backdrop-filter var(--dur-slow) var(--ease-out);
+}
+
+.glow-card {
+  border-color: var(--glow-border);
+  box-shadow: var(--shadow-glow);
+}
+
+.ambient-glow {
+  background: radial-gradient(circle closest-side, rgba(129, 98, 255, 0.18), transparent);
+  animation: ambient-fade-in var(--dur-slow) var(--ease-out) both;
+}
+
+@keyframes ambient-fade-in {
+  from { opacity: 0; }
+}
+
 /* Versão leve do vidro (MEL-006) */
-@supports not (backdrop-filter: blur(1px)) {
-  .glass { background: hsl(var(--card)); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-blur { background-color: hsl(var(--card)); }
+}
+
+/* Sem brilho para quem pede menos movimento ou menos transparência */
+@media (prefers-reduced-motion: reduce) {
+  .ambient-glow { display: none; }
+  .glow-card { box-shadow: none; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass { background-color: hsl(var(--card)); }
+  .glass-blur {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .ambient-glow { display: none; }
+  .glow-card { box-shadow: none; }
 }
