@@ -16,7 +16,8 @@
 | 11 · Vidro, brilho e luz ambiente | ✅ Publicado em produção | 2026-10-16 | `fase2/visual-b` (PR #11) |
 | 12 · Estados (vazio, erro, carregando) | ✅ Publicado em produção | 2026-10-16 | `fase2/estados` (PR #12) |
 | 13 · Menu lateral acessível | ✅ Publicado em produção | 2026-10-16 | `fase2/menu` (PR #13) |
-| 14 · Home nova (NEW_HOME) | ✅ Publicado em produção — previsto após o merge | 2026-10-17 | `fase2/home-nova` |
+| 14 · Home nova (NEW_HOME) | ✅ Publicado em produção | 2026-10-17 | `fase2/home-nova` (PR #14) |
+| 15 · Voltar com a seleção após o login | ✅ Publicado em produção — previsto após o merge | 2026-10-17 | `fase2/login-resume` |
 
 ## Ambientes
 
@@ -479,6 +480,29 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 **Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-17, no celular e no computador.
 
 **Pendências:**
-- [ ] Vercel Production: criar `NEW_HOME=admin` antes do merge; depois de 7 dias, `all` (spec §6). `/classic` fica por 30 dias.
-- [ ] Prompt 15: voltar com a seleção depois do login (MEL-009).
+- [x] Vercel Production: `NEW_HOME` e `AGENDA_V2` em `all` desde 2026-10-17, a pedido do Cris (antes dos 7 dias da spec §6). `/classic` fica por 30 dias.
+- [x] Prompt 15: voltar com a seleção depois do login (MEL-009) — feito no Prompt 15.
+
+**Produção (2026-10-17) ✅:** PR #14 mergeado na `main` (`38a1ec9`) e publicado pela Vercel. No mesmo dia, `NEW_HOME` e `AGENDA_V2` foram para `all` em Production, a pedido do Cris. `staging` atualizada para ficar igual à `main`.
+
+## Prompt 15 · Voltar com a seleção após o login (MEL-009)
+
+**Feito:**
+- `app/_lib/booking-resume.ts`: `saveBookingResume` / `takeBookingResume` (lê e apaga) em `sessionStorage`, chave `crisducorte:booking-resume`, formato `{serviceId, date, time}` validado. Tudo em try/catch: sem storage (aba anônima, bloqueado) não faz nada e o fluxo segue como antes.
+- Home nova, deslogado: o toque no BookingCTA salva a seleção, registra `login_from_booking` (evento já existente) e chama `signIn("google", { callbackUrl: "/?resume=1" })`.
+- Volta com `?resume=1`: retoma a seleção se o dia ainda está na grade do servidor (que já segue a regra da agenda) e o horário está livre. Com mais de 1 serviço abre o Sheet "Confirmar reserva" com o serviço marcado; com 1 serviço deixa o CTA pronto. Nunca confirma sozinho. Horário ocupado ou fora da regra: toast "Esse horário não está mais disponível. Escolha outro." e a grade do dia salvo. Nos dois casos o storage é apagado e o `?resume=1` sai da URL (`router.replace("/")`). O `saveBooking` continua validando no servidor.
+- Sem banco, sem mudança na regra da agenda e sem visual novo (aviso no toast existente). Só aparece com `NEW_HOME` ligada.
+- e2e com `NEW_HOME=all` (igual à produção); o teste "cliente comum continua vendo a home antiga" virou "cliente comum vê a home nova e a antiga em /classic".
+- Testes: `booking-resume.test.ts` (unit) e `e2e/login-resume.spec.ts` — o login do Google é simulado interceptando o `POST /api/auth/signin/google` (confere o `callbackUrl`, cria o cookie de sessão e devolve `/?resume=1`). Casos: volta com o mesmo dia e horário e confirma; horário ocupado por outro cliente durante o login; `sessionStorage` bloqueado sem erro.
+
+**Decisões (aprovadas pelo dono em 2026-10-17):**
+- e2e com `NEW_HOME=all`.
+- Mais de 1 serviço: Sheet aberto com o serviço marcado; 1 serviço: CTA pronto; nunca confirma sozinho.
+
+**Validação (local, 2026-10-17):** `npm run lint` ✅ · `npm run test:unit` 83 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 28 ✅ em 2 rodadas seguidas.
+
+**Staging:** `fase2/login-resume` enviado para `staging` (`NEW_HOME=all`) para teste no celular.
+
+**Pendências:**
+- [ ] Teste de aceite na staging (login real com Google).
 
