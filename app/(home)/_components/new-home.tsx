@@ -68,64 +68,67 @@ const NewHome = async ({ session }: NewHomeProps) => {
     <div className="pb-10">
       <Header />
 
-      <div className="px-page pt-6">
-        <h1 className="text-display font-bold">{firstName ? `Olá, ${firstName}!` : "Olá, vamos agendar um corte?"}</h1>
-        <p className="mt-1 text-body text-muted-foreground">Atendimento às sextas e sábados</p>
+      {/* Coluna centralizada no computador, igual ao design de celular; header e rodapé seguem largos. */}
+      <div className="mx-auto w-full max-w-lg">
+        <div className="px-page pt-6">
+          <h1 className="text-display font-bold">{firstName ? `Olá, ${firstName}!` : "Olá, vamos agendar um corte?"}</h1>
+          <p className="mt-1 text-body text-muted-foreground">Atendimento às sextas e sábados</p>
 
-        {!barbershop ? (
-          <EmptyState className="mt-6" icon={StoreIcon} title="Nenhuma barbearia disponível agora." />
-        ) : (
-          <>
-            <div className="mt-6">
-              <ShopCard name={barbershop.name} address={barbershop.address} />
-            </div>
+          {!barbershop ? (
+            <EmptyState className="mt-6" icon={StoreIcon} title="Nenhuma barbearia disponível agora." />
+          ) : (
+            <>
+              <div className="mt-6">
+                <ShopCard name={barbershop.name} address={barbershop.address} />
+              </div>
 
-            {days.length === 0 ? (
-              <EmptyState className="mt-6" icon={CalendarClockIcon} title={AGENDA_CLOSED_MESSAGE} />
-            ) : (
-              <BookingPicker
-                barbershop={{ id: barbershop.id, name: barbershop.name }}
-                services={barbershop.services.map((service) => ({ id: service.id, name: service.name, price: Number(service.price) }))}
-                days={days}
-                isAuthenticated={!!user}
-              />
-            )}
-          </>
-        )}
+              {days.length === 0 ? (
+                <EmptyState className="mt-6" icon={CalendarClockIcon} title={AGENDA_CLOSED_MESSAGE} />
+              ) : (
+                <BookingPicker
+                  barbershop={{ id: barbershop.id, name: barbershop.name }}
+                  services={barbershop.services.map((service) => ({ id: service.id, name: service.name, price: Number(service.price) }))}
+                  days={days}
+                  isAuthenticated={!!user}
+                />
+              )}
+            </>
+          )}
 
-        {nextBooking && (
-          <section aria-labelledby="proximo-agendamento" className="mt-8">
-            <h2 id="proximo-agendamento" className="mb-3 text-label font-bold uppercase text-muted-foreground">
-              Meu próximo agendamento
+          {nextBooking && (
+            <section aria-labelledby="proximo-agendamento" className="mt-8">
+              <h2 id="proximo-agendamento" className="mb-3 text-label font-bold uppercase text-muted-foreground">
+                Meu próximo agendamento
+              </h2>
+              <NextBookingCard date={nextBooking.date} serviceName={nextBooking.service.name} />
+            </section>
+          )}
+        </div>
+
+        {isAdmin && (
+          <section aria-labelledby="reservas-semana" className="mt-8">
+            <h2 id="reservas-semana" className="mb-3 px-page text-label font-bold uppercase text-muted-foreground">
+              Reservas da semana (admin)
             </h2>
-            <NextBookingCard date={nextBooking.date} serviceName={nextBooking.service.name} />
+            {adminBookings.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto px-page [&::-webkit-scrollbar]:hidden">
+                {adminBookings.map((booking) => (
+                  <BookingItem key={booking.id} booking={booking} />
+                ))}
+              </div>
+            ) : (
+              <div className="px-page">
+                <EmptyState icon={CalendarIcon} title="Nenhuma reserva nesta semana." />
+              </div>
+            )}
+            <div className="mt-3 px-page">
+              <Link href="/adm" className="inline-flex min-h-11 items-center text-body font-bold text-accent-soft underline underline-offset-4">
+                Ver agenda completa
+              </Link>
+            </div>
           </section>
         )}
       </div>
-
-      {isAdmin && (
-        <section aria-labelledby="reservas-semana" className="mt-8">
-          <h2 id="reservas-semana" className="mb-3 px-page text-label font-bold uppercase text-muted-foreground">
-            Reservas da semana (admin)
-          </h2>
-          {adminBookings.length > 0 ? (
-            <div className="flex gap-3 overflow-x-auto px-page [&::-webkit-scrollbar]:hidden">
-              {adminBookings.map((booking) => (
-                <BookingItem key={booking.id} booking={booking} />
-              ))}
-            </div>
-          ) : (
-            <div className="px-page">
-              <EmptyState icon={CalendarIcon} title="Nenhuma reserva nesta semana." />
-            </div>
-          )}
-          <div className="mt-3 px-page">
-            <Link href="/adm" className="inline-flex min-h-11 items-center text-body font-bold text-accent-soft underline underline-offset-4">
-              Ver agenda completa
-            </Link>
-          </div>
-        </section>
-      )}
     </div>
   );
 };

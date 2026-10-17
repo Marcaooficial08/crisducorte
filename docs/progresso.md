@@ -463,6 +463,7 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - `saveBooking`: a validação do Prompt 6 (`isBookableSlot`) vale quando `AGENDA_V2` **ou** `NEW_HOME` está ligada para o usuário. Mensagens do Prompt 12 reaproveitadas (`BOOKING_ERROR_MESSAGES`, `shouldReloadSlots` → `router.refresh()`). Sucesso: "Reservado! Sex 16 às 10:30." (spec §4.2) + [Visualizar].
 - Relógio do servidor no e2e: `getNow()` em `schedule.ts` só lê `SCHEDULE_NOW` com `E2E=1` **e** sem `VERCEL`; em qualquer outro caso `new Date()`. Usado pela home nova e pelo `saveBooking`. Teste unitário garante que com `VERCEL` definido o `SCHEDULE_NOW` é ignorado.
 - `/barbershop/[id]` sem alteração. Banco sem migração.
+- Ajuste pedido após o teste na staging: no computador, o conteúdo da home nova fica numa coluna centralizada (`mx-auto max-w-lg`, 512px); header e rodapé continuam largos. No celular nada muda (390px: CTA com 350px, sem rolagem horizontal).
 
 **Decisões:**
 - Serviço no Sheet (spec §4.1), seção do admin + link para `/adm`, relógio com trava dupla e MEL-009 adiado: aprovados pelo dono em 2026-10-17.
@@ -473,10 +474,10 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Validação (local, 2026-10-17):** `npm run lint` ✅ · `npm run test:unit` 78 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 25 ✅ em 2 rodadas seguidas.
 
-**Staging:** `fase2/home-nova` enviado para `staging` (Preview com `NEW_HOME=all`) para teste no celular.
+**Staging:** `fase2/home-nova` enviado para `staging` (Preview com `NEW_HOME=all`); fluxo aprovado pelo dono no celular em 2026-10-17. Reenviado com a coluna centralizada (lint ✅ · e2e 25 ✅).
 
 **Pendências:**
-- [ ] Teste no celular (Android e iPhone) na staging.
+- [ ] Conferir a coluna centralizada no computador na staging.
 - [ ] Vercel Production: criar `NEW_HOME=admin` antes do merge; depois de 7 dias, `all` (spec §6). `/classic` fica por 30 dias.
 - [ ] Prompt 15: voltar com a seleção depois do login (MEL-009).
 
