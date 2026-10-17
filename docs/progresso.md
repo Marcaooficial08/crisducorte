@@ -503,6 +503,5 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Staging:** `fase2/login-resume` enviado para `staging` (`NEW_HOME=all`) para teste no celular.
 
-**Pendências:**
-- [ ] Teste de aceite na staging (login real com Google).
+**Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-17, no celular, com login real do Google: voltou com o horário selecionado e a reserva foi confirmada.
 
