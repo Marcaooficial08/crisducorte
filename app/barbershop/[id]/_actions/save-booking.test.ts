@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 
 const mocks = vi.hoisted(() => ({
   getServerSession: vi.fn(),
@@ -17,8 +18,8 @@ vi.mock("@/app/_lib/prisma", () => ({
 }));
 
 import { saveBooking } from "./save-booking";
-import { RATE_LIMIT_MESSAGE, resetRateLimit } from "@/app/_lib/rate-limit";
-import { SLOT_UNAVAILABLE_MESSAGE } from "@/app/_lib/schedule";
+import { resetRateLimit } from "@/app/_lib/rate-limit";
+import { BOOKING_ERROR_MESSAGES } from "@/app/_lib/booking-errors";
 
 const params = {
   barbershopId: "shop-1",
@@ -44,7 +45,7 @@ describe("saveBooking", () => {
 
     const result = await saveBooking(params);
 
-    expect(result).toEqual({ success: false, error: "Faça login para agendar." });
+    expect(result).toEqual({ success: false, code: "UNAUTHENTICATED", error: "Faça login para agendar." });
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
@@ -65,9 +66,29 @@ describe("saveBooking", () => {
 
     const result = await saveBooking(params);
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Horário já reservado. Escolha outro.");
+    expect(result).toEqual({ success: false, code: "SLOT_TAKEN", error: BOOKING_ERROR_MESSAGES.SLOT_TAKEN });
     expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("P2002 (dois gravando juntos) vira horário tomado", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
+    mocks.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("Unique constraint failed", { code: "P2002", clientVersion: "test" }),
+    );
+
+    const result = await saveBooking(params);
+
+    expect(result).toEqual({ success: false, code: "SLOT_TAKEN", error: BOOKING_ERROR_MESSAGES.SLOT_TAKEN });
+  });
+
+  it("erro inesperado vira a mensagem genérica", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
+    mocks.create.mockRejectedValue(new Error("conexão caiu"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await saveBooking(params);
+
+    expect(result).toEqual({ success: false, code: "GENERIC", error: BOOKING_ERROR_MESSAGES.GENERIC });
   });
 
   it("bloqueia a 11ª tentativa no mesmo minuto", async () => {
@@ -78,7 +99,7 @@ describe("saveBooking", () => {
     }
     const result = await saveBooking(params);
 
-    expect(result).toEqual({ success: false, error: RATE_LIMIT_MESSAGE });
+    expect(result).toEqual({ success: false, code: "RATE_LIMIT", error: "Muitas tentativas seguidas. Aguarde 1 minuto." });
     expect(mocks.create).toHaveBeenCalledTimes(10);
   });
 
@@ -108,7 +129,7 @@ describe("saveBooking", () => {
       vi.stubEnv("AGENDA_V2", "admin");
 
       mocks.getServerSession.mockResolvedValueOnce(sessionOf("admin-1", true));
-      expect(await saveBooking(outOfRule)).toEqual({ success: false, error: SLOT_UNAVAILABLE_MESSAGE });
+      expect(await saveBooking(outOfRule)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
 
       mocks.getServerSession.mockResolvedValueOnce(sessionOf("user-1"));
       expect(await saveBooking(outOfRule)).toEqual({ success: true });
@@ -119,7 +140,7 @@ describe("saveBooking", () => {
       vi.stubEnv("AGENDA_V2", "all");
       mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
 
-      expect(await saveBooking(outOfRule)).toEqual({ success: false, error: SLOT_UNAVAILABLE_MESSAGE });
+      expect(await saveBooking(outOfRule)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
       expect(mocks.create).not.toHaveBeenCalled();
       expect(await saveBooking(valid)).toEqual({ success: true });
     });

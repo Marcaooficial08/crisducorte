@@ -7,18 +7,22 @@ import { Card, CardContent } from "@/app/_components/ui/card";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/app/_components/ui/sheet";
 import { Barbershop, Booking, Service } from "@prisma/client";
 import { ptBR } from "date-fns/locale";
-import { format, setHours, setMinutes } from "date-fns";
+import { addDays, format, isBefore, setHours, setMinutes, startOfDay } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { saveBooking } from "../_actions/save-booking";
-import { Loader2 } from "lucide-react";
+import { CalendarXIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { getDayBookings } from "../_actions/get-day-bookings";
-import { signIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { track } from "@/app/_lib/track";
-import { AGENDA_CLOSED_MESSAGE, SLOT_UNAVAILABLE_MESSAGE, ServiceDay, TIME_GRID, TIME_ZONE } from "@/app/_lib/schedule";
+import { AGENDA_CLOSED_MESSAGE, ServiceDay, TIME_GRID, TIME_ZONE } from "@/app/_lib/schedule";
+import { BOOKING_ERROR_MESSAGES, clientBookingErrorCode, shouldReloadSlots } from "@/app/_lib/booking-errors";
+import EmptyState from "@/app/_components/empty-state";
+
+const WEEKDAY_NAMES: Record<number, string> = { 5: "sexta", 6: "sábado" };
 
 interface ServiceItemProps {
   barbershop: Barbershop;
@@ -30,12 +34,13 @@ interface ServiceItemProps {
 
 const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: ServiceItemProps) => {
   const router = useRouter();
-  const { data } = useSession();
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [hour, setHour] = useState<string | undefined>();
   const [submitIsLoading, setSubmitIsLoading] = useState(false);
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const [dayBookings, setDayBookings] = useState<Booking[]>([]);
+  // Dia ("yyyy-MM-dd") a que dayBookings se refere: evita mostrar "lotado" com as reservas do dia anterior.
+  const [dayBookingsDay, setDayBookingsDay] = useState<string>();
   const [bookingsVersion, setBookingsVersion] = useState(0);
 
   // Dia selecionado no calendário ("yyyy-MM-dd").
@@ -48,6 +53,7 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
     const refreshAvailableHours = async () => {
       const _dayBookings = await getDayBookings(barbershop.id, date);
       setDayBookings(_dayBookings);
+      setDayBookingsDay(format(date, "yyyy-MM-dd"));
     };
     refreshAvailableHours();
   }, [date, barbershop.id, bookingsVersion]);
@@ -70,7 +76,8 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
   };
 
   const handleBookingClick = () => {
-    if (!data?.user) {
+    // Sessão vinda do servidor: não depende do useSession ter terminado de carregar.
+    if (!isAuthenticated) {
       track("login_from_booking", { service: service.name });
       return signIn("google");
     }
@@ -81,7 +88,11 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
   const handleBookingSubmit = async () => {
     setSubmitIsLoading(true);
     try {
-      if (!hour || !date || !data?.user) {
+      if (!hour || !date || !isAuthenticated) {
+        return;
+      }
+      if (!navigator.onLine) {
+        toast(BOOKING_ERROR_MESSAGES.NETWORK);
         return;
       }
       const newDate = serviceDays
@@ -95,10 +106,10 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
       });
 
       if (!result.success) {
-        track("booking_failed", { service: service.name, reason: "rejected" });
-        toast(result.error ?? "Erro ao criar reserva.", { description: "Escolha outro horário." });
-        if (result.error === SLOT_UNAVAILABLE_MESSAGE) {
-          // Recarrega dias/horários do servidor e as reservas do dia: o horário vencido some.
+        track("booking_failed", { service: service.name, reason: result.code });
+        toast(result.error);
+        if (shouldReloadSlots(result.code)) {
+          // Recarrega dias/horários do servidor e as reservas do dia: o horário tomado ou vencido some.
           setHour(undefined);
           setBookingsVersion((version) => version + 1);
           router.refresh();
@@ -125,7 +136,9 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
       });
     } catch (error) {
       console.error(error);
-      track("booking_failed", { service: service.name, reason: "exception" });
+      const code = clientBookingErrorCode(error, navigator.onLine);
+      track("booking_failed", { service: service.name, reason: code });
+      toast(BOOKING_ERROR_MESSAGES[code]);
     } finally {
       setSubmitIsLoading(false);
     }
@@ -181,6 +194,14 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
       });
     });
   }, [date, dayBookings, serviceDays, selectedDay]);
+
+  // Dia lotado (só depois de carregar as reservas desse dia): oferece o outro dia de atendimento.
+  const dayIsFull = !!date && dayBookingsDay === selectedDay && timeList.length === 0;
+  const otherDayCandidate = dayIsFull && date && WEEKDAY_NAMES[date.getDay()] ? addDays(date, date.getDay() === 5 ? 1 : -1) : undefined;
+  const otherDay =
+    otherDayCandidate && !isBefore(otherDayCandidate, startOfDay(new Date())) && !tileDisabled(otherDayCandidate)
+      ? otherDayCandidate
+      : undefined;
 
   return (
     <Card className="glass">
@@ -247,7 +268,23 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
                     />
                     )}
                   </div>
-                  {date && (
+                  {date && dayIsFull && (
+                    <div className="py-6 px-page border-t border-solid border-secondary">
+                      <EmptyState
+                        icon={CalendarXIcon}
+                        title={`Todos os horários de ${WEEKDAY_NAMES[date.getDay()] ?? "hoje"} já foram reservados.`}
+                        description={otherDay ? `Que tal ${WEEKDAY_NAMES[otherDay.getDay()]}?` : undefined}
+                        action={
+                          otherDay && (
+                            <Button variant="secondary" onClick={() => handleDateClick(otherDay)}>
+                              Ver {WEEKDAY_NAMES[otherDay.getDay()]}
+                            </Button>
+                          )
+                        }
+                      />
+                    </div>
+                  )}
+                  {date && !dayIsFull && (
                     <div className="flex gap-3 overflow-auto py-6 px-page border-t border-solid border-secondary [&::-webkit-scrollbar]:hidden">
                       {timeList.map((time) => (
                         <Button onClick={() => handleHourClick(time)} variant={hour === time ? "default" : "outline"} className="rounded-full" key={time}>

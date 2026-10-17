@@ -10,6 +10,8 @@ import BarbershopItem from "./_components/barbershop-item";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
 import { hairSalonJsonLd } from "../_lib/json-ld";
+import EmptyState from "../_components/empty-state";
+import { StoreIcon } from "lucide-react";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
@@ -82,7 +84,9 @@ export default async function Home() {
           Recomendados
         </h2>
         <div className="flex px-page gap-4 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-          {barbershops.length === 1 ? (
+          {barbershops.length === 0 ? (
+            <EmptyState className="w-full" icon={StoreIcon} title="Nenhuma barbearia disponível agora." />
+          ) : barbershops.length === 1 ? (
             <div className="w-full max-w-sm">
               <BarbershopItem key={barbershops[0].id} barbershop={barbershops[0]} priority />
             </div>
@@ -96,6 +100,7 @@ export default async function Home() {
         </div>
       </div>
 
+      {recommendedBarbershops.length > 0 && (
       <div className="mt-6 mb-[4.5rem]">
         <h2 className="pl-page text-label mb-3 uppercase text-muted-foreground font-bold">
           Populares
@@ -112,6 +117,7 @@ export default async function Home() {
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }

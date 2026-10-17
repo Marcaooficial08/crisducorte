@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
 import BookingItemAdm from "../_components/booking-item-adm";
 import { assertAdmin } from "../_lib/auth-guards";
+import EmptyState from "../_components/empty-state";
+import { CalendarIcon } from "lucide-react";
 
 const BookingsPageAdm = async () => {
     const session = await getServerSession(authOptions);
@@ -68,7 +70,7 @@ const BookingsPageAdm = async () => {
                     </>
                 )}
                 {confirmedBookings.length === 0 && finishedBookings.length === 0 && (
-                    <p className="text-muted-foreground text-body">Nenhum agendamento encontrado.</p>
+                    <EmptyState icon={CalendarIcon} title="Nenhum agendamento por enquanto." />
                 )}
             </div>
         </>
