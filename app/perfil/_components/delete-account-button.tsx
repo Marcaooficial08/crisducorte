@@ -58,7 +58,7 @@ const DeleteAccountButton = () => {
           <AlertDialogCancel className="w-full mt-0 min-h-11">Voltar</AlertDialogCancel>
           <AlertDialogAction
             disabled={isLoading}
-            className="w-full min-h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="w-full min-h-11 bg-destructive-solid text-destructive-foreground hover:bg-destructive-solid/90"
             onClick={handleConfirmClick}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
