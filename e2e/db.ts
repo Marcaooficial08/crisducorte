@@ -13,6 +13,9 @@ export const E2E = {
   logoutSessionToken: "e2e-session-cliente-c-sair",
   // Reserva passada do próprio admin, criada só no teste do menu (o estados.spec usa o admin sem reservas).
   adminBookingDate: new Date("2026-01-03T15:00:00.000Z"),
+  // Segundo serviço: com mais de 1, o CTA da home nova abre o Sheet de serviço (spec §4.1).
+  // Id maior que o do "Corte de Cabelo", que continua sendo o primeiro (já marcado).
+  barba: { id: "test-service-barba", name: "Barba", description: "Barba de teste", price: 25 },
 } as const;
 
 export const testDb = () => {
@@ -24,7 +27,10 @@ export const testDb = () => {
 };
 
 export const seedE2eFixtures = async (db: PrismaClient) => {
-  const { clienteC, pastBookingDate } = E2E;
+  const { clienteC, pastBookingDate, barba } = E2E;
+  await db.service.create({
+    data: { ...barba, barbershopId: FIXTURES.barbershop.id, imageUrl: "https://utfs.io/f/0ddfbd26-a424-43a0-aaf3-c3f1dc6be6d1-1kgxo7.png" },
+  });
   await db.user.create({
     data: {
       id: clienteC.id,

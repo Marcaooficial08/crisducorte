@@ -65,7 +65,7 @@ test("home tem JSON-LD HairSalon com endereço e horário", async ({ page }) => 
 test("robots.txt bloqueia as áreas privadas", async ({ request }) => {
   const body = await (await request.get("/robots.txt")).text();
 
-  for (const path of ["/adm", "/perfil", "/bookings", "/api"]) {
+  for (const path of ["/adm", "/perfil", "/bookings", "/api", "/classic"]) {
     expect(body).toContain(`Disallow: ${path}`);
   }
   expect(body).toContain(`Sitemap: ${SITE_URL}/sitemap.xml`);

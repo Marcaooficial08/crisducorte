@@ -66,6 +66,8 @@ Admin = `User.isAdmin` (lido do banco no session callback de `app/_lib/auth.ts`,
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 - `NEXTAUTH_SECRET` — único nome lido pelo NextAuth (`app/_lib/auth.ts`); modelo em `.env.example`
 - `AGENDA_V2` — feature flag `off | admin | all` (padrão `off`), lida por `isEnabled` em `app/_lib/flags.ts`
+- `NEW_HOME` — home nova (`off | admin | all`, padrão `off`); ligada, a home antiga fica em `/classic`
+- `SCHEDULE_NOW` — relógio fixo da agenda, só no e2e (`getNow` em `app/_lib/schedule.ts` exige `E2E=1` e ignora na Vercel)
 
 ## Workflow
 

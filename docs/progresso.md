@@ -15,7 +15,15 @@
 | 10 · Tokens, fontes e escala | ✅ Publicado em produção | 2026-10-16 | `fase2/tokens` (PR #10) |
 | 11 · Vidro, brilho e luz ambiente | ✅ Publicado em produção | 2026-10-16 | `fase2/visual-b` (PR #11) |
 | 12 · Estados (vazio, erro, carregando) | ✅ Publicado em produção | 2026-10-16 | `fase2/estados` (PR #12) |
-| 13 · Menu lateral acessível | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase2/menu` |
+| 13 · Menu lateral acessível | ✅ Publicado em produção | 2026-10-16 | `fase2/menu` (PR #13) |
+| 14 · Home nova (NEW_HOME) | ✅ Publicado em produção — previsto após o merge | 2026-10-17 | `fase2/home-nova` |
+
+## Ambientes
+
+| Ambiente | URL | Origem | Banco | Observações |
+|---|---|---|---|---|
+| Produção | https://crisducorte.vercel.app | branch `main` | Supabase | Só leitura para conferências |
+| Testes (staging) | https://crisducorte-staging.vercel.app | branch `staging` (Preview da Vercel) | Neon dev | `NEXTAUTH_URL` próprio; login Google funcionando. Atualizar com `git push origin <branch>:staging --force` antes do PR, para teste no celular |
 
 ## Prompt 0 · Preparação
 
@@ -435,5 +443,42 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-16.
 
+**Produção ✅:** PR #13 mergeado na `main` (`5b9a581`) e publicado pela Vercel.
+
 **Pendências:**
 - [ ] Depois do merge: PageSpeed em produção.
+
+## Prompt 14 · Home nova (MEL-008, 001, 003, 007)
+
+**Feito:**
+- Flag `NEW_HOME` (`off | admin | all`) no `isEnabled` existente (`isNewHomeEnabled` em `app/_lib/flags.ts`). Sem `NEW_THEME`: o visual já estava aplicado.
+- `app/(home)/page.tsx` escolhe a home: flag ligada para a sessão → `NewHome`; desligada → `ClassicHome` (conteúdo antigo movido sem alteração para `app/(home)/_components/classic-home.tsx`). JSON-LD continua na `/` nas duas.
+- `/classic` (`app/classic/page.tsx`): home antiga para quem tem a flag ligada; para os outros redireciona para `/` (que já é a antiga). `noindex` e `Disallow: /classic` no `robots.txt`.
+- Home nova (ordem da spec §4.1 e da tela ✔ Escolhida): saudação ("Olá, [primeiro nome]!" / "Olá, vamos agendar um corte?") + "Atendimento às sextas e sábados"; `ShopCard` horizontal (`logo-card.jpg` 72px, nome e endereço do banco, selo "Sex e Sáb"); `DayChip` com "N horários livres" / "Lotado" (`aria-pressed`, abre no primeiro dia com horário livre); `TimeSlot` em grade de 4 colunas (ocupado riscado, tracejado, `disabled`, `aria-label="10:30, ocupado"`); `BookingCTA` ("Escolha um horário" → "Reservar Sex 16 às 09:00 →", "Reservando…"); `NextBookingCard` só com a próxima reserva **futura** do próprio cliente (resolve a pendência do Prompt 8). Componentes em `app/_components/` (`shop-card`, `day-chip`, `time-slot`, `booking-cta`, `next-booking-card`); composição em `app/(home)/_components/` (`new-home`, `booking-picker`).
+- Sem busca e sem Recomendados/Populares na home nova. Domingo (sem dias): `AGENDA_CLOSED_MESSAGE`. Dia lotado: "Todos os horários de sábado já foram reservados." + [Ver sexta].
+- Serviço (spec §4.1): com mais de 1 serviço, o CTA abre o Sheet "Confirmar reserva" com os serviços em `radiogroup` (primeiro por `id` já marcado: "Corte de Cabelo" em produção/Neon) e o resumo (dia, horário, barbearia, valor); com 1 serviço, confirma direto. Reserva em 3 toques: horário → CTA → Confirmar.
+- Deslogado: o CTA chama `signIn("google")` normal. Voltar com a seleção (MEL-009) fica para o Prompt 15.
+- Admin: seção "Reservas da semana (admin)" com todas as reservas futuras até o fim do último dia liberado (carrossel do `BookingItem`, como na home antiga) + link "Ver agenda completa" → `/adm`.
+- Dias, horários e reservas calculados só no servidor (`getNextServiceDays` + `buildDaySlots` em `schedule.ts`, comparação no fuso de São Paulo).
+- `saveBooking`: a validação do Prompt 6 (`isBookableSlot`) vale quando `AGENDA_V2` **ou** `NEW_HOME` está ligada para o usuário. Mensagens do Prompt 12 reaproveitadas (`BOOKING_ERROR_MESSAGES`, `shouldReloadSlots` → `router.refresh()`). Sucesso: "Reservado! Sex 16 às 10:30." (spec §4.2) + [Visualizar].
+- Relógio do servidor no e2e: `getNow()` em `schedule.ts` só lê `SCHEDULE_NOW` com `E2E=1` **e** sem `VERCEL`; em qualquer outro caso `new Date()`. Usado pela home nova e pelo `saveBooking`. Teste unitário garante que com `VERCEL` definido o `SCHEDULE_NOW` é ignorado.
+- `/barbershop/[id]` sem alteração. Banco sem migração.
+- Ajuste pedido após o teste na staging: no computador, o conteúdo da home nova fica numa coluna centralizada (`mx-auto max-w-lg`, 512px); header e rodapé continuam largos. No celular nada muda (390px: CTA com 350px, sem rolagem horizontal).
+
+**Decisões:**
+- Serviço no Sheet (spec §4.1), seção do admin + link para `/adm`, relógio com trava dupla e MEL-009 adiado: aprovados pelo dono em 2026-10-17.
+- Com `NEW_HOME` ligada para o admin, uma reserva dele pela `/barbershop/[id]` também passa pela regra do Prompt 6 (efeito de validar por `NEW_HOME` no `saveBooking`).
+- e2e com `NEW_HOME=admin`, `E2E=1` e `SCHEDULE_NOW` = a mesma quarta futura do `page.clock`. Segundo serviço só do e2e ("Barba", `e2e/db.ts`) para cobrir o Sheet. O aviso de domingo fica coberto por unit (o relógio do servidor é um só por rodada).
+
+**Lighthouse 13.5 (local, `next start`, banco Neon "Testes", celular, acessibilidade):** 100 em home nova (admin, `NEW_HOME=admin`), `/classic` (admin), home antiga (cliente), home nova deslogada e de cliente (`NEW_HOME=all`). Sheet "Confirmar reserva" aberto: axe-core 4.14 sem violações. 390px sem rolagem horizontal.
+
+**Validação (local, 2026-10-17):** `npm run lint` ✅ · `npm run test:unit` 78 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 25 ✅ em 2 rodadas seguidas.
+
+**Staging:** `fase2/home-nova` enviado para `staging` (Preview com `NEW_HOME=all`); fluxo aprovado pelo dono no celular em 2026-10-17. Reenviado com a coluna centralizada (lint ✅ · e2e 25 ✅).
+
+**Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-17, no celular e no computador.
+
+**Pendências:**
+- [ ] Vercel Production: criar `NEW_HOME=admin` antes do merge; depois de 7 dias, `all` (spec §6). `/classic` fica por 30 dias.
+- [ ] Prompt 15: voltar com a seleção depois do login (MEL-009).
+

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { TIME_GRID, getNextServiceDays, isBookableSlot } from "./schedule";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { TIME_GRID, buildDaySlots, getNextServiceDays, getNow, isBookableSlot, serviceDayLabel } from "./schedule";
 
 // Semana de seg 12/10/2026 a dom 18/10/2026, horário de São Paulo (UTC-3).
 const at = (isoLocal: string) => new Date(`${isoLocal}-03:00`);
@@ -118,5 +118,65 @@ describe("isBookableSlot", () => {
 
   it("recusa data inválida", () => {
     expect(isBookableSlot(new Date("lixo"), wednesday)).toBe(false);
+  });
+});
+
+describe("getNow", () => {
+  const FIXED = "2026-10-14T15:00:00.000Z";
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("no e2e (E2E=1, sem VERCEL) usa SCHEDULE_NOW", () => {
+    vi.stubEnv("SCHEDULE_NOW", FIXED);
+    vi.stubEnv("E2E", "1");
+    vi.stubEnv("VERCEL", undefined);
+    expect(getNow().toISOString()).toBe(FIXED);
+  });
+
+  it("com VERCEL definido ignora SCHEDULE_NOW, mesmo com E2E=1", () => {
+    vi.stubEnv("SCHEDULE_NOW", FIXED);
+    vi.stubEnv("E2E", "1");
+    vi.stubEnv("VERCEL", "1");
+    expect(getNow().toISOString()).not.toBe(FIXED);
+  });
+
+  it("sem E2E=1 ignora SCHEDULE_NOW", () => {
+    vi.stubEnv("SCHEDULE_NOW", FIXED);
+    vi.stubEnv("E2E", undefined);
+    vi.stubEnv("VERCEL", undefined);
+    expect(getNow().toISOString()).not.toBe(FIXED);
+  });
+
+  it("SCHEDULE_NOW inválido cai no relógio real", () => {
+    vi.stubEnv("SCHEDULE_NOW", "ontem");
+    vi.stubEnv("E2E", "1");
+    vi.stubEnv("VERCEL", undefined);
+    expect(Number.isNaN(getNow().getTime())).toBe(false);
+  });
+});
+
+describe("buildDaySlots", () => {
+  it("rótulo curto do dia", () => {
+    expect(serviceDayLabel("2026-10-16")).toBe("Sex 16");
+    expect(serviceDayLabel("2026-10-17")).toBe("Sáb 17");
+  });
+
+  it("marca ocupados pelo horário de São Paulo e conta os livres", () => {
+    const days = getNextServiceDays(at("2026-10-14T12:00:00"));
+    const result = buildDaySlots(days, [at("2026-10-16T10:30:00"), at("2026-10-17T19:30:00"), at("2026-10-23T10:30:00")]);
+
+    expect(result.map((day) => [day.label, day.freeCount])).toEqual([
+      ["Sex 16", 10],
+      ["Sáb 17", 10],
+    ]);
+    expect(result[0].slots.find((slot) => slot.time === "10:30")).toEqual({ time: "10:30", booked: true });
+    expect(result[0].slots.find((slot) => slot.time === "19:30")).toEqual({ time: "19:30", booked: false });
+    expect(result[1].slots.at(-1)).toEqual({ time: "19:30", booked: true });
+  });
+
+  it("no domingo não há dias", () => {
+    expect(buildDaySlots(getNextServiceDays(at("2026-10-18T12:00:00")), [])).toEqual([]);
   });
 });
