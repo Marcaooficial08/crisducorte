@@ -16,7 +16,7 @@
 | 11 · Vidro, brilho e luz ambiente | ✅ Publicado em produção | 2026-10-16 | `fase2/visual-b` (PR #11) |
 | 12 · Estados (vazio, erro, carregando) | ✅ Publicado em produção | 2026-10-16 | `fase2/estados` (PR #12) |
 | 13 · Menu lateral acessível | ✅ Publicado em produção | 2026-10-16 | `fase2/menu` (PR #13) |
-| 14 · Home nova (NEW_HOME) | 🧪 Em teste na staging | 2026-10-17 | `fase2/home-nova` |
+| 14 · Home nova (NEW_HOME) | ✅ Publicado em produção — previsto após o merge | 2026-10-17 | `fase2/home-nova` |
 
 ## Ambientes
 
@@ -476,8 +476,9 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Staging:** `fase2/home-nova` enviado para `staging` (Preview com `NEW_HOME=all`); fluxo aprovado pelo dono no celular em 2026-10-17. Reenviado com a coluna centralizada (lint ✅ · e2e 25 ✅).
 
+**Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-17, no celular e no computador.
+
 **Pendências:**
-- [ ] Conferir a coluna centralizada no computador na staging.
 - [ ] Vercel Production: criar `NEW_HOME=admin` antes do merge; depois de 7 dias, `all` (spec §6). `/classic` fica por 30 dias.
 - [ ] Prompt 15: voltar com a seleção depois do login (MEL-009).
 
