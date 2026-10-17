@@ -14,7 +14,8 @@
 | 9 · SEO e imagens | ✅ Publicado em produção | 2026-10-16 | `fase1/seo-imagens` (PR #9) |
 | 10 · Tokens, fontes e escala | ✅ Publicado em produção | 2026-10-16 | `fase2/tokens` (PR #10) |
 | 11 · Vidro, brilho e luz ambiente | ✅ Publicado em produção | 2026-10-16 | `fase2/visual-b` (PR #11) |
-| 12 · Estados (vazio, erro, carregando) | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase2/estados` |
+| 12 · Estados (vazio, erro, carregando) | ✅ Publicado em produção | 2026-10-16 | `fase2/estados` (PR #12) |
+| 13 · Menu lateral acessível | ✅ Publicado em produção — previsto após o merge | 2026-10-16 | `fase2/menu` |
 
 ## Prompt 0 · Preparação
 
@@ -412,3 +413,27 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Pendências:**
 - [ ] Depois do merge: PageSpeed em produção (acessibilidade 100 esperada).
+
+
+## Prompt 13 · Menu lateral acessível (MEL-011)
+
+**Feito:**
+- `app/_components/side-menu.tsx`: itens Início · Meus agendamentos (logado) · Perfil (logado) · Admin (só `session.user.isAdmin`) · Privacidade · Sair (logado) / Fazer login (deslogado), com o aviso "Ao entrar, você concorda com a Política de Privacidade." logo abaixo do Fazer login. Itens dentro de `<nav aria-label="Menu principal">`; o item da página atual tem `aria-current="page"` (via `usePathname`) e borda accent + texto `accent-soft`. "Sair" virou um `<button>` real com texto (antes era só ícone ao lado do avatar). Os links fecham o menu (`SheetClose`), inclusive quando o item é a página atual.
+- Admin passa a ver "Meus agendamentos" (`/bookings`, as próprias reservas) além de "Admin" (`/adm`). Removida a troca de rótulo e rota pelo `isAdmin` ("Agendamentos" × "Agendamentos dos clientes"). Não havia mais checagem por e-mail no código.
+- Foco preso, Esc fechando e foco voltando ao botão "Abrir menu" vêm do Sheet (Radix Dialog); agora cobertos por e2e. `header.tsx`: só `aria-describedby={undefined}` no `SheetContent` (tira o aviso do Radix sobre descrição); visual igual.
+- Contraste dos botões vermelhos sólidos (pedido do dono): token novo `--destructive-solid` #DC2626 (branco 4,83:1; o #EF4444 dava 3,76:1) em `globals.css` + `destructive.solid` no `tailwind.config.ts`; usado no variant `destructive` do `Button` (vale para o "Excluir" do `AlertDialogAction`, os "Cancelar reserva" e o "Excluir minha conta") e na classe do "Excluir" em `delete-account-button.tsx`. O `--destructive` #EF4444 continua em textos e bordas sobre fundo escuro (ErrorState, mensagens do formulário): 4,80:1 no fundo, contra 3,74:1 se fosse o #DC2626.
+- E2e novo `e2e/menu.spec.ts`, só com teclado (Tab, Shift+Tab, Enter, Esc): deslogado (itens, Fazer login + aviso, sem Admin/Sair, foco preso nas duas direções, Esc devolve o foco), cliente (itens, Enter em "Meus agendamentos" abre `/bookings` com `aria-current`), admin (Admin + própria reserva em `/bookings`, Enter em Admin abre `/adm`) e Sair (é `<button>`, Enter desloga). O teste do admin cria e apaga a própria reserva (o `estados.spec` usa o admin sem reservas); o do Sair recria a sessão dele a cada execução (o `signOut` apaga a sessão no banco).
+
+**Decisões:**
+- **Sem feature flag (decisão do dono, 2026-10-16).**
+- Home não alterada: o admin continua vendo na home as reservas de todos.
+- Agenda, home, banco, marca e o visual dos Prompts 8, 10 e 11 não foram tocados.
+
+**Lighthouse 13.5 (local, `next start`, banco Neon "Testes", celular, acessibilidade):** 100 em home deslogada, home logada, barbearia, `/bookings` (cliente e admin), `/adm` e `/privacidade`. `/perfil` 100 em 3 rodadas (antes 96 pelo contraste do "Excluir minha conta", corrigido acima). AlertDialog "Excluir sua conta?" aberto: axe-core 4.14 sem violações, botões com fundo `rgb(220, 38, 38)` e texto branco. Menu aberto (o Lighthouse não abre o menu): axe-core 4.14 (o do Lighthouse 13.5), deslogado, cliente e admin, sem violações.
+
+**Validação (local, 2026-10-16):** `npm run lint` ✅ · `npm run test:unit` 68 ✅ · `npm run test:int` 14 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 22 ✅ em 5 rodadas seguidas (5/5), também depois da correção do contraste · `e2e/menu.spec.ts` com `--repeat-each 5` 20/20 ✅.
+
+**Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-16.
+
+**Pendências:**
+- [ ] Depois do merge: PageSpeed em produção.

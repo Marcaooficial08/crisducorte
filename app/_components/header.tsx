@@ -58,7 +58,7 @@ const Header = () => {
               <MenuIcon size={16} aria-hidden="true" />
             </Button>
           </SheetTrigger>
-          <SheetContent className="p-0">
+          <SheetContent className="p-0" aria-describedby={undefined}>
             <SideMenu/>
 
           </SheetContent>

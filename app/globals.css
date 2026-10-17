@@ -28,6 +28,7 @@
     --warning: 43.3 96.4% 56.3%;       /* #FBBF24 */
     --destructive: 0 84.2% 60.2%;      /* #EF4444 */
     --destructive-foreground: 0 0% 100%;
+    --destructive-solid: 0 72.2% 50.6%; /* #DC2626: fundo de botão vermelho com texto branco (4,83:1); #EF4444 fica para texto e borda */
 
     /* Raio novo da spec: variáveis prontas, mapeamento do Tailwind muda no prompt de componentes. */
     --radius: 0.5rem;
