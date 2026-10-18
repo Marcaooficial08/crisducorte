@@ -7,7 +7,8 @@ import { authOptions } from "@/app/_lib/auth";
 import { AuthError, assertUser } from "@/app/_lib/auth-guards";
 import { checkRateLimit } from "@/app/_lib/rate-limit";
 import { isAgendaV2Enabled, isNewHomeEnabled } from "@/app/_lib/flags";
-import { getNow, isBookableSlot } from "@/app/_lib/schedule";
+import { getNow } from "@/app/_lib/schedule";
+import { SlotStatus, getInstantStatus, getSlotStatus, slotFromInstant } from "@/app/_lib/availability";
 import { BOOKING_ERROR_MESSAGES, BookingErrorCode } from "@/app/_lib/booking-errors";
 import { revalidatePath } from "next/cache";
 
@@ -34,20 +35,25 @@ export const saveBooking = async (params: SaveBookingParams): Promise<SaveBookin
     }
 
     // Agenda nova (AGENDA_V2 ou home nova): só dias liberados, horários da grade e ainda por vir.
-    if ((isAgendaV2Enabled(session) || isNewHomeEnabled(session)) && !isBookableSlot(bookingDate, getNow())) {
+    const useSchedule = isAgendaV2Enabled(session) || isNewHomeEnabled(session);
+    const slot = slotFromInstant(bookingDate);
+    if (useSchedule && !slot) {
       return fail("SLOT_UNAVAILABLE");
     }
 
     await db.$transaction(async (tx) => {
-      const existing = await tx.booking.findFirst({
-        where: {
-          barbershopId: params.barbershopId,
-          date: bookingDate,
-        },
-      });
+      // Disponibilidade pelo ponto único (app/_lib/availability.ts). Flags desligadas: só reserva e
+      // bloqueio no instante exato, como a agenda antiga (data montada no navegador).
+      const status: SlotStatus =
+        useSchedule && slot
+          ? await getSlotStatus(slot.date, slot.time, { barbershopId: params.barbershopId, now: getNow(), client: tx })
+          : await getInstantStatus(params.barbershopId, bookingDate, tx);
 
-      if (existing) {
+      if (status === "TAKEN") {
         throw new Error("SLOT_TAKEN");
+      }
+      if (status !== "AVAILABLE") {
+        throw new Error("SLOT_UNAVAILABLE");
       }
 
       await tx.booking.create({
@@ -75,6 +81,9 @@ export const saveBooking = async (params: SaveBookingParams): Promise<SaveBookin
       (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
     ) {
       return fail("SLOT_TAKEN");
+    }
+    if (error instanceof Error && error.message === "SLOT_UNAVAILABLE") {
+      return fail("SLOT_UNAVAILABLE");
     }
     console.error("Erro ao criar reserva:", error);
     return fail("GENERIC");

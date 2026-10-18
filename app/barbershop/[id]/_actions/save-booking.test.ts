@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getServerSession: vi.fn(),
   findFirst: vi.fn(),
   create: vi.fn(),
+  findBlock: vi.fn(),
 }));
 
 vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
@@ -13,7 +14,7 @@ vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
 vi.mock("@/app/_lib/prisma", () => ({
   db: {
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
-      fn({ booking: { findFirst: mocks.findFirst, create: mocks.create } }),
+      fn({ booking: { findFirst: mocks.findFirst, create: mocks.create }, slotBlock: { findUnique: mocks.findBlock } }),
   },
 }));
 
@@ -38,6 +39,7 @@ describe("saveBooking", () => {
     resetRateLimit();
     mocks.findFirst.mockResolvedValue(null);
     mocks.create.mockResolvedValue({});
+    mocks.findBlock.mockResolvedValue(null);
   });
 
   it("recusa sem sessão e não grava nada", async () => {
@@ -134,6 +136,28 @@ describe("saveBooking", () => {
       mocks.getServerSession.mockResolvedValueOnce(sessionOf("user-1"));
       expect(await saveBooking(outOfRule)).toEqual({ success: true });
       expect(mocks.create).toHaveBeenCalledTimes(1);
+    });
+
+    it("all: recusa horário bloqueado (SlotBlock)", async () => {
+      vi.stubEnv("AGENDA_V2", "all");
+      mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
+      mocks.findBlock.mockResolvedValue({ id: "block-1" });
+
+      expect(await saveBooking(valid)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
+      expect(mocks.findBlock).toHaveBeenCalledWith({ where: { date: new Date(valid.date) }, select: { id: true } });
+      expect(mocks.create).not.toHaveBeenCalled();
+    });
+
+    it("all: recusa horário com segundos", async () => {
+      vi.stubEnv("AGENDA_V2", "all");
+      mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
+
+      expect(await saveBooking({ ...params, date: "2026-10-16T12:00:30.000Z" })).toEqual({
+        success: false,
+        code: "SLOT_UNAVAILABLE",
+        error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE,
+      });
+      expect(mocks.create).not.toHaveBeenCalled();
     });
 
     it("all: recusa fora da regra e aceita horário liberado", async () => {
