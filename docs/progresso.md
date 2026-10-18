@@ -17,7 +17,8 @@
 | 12 · Estados (vazio, erro, carregando) | ✅ Publicado em produção | 2026-10-16 | `fase2/estados` (PR #12) |
 | 13 · Menu lateral acessível | ✅ Publicado em produção | 2026-10-16 | `fase2/menu` (PR #13) |
 | 14 · Home nova (NEW_HOME) | ✅ Publicado em produção | 2026-10-17 | `fase2/home-nova` (PR #14) |
-| 15 · Voltar com a seleção após o login | ✅ Publicado em produção — previsto após o merge | 2026-10-17 | `fase2/login-resume` |
+| 15 · Voltar com a seleção após o login | ✅ Publicado em produção | 2026-10-17 | `fase2/login-resume` (PR #15) |
+| 16 · Schema da Fase 3 + disponibilidade | 🧪 Em teste na staging | 2026-10-17 | `fase3/schema` |
 
 ## Ambientes
 
@@ -504,4 +505,42 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 **Staging:** `fase2/login-resume` enviado para `staging` (`NEW_HOME=all`) para teste no celular.
 
 **Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-17, no celular, com login real do Google: voltou com o horário selecionado e a reserva foi confirmada.
+
+**Produção (2026-10-17) ✅:** PR #15 mergeado na `main` (`5f6f3df`) e publicado pela Vercel. `staging` atualizada para ficar igual à `main`.
+
+## Prompt 16 · Schema da Fase 3 + disponibilidade (MEL-019, MEL-025)
+
+**Feito:**
+- `schema.prisma` (spec §5): enum `BookingSource` (CLIENT, MANUAL, MENSALISTA); em `Booking`, `customerName`, `customerPhone`, `mensalistaId`, `cycleId` (opcionais) e `source` (padrão CLIENT); modelos `SlotBlock`, `Mensalista`, `MensalistaCycle`, enum `MensalistaStatus` e `BookingCancellation` (`bookingId`, `date`, `cancelledAt`, `byAdmin`, `source`).
+- Migração `20261017000000_fase3_schema`, só aditiva: 2 enums, 5 colunas novas em `Booking`, 4 tabelas, 2 índices (`BookingCancellation_date_idx`, `SlotBlock_date_key`) e 3 chaves estrangeiras. Nenhum DROP, RENAME, ALTER TYPE ou UPDATE. Gerada com `prisma migrate diff` entre o schema antigo e o novo (sem banco), SQL aprovado pelo dono antes de aplicar.
+- `app/_lib/availability.ts` (ponto único, spec §5): `isSlotAvailable(data, hora, { barbershopId })`, `getSlotStatus` (AVAILABLE, TAKEN, BLOCKED, OUTSIDE_SCHEDULE) e `getDaySlots(data, { barbershopId })`. Consideram `TIME_GRID`, a regra da agenda (`getNextServiceDays`), `Booking` da barbearia e `SlotBlock`. Aceitam o `tx` da transação.
+- Home nova usa `getDaySlots`. `saveBooking` usa `getSlotStatus` dentro da transação (flags ligadas) ou `getInstantStatus` (só reserva e bloqueio no instante exato, com as flags desligadas, como a agenda antiga). Mensagens iguais: ocupado → SLOT_TAKEN; fora da regra ou bloqueado → SLOT_UNAVAILABLE. O `@@unique` (P2002) continua como última trava.
+- Nome do cliente (`app/_lib/customer-name.ts`): `customerName ?? user.name`; conta sem nome continua "Cliente"; "Conta excluída" só sem conta e sem `customerName`. Usado em `booking-info.tsx` e `booking-item-adm.tsx` (inicial do avatar também).
+- `cancelBooking` continua apagando a reserva e grava 1 linha em `BookingCancellation` na mesma transação. `byAdmin` só quando o admin cancela a reserva de outra pessoa.
+- `getBookingMetrics` conta as canceladas (`canceladas` no total e por semana), pela data do horário cancelado. Cancelamentos anteriores a esta versão não têm registro.
+- `prisma/sql/fase3-schema-producao.sql`: o mesmo SQL da migração dentro de `BEGIN`/`COMMIT` (com `lock_timeout` de 5s), mais as consultas de antes e de conferência (só leitura) e o lembrete do `migrate resolve`. Consultas de conferência testadas no Neon dev.
+- Testes: unit `availability.test.ts`, `customer-name.test.ts`, `metrics.test.ts`, `cancel-booking.test.ts` e `save-booking.test.ts` (bloqueio e horário com segundos); integração `tests/integration/cancellation.int.test.ts` (linha gravada, `byAdmin`, `source` preservado, recusa não grava, dois cancelamentos simultâneos geram 1 linha, métrica) e caso de `SlotBlock` em `agenda-v2.int.test.ts`. `resetDatabase` limpa as tabelas novas.
+
+**Decisões (aprovadas pelo dono em 2026-10-17):**
+- Funções de disponibilidade recebem `barbershopId` (a reserva é única por barbearia e data); o bloqueio vale para o horário em todas as barbearias.
+- `byAdmin` só quando o admin cancela a reserva de outra pessoa.
+- "Conta excluída" só com `userId` nulo e sem `customerName`; conta sem nome continua "Cliente".
+- `/barbershop/[id]` sem mudança agora (continua com `getDayBookings`).
+- Índice `Booking_barbershopId_date_key` e tabela `Booking_backup_duplicates` de produção não foram tocados.
+- `isBookableSlot` e `buildDaySlots` (`schedule.ts`) ficaram sem uso no app, só nos testes; podem sair num prompt de limpeza.
+
+**Banco:**
+- Neon dev: o histórico não tinha a migração do Prompt 5 (`userId` ainda `NOT NULL`); o `migrate deploy` aplicou as duas em ordem. Reservas antes: 3; depois: 3, mesmo hash (id, barbearia, serviço, usuário, data), todas com `source = CLIENT`.
+- Neon "Testes": aplicada pelo setup da integração (`migrate deploy`).
+- Produção (Supabase): **não tocada**. Aplicação manual pelo dono com `prisma/sql/fase3-schema-producao.sql`, depois do backup, e `migrate resolve` em seguida.
+
+**Validação (local, 2026-10-17):** `npm run lint` ✅ · `npm run test:unit` 105 ✅ · `npm run test:int` 21 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 28 ✅.
+
+**Staging:** `fase3/schema` enviado para `staging` (banco Neon dev, já migrado).
+
+**Pendências:**
+- [ ] Produção: dono aplica o SQL no Supabase (backup antes) **antes do merge** — o código novo lê `SlotBlock` e grava `BookingCancellation`; sem a migração, reservar e cancelar quebram em produção.
+- [ ] Produção: `npx prisma migrate resolve --applied 20261017000000_fase3_schema` e `migrate status`.
+- [ ] Prompt 17: `/barbershop/[id]` deve esconder os horários bloqueados (`SlotBlock`), usando `availability.ts`.
+- [ ] Pendência do Prompt 3 (12 pares de reservas no mesmo horário antes de um `@@unique` só por data) continua aberta.
 
