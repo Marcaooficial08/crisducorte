@@ -9,7 +9,8 @@ import BookingItem from "@/app/_components/booking-item";
 import EmptyState from "@/app/_components/empty-state";
 import { db } from "@/app/_lib/prisma";
 import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
-import { AGENDA_CLOSED_MESSAGE, TIME_ZONE, buildDaySlots, getNextServiceDays, getNow } from "@/app/_lib/schedule";
+import { AGENDA_CLOSED_MESSAGE, DaySlots, TIME_ZONE, getNextServiceDays, getNow } from "@/app/_lib/schedule";
+import { getDaySlots } from "@/app/_lib/availability";
 import BookingPicker from "./booking-picker";
 
 interface NewHomeProps {
@@ -29,7 +30,6 @@ const NewHome = async ({ session }: NewHomeProps) => {
   const user = session?.user;
   const isAdmin = user?.isAdmin === true;
   const serviceDays = getNextServiceDays(now);
-  const rangeStart = serviceDays.length > 0 ? fromZonedTime(`${serviceDays[0].date}T00:00:00`, TIME_ZONE) : undefined;
   const rangeEnd = serviceDays.length > 0 ? endOfServiceDays(serviceDays[serviceDays.length - 1].date) : undefined;
 
   const barbershop = await db.barbershop.findFirst({
@@ -38,12 +38,10 @@ const NewHome = async ({ session }: NewHomeProps) => {
     include: { services: { orderBy: { id: "asc" } } },
   });
 
-  const [bookedDates, nextBooking, adminBookings] = await Promise.all([
-    barbershop && rangeStart && rangeEnd
-      ? db.booking.findMany({
-          where: { barbershopId: barbershop.id, date: { gte: rangeStart, lt: rangeEnd } },
-          select: { date: true },
-        })
+  const [daySlots, nextBooking, adminBookings] = await Promise.all([
+    // Disponibilidade pelo ponto único (reservas + bloqueios).
+    barbershop
+      ? Promise.all(serviceDays.map((day) => getDaySlots(day.date, { barbershopId: barbershop.id, now })))
       : Promise.resolve([]),
     user
       ? db.booking.findFirst({
@@ -61,7 +59,7 @@ const NewHome = async ({ session }: NewHomeProps) => {
       : Promise.resolve([]),
   ]);
 
-  const days = buildDaySlots(serviceDays, bookedDates.map((booking) => booking.date));
+  const days = daySlots.filter((day): day is DaySlots => day !== null);
   const firstName = user?.name?.split(" ")[0];
 
   return (

@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const findMany = vi.fn();
+const findCancellations = vi.fn();
 
 vi.mock("@/app/_lib/prisma", () => ({
-  db: { booking: { findMany: (...args: unknown[]) => findMany(...args) } },
+  db: {
+    booking: { findMany: (...args: unknown[]) => findMany(...args) },
+    bookingCancellation: { findMany: (...args: unknown[]) => findCancellations(...args) },
+  },
 }));
 
 import { getBookingMetrics } from "./metrics";
@@ -11,6 +15,8 @@ import { getBookingMetrics } from "./metrics";
 describe("getBookingMetrics", () => {
   beforeEach(() => {
     findMany.mockReset();
+    findCancellations.mockReset();
+    findCancellations.mockResolvedValue([]);
   });
 
   it("filtra pelo período informado", async () => {
@@ -21,6 +27,10 @@ describe("getBookingMetrics", () => {
     await getBookingMetrics(desde, ate);
 
     expect(findMany).toHaveBeenCalledWith({
+      where: { date: { gte: desde, lte: ate } },
+      select: { date: true },
+    });
+    expect(findCancellations).toHaveBeenCalledWith({
       where: { date: { gte: desde, lte: ate } },
       select: { date: true },
     });
@@ -38,9 +48,29 @@ describe("getBookingMetrics", () => {
 
     expect(result).toEqual({
       confirmadas: 4,
+      canceladas: 0,
       porSemana: [
-        { semana: "2026-10-12", total: 3 },
-        { semana: "2026-10-19", total: 1 },
+        { semana: "2026-10-12", total: 3, canceladas: 0 },
+        { semana: "2026-10-19", total: 1, canceladas: 0 },
+      ],
+    });
+  });
+
+  it("conta canceladas pela data do horário, inclusive em semana sem confirmadas", async () => {
+    findMany.mockResolvedValue([{ date: new Date("2026-10-16T09:00:00Z") }]);
+    findCancellations.mockResolvedValue([
+      { date: new Date("2026-10-17T10:30:00Z") }, // mesma semana
+      { date: new Date("2026-10-30T12:00:00Z") }, // semana só com cancelada
+    ]);
+
+    const result = await getBookingMetrics(new Date("2026-10-01"), new Date("2026-10-31"));
+
+    expect(result).toEqual({
+      confirmadas: 1,
+      canceladas: 2,
+      porSemana: [
+        { semana: "2026-10-12", total: 1, canceladas: 1 },
+        { semana: "2026-10-26", total: 0, canceladas: 1 },
       ],
     });
   });
@@ -50,6 +80,6 @@ describe("getBookingMetrics", () => {
 
     const result = await getBookingMetrics(new Date("2026-10-01"), new Date("2026-10-31"));
 
-    expect(result).toEqual({ confirmadas: 0, porSemana: [] });
+    expect(result).toEqual({ confirmadas: 0, canceladas: 0, porSemana: [] });
   });
 });

@@ -94,4 +94,12 @@ describe("saveBooking com AGENDA_V2=all (banco real, relógio fixo)", () => {
     const bookings = await db.booking.findMany({ orderBy: { date: "asc" } });
     expect(bookings.map((b) => b.date)).toEqual([new Date(LEGACY_SLOT), new Date(sp("2030-01-04T14:30:00"))]);
   });
+
+  it("recusa horário bloqueado (SlotBlock) e aceita o vizinho livre", async () => {
+    await db.slotBlock.create({ data: { date: new Date(sp("2030-01-05T10:30:00")), reason: "teste" } });
+
+    expect(await book(sp("2030-01-05T10:30:00"))).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: SLOT_UNAVAILABLE_MESSAGE });
+    await expectOnlyLegacyBooking();
+    expect(await book(sp("2030-01-05T11:30:00"))).toEqual({ success: true });
+  });
 });

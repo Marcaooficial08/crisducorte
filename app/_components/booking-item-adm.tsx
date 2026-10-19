@@ -32,7 +32,7 @@ import {
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
 import { track } from "../_lib/track";
-import { DELETED_ACCOUNT_LABEL } from "../_lib/auth-guards";
+import { getCustomerName } from "../_lib/customer-name";
 
 interface BookingItemAdmProps {
   booking: Prisma.BookingGetPayload<{
@@ -47,7 +47,7 @@ interface BookingItemAdmProps {
 const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   const isBookingConfirmed = isFuture(booking.date);
-  const customerName = booking.user ? (booking.user.name ?? "Cliente") : DELETED_ACCOUNT_LABEL;
+  const customerName = getCustomerName(booking);
 
   const handleCancelClick = async () => {
     setIsDeleteLoading(true);
@@ -88,7 +88,7 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
                 <Avatar className="h-7 w-7">
                   <AvatarImage src={booking.user?.image ?? ""} alt="" />
                   <AvatarFallback className="text-caption">
-                    {booking.user?.name?.charAt(0).toUpperCase() ?? "?"}
+                    {(booking.customerName || booking.user?.name)?.charAt(0).toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col">
@@ -125,7 +125,7 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
               <Avatar>
                 <AvatarImage src={booking.user?.image ?? ""} alt="" />
                 <AvatarFallback>
-                  {booking.user?.name?.charAt(0).toUpperCase() ?? "?"}
+                  {(booking.customerName || booking.user?.name)?.charAt(0).toUpperCase() ?? "?"}
                 </AvatarFallback>
               </Avatar>
               <div>

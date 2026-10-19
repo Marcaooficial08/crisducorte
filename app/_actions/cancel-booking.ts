@@ -29,9 +29,16 @@ export const cancelBooking = async (bookingId: string): Promise<{ success: boole
     throw new Error("Sem permissão para cancelar esta reserva.");
   }
 
-  await db.booking.delete({
-    where: { id: bookingId },
-  });
+  // Continua apagando a reserva; o registro do cancelamento entra na mesma transação (métricas).
+  // byAdmin só quando o admin cancela a reserva de outra pessoa.
+  await db.$transaction([
+    db.bookingCancellation.create({
+      data: { bookingId: booking.id, date: booking.date, byAdmin: !isOwner, source: booking.source },
+    }),
+    db.booking.delete({
+      where: { id: bookingId },
+    }),
+  ]);
 
   revalidatePath("/");
   revalidatePath("/bookings");

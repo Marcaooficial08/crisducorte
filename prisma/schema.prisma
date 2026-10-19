@@ -38,18 +38,16 @@ model Session {
 }
 
 model User {
-  id                String        @id @default(cuid())
-  name              String?
-  email             String?       @unique
-  emailVerified     DateTime?
-  image             String?
-  accounts          Account[]
-  sessions          Session[]
-  bookings          Booking[]
-  isAdmin           Boolean       @default(false)
- 
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  bookings      Booking[]
+  isAdmin       Boolean   @default(false)
 }
-
 
 model VerificationToken {
   identifier String
@@ -69,16 +67,80 @@ model Barbershop {
 }
 
 model Booking {
-  id           String     @id @default(uuid())
-  barbershopId String
-  barbershop   Barbershop @relation(fields: [barbershopId], references: [id])
-  serviceId    String
-  service      Service    @relation(fields: [serviceId], references: [id])
-  userId       String?    // null = conta excluída pelo cliente (LGPD); a reserva fica sem dado pessoal
-  user         User?      @relation(fields: [userId], references: [id], onDelete: Restrict)
-  date         DateTime   @db.Timestamp
+  id            String           @id @default(uuid())
+  barbershopId  String
+  barbershop    Barbershop       @relation(fields: [barbershopId], references: [id])
+  serviceId     String
+  service       Service          @relation(fields: [serviceId], references: [id])
+  userId        String? // null = conta excluída pelo cliente (LGPD); a reserva fica sem dado pessoal
+  user          User?            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  date          DateTime         @db.Timestamp
+  customerName  String? // reserva manual sem conta (Fase 3); telas usam customerName ?? user.name
+  customerPhone String?
+  source        BookingSource    @default(CLIENT)
+  mensalistaId  String?
+  mensalista    Mensalista?      @relation(fields: [mensalistaId], references: [id])
+  cycleId       String?
+  cycle         MensalistaCycle? @relation(fields: [cycleId], references: [id])
 
   @@unique([barbershopId, date])
+}
+
+enum BookingSource {
+  CLIENT // cliente pelo app
+  MANUAL // Cris pelo painel
+  MENSALISTA // gerada pelo horário fixo
+}
+
+// Uma linha por reserva cancelada (o cancelamento apaga a Booking). Sem FK: a reserva já não existe.
+model BookingCancellation {
+  id          String        @id @default(cuid())
+  bookingId   String
+  date        DateTime      @db.Timestamp // data + hora da reserva cancelada
+  cancelledAt DateTime      @default(now())
+  byAdmin     Boolean
+  source      BookingSource
+
+  @@index([date])
+}
+
+model SlotBlock {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Timestamp // data + hora do horário bloqueado (mesmo tipo de Booking.date)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([date])
+}
+
+enum MensalistaStatus {
+  ATIVO
+  PAUSADO
+  EXCLUIDO
+}
+
+model Mensalista {
+  id        String            @id @default(cuid())
+  name      String
+  phone     String
+  email     String? // liga ao User pelo e-mail, se existir
+  fixedDay  Int? // 5 = sexta, 6 = sábado; null = reserva na mão
+  fixedTime String? // "10:30"
+  status    MensalistaStatus  @default(ATIVO)
+  cycles    MensalistaCycle[]
+  bookings  Booking[]
+  createdAt DateTime          @default(now())
+}
+
+model MensalistaCycle {
+  id           String     @id @default(cuid())
+  mensalistaId String
+  mensalista   Mensalista @relation(fields: [mensalistaId], references: [id])
+  paidAt       DateTime // início do ciclo
+  weekends     DateTime[] // as 4 sextas de referência do ciclo
+  endsAt       DateTime // domingo após o 4º fim de semana
+  renewedAt    DateTime?
+  bookings     Booking[]
 }
 
 model Service {
@@ -102,4 +164,3 @@ model VerificationRequest {
 
   @@unique([identifier, token])
 }
-
