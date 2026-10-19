@@ -4,7 +4,8 @@ import { db } from "@/app/_lib/prisma";
 import { DaySlots, TIME_ZONE, getNextServiceDays, getNow, serviceDayLabel } from "@/app/_lib/schedule";
 
 // Disponibilidade de um horário (spec §5): está na grade e nos dias liberados, não tem Booking
-// e não tem SlotBlock. Ponto único para a home nova, o saveBooking e (depois) o painel e os mensalistas.
+// e não tem SlotBlock. Ponto único para a home nova, a /barbershop/[id], o saveBooking, o painel do
+// admin e (depois) os mensalistas.
 
 type DbClient = Pick<Prisma.TransactionClient, "booking" | "slotBlock">;
 
@@ -58,6 +59,27 @@ export const getSlotStatus = async (date: string, time: string, options: Availab
 export const isSlotAvailable = async (date: string, time: string, options: AvailabilityOptions): Promise<boolean> =>
   (await getSlotStatus(date, time, options)) === "AVAILABLE";
 
+// Início (inclusive) e fim (exclusivo) de um dia no fuso de São Paulo.
+export const dayRange = (date: string): { gte: Date; lt: Date } => {
+  const nextDay = new Date(`${date}T00:00:00Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  return { gte: slotInstant(date, "00:00"), lt: slotInstant(nextDay.toISOString().slice(0, 10), "00:00") };
+};
+
+// Instantes ocupados (reserva da barbearia ou bloqueio) num intervalo. Só as datas: nada de dado
+// pessoal, porque também vai para o navegador (getDayBookings da /barbershop/[id]).
+export const getTakenInstants = async (
+  barbershopId: string,
+  range: { gte: Date; lt?: Date; lte?: Date },
+  client: DbClient = db,
+): Promise<Date[]> => {
+  const [bookings, blocks] = await Promise.all([
+    client.booking.findMany({ where: { barbershopId, date: range }, select: { date: true } }),
+    client.slotBlock.findMany({ where: { date: range }, select: { date: true } }),
+  ]);
+  return [...bookings, ...blocks].map((item) => item.date);
+};
+
 // Horários de um dia liberado; null se o dia não está liberado agora.
 // Reservado ou bloqueado aparece como ocupado (booked).
 export const getDaySlots = async (date: string, options: AvailabilityOptions): Promise<DaySlots | null> => {
@@ -66,18 +88,8 @@ export const getDaySlots = async (date: string, options: AvailabilityOptions): P
     return null;
   }
 
-  const client = options.client ?? db;
-  const nextDay = new Date(`${date}T00:00:00Z`);
-  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-  const range = { gte: slotInstant(date, "00:00"), lt: slotInstant(nextDay.toISOString().slice(0, 10), "00:00") };
-  const [bookings, blocks] = await Promise.all([
-    client.booking.findMany({ where: { barbershopId: options.barbershopId, date: range }, select: { date: true } }),
-    client.slotBlock.findMany({ where: { date: range }, select: { date: true } }),
-  ]);
-
-  const taken = new Set(
-    [...bookings, ...blocks].map((item) => formatInTimeZone(item.date, TIME_ZONE, "yyyy-MM-dd HH:mm")),
-  );
+  const instants = await getTakenInstants(options.barbershopId, dayRange(date), options.client);
+  const taken = new Set(instants.map((instant) => formatInTimeZone(instant, TIME_ZONE, "yyyy-MM-dd HH:mm")));
   const slots = day.times.map((time) => ({ time, booked: taken.has(`${date} ${time}`) }));
 
   return {

@@ -543,7 +543,47 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 **Pendências:**
 - [x] Produção: dono aplica o SQL no Supabase (backup antes) **antes do merge** — o código novo lê `SlotBlock` e grava `BookingCancellation`; sem a migração, reservar e cancelar quebram em produção. Feito em 2026-10-17 (backup prod-2026-10-17.dump).
 - [x] Produção: `npx prisma migrate resolve --applied 20261017000000_fase3_schema` e `migrate status` — feito em 2026-10-17, "Database schema is up to date!".
-- [ ] Prompt 17: `/barbershop/[id]` deve esconder os horários bloqueados (`SlotBlock`), usando `availability.ts`.
-- [ ] Prompt 17 (painel do admin): exibir métricas no /adm, incluindo canceladas (getBookingMetrics). Sem flag nova — o /adm já é restrito ao admin. Hoje `getBookingMetrics` não aparece em nenhuma tela.
+- [x] Prompt 17: `/barbershop/[id]` deve esconder os horários bloqueados (`SlotBlock`), usando `availability.ts` — feito no Prompt 17.
+- [x] Prompt 17 (painel do admin): exibir métricas no /adm, incluindo canceladas (getBookingMetrics) — feito no Prompt 17 (aparecem com a flag ligada ou desligada).
 - [ ] Pendência do Prompt 3 (12 pares de reservas no mesmo horário antes de um `@@unique` só por data) continua aberta.
+
+## Prompt 17 · Painel do admin: bloqueios, reserva manual e métricas (MEL-019)
+
+**Feito:**
+- Flag `ADMIN_PANEL_V2` (`off | admin | all`, padrão `off`; `isAdminPanelV2Enabled` em `app/_lib/flags.ts`). Ligada: o `/adm` mostra a grade da semana aberta no topo, depois as métricas e a lista antiga (Confirmados/Finalizados). Desligada: a lista antiga + as métricas.
+- Grade (`app/_lib/admin-agenda.ts` + `app/adm/_components/`): os dias de `getNextServiceDays` (sexta e sábado da semana aberta; domingo mostra `AGENDA_CLOSED_MESSAGE`), os 11 horários de cada dia com o estado: Livre (Reservar na mão · Bloquear), reservado (nome via `customer-name.ts`, serviço, selo "Reserva na mão", telefone completo como link `https://wa.me/55<dígitos>` com `aria-label="Chamar <nome> no WhatsApp"`; Cancelar com AlertDialog), Bloqueado + motivo (Desbloquear). Horário que já passou aparece sem ações. Relógio `getNow()`.
+- "Bloquear dia inteiro" (Sheet com motivo opcional): numa transação só, trava cada horário (`lockSlot`, em ordem) e bloqueia os livres e futuros do dia; reservas não são tocadas. Toast: "X horários bloqueados, Y reservas mantidas (cancele à parte se precisar)." (sem o parêntese quando Y = 0). "Desbloquear dia" remove os bloqueios do dia.
+- Server Actions em `app/_actions/admin/`: `blockSlot`, `unblockSlot`, `blockDay`, `unblockDay`, `createManualBooking`, `adminCancelBooking`. Todas conferem `isAdmin` pela sessão no servidor (`assertAdmin`) antes de tocar no banco, validam a entrada com zod e devolvem `{ success, message | code + error }` (peças comuns em `app/_lib/admin-actions.ts`). A barbearia é resolvida no servidor (a mesma da home nova).
+- Reserva manual: nome (1–80) + WhatsApp (10 ou 11 dígitos, aceita máscara e +55; grava só os dígitos, `app/_lib/phone.ts`) + serviço da barbearia; `source = MANUAL`, `userId = null`. Recusa horário reservado, bloqueado ou fora da semana aberta (`getSlotStatus` na transação); P2002 vira "já tem reserva".
+- Cancelamento pelo painel: apaga a reserva e grava `BookingCancellation` com `byAdmin = true` sempre e o `source` original, na mesma transação. O `cancelBooking` do cliente continua com a regra do Prompt 16.
+- Métricas (`booking-metrics.tsx`): `getBookingMetrics` da semana atual + 4 anteriores (`recentWeeksWindow`), total de confirmadas e canceladas e tabela por semana (semanas sem reserva aparecem com 0), com a nota "Canceladas registradas desde 19/10/2026."
+- Trava por horário (`app/_lib/slot-lock.ts`): `pg_advisory_xact_lock(hashtextextended('slot:<barbershopId>:<instante ISO UTC>', 0))` dentro da transação, igual em `saveBooking`, `createManualBooking`, `blockSlot` e `blockDay`. Sem ela, bloquear e reservar o mesmo horário ao mesmo tempo gravava os dois (SlotBlock e Booking são tabelas diferentes) — conferido: com a trava desligada o teste de integração falha.
+- `/barbershop/[id]`: `getDayBookings` passa a usar `getTakenInstants` (`availability.ts`, reservas + bloqueios) e devolve **só as datas**. Antes devolvia o `Booking` inteiro (userId, `customerName`, `customerPhone`) para qualquer visitante. `getDaySlots` usa o mesmo `getTakenInstants`.
+- Ajuste pedido após o teste no localhost: no computador, o `/adm` fica numa coluna centralizada (`mx-auto max-w-2xl`, 672px), coerente com a home nova; header largo. Cada linha da grade: hora + estado + botões; no celular os botões ficam abaixo, a partir de `sm` na mesma linha, à direita.
+- Sem migração.
+
+**Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-19 (bloquear/desbloquear, reserva manual, WhatsApp, cancelamento pelo admin, bloquear/desbloquear dia mantendo a reserva).
+
+**Decisões (aprovadas pelo dono em 2026-10-19):**
+- Flag `ADMIN_PANEL_V2`, padrão `off`.
+- Grade só da semana aberta, respeitando `getSlotStatus` (spec §4.4 falava em 4 semanas).
+- `byAdmin = true` sempre que o cancelamento vem do painel.
+- "Bloquear dia inteiro" incluído; mensalistas, AdminTabs e métrica por `source` ficam para o Prompt 18.
+- Chave da trava: barbearia + instante em UTC. O bloqueio vale para todas as barbearias (Prompt 16), mas a trava é por barbearia: com mais de uma barbearia, um bloqueio e uma reserva noutra barbearia não se excluem (hoje só há uma visível).
+
+**Testes:**
+- Unit: `app/_actions/admin/admin-actions.test.ts` (isAdmin em todas as actions, validação, recusas, `blockDay` só livres e futuros e travas em ordem, reserva manual, `byAdmin`), `admin-agenda.test.ts`, `phone.test.ts` (inclui `slotLockKey`), `get-day-bookings.test.ts` (só datas), `availability.test.ts` (`getTakenInstants`), `metrics.test.ts` (`recentWeeksWindow`), `flags.test.ts`, `adm/page.test.ts` (flag on/off, métricas, não-admin) e `save-booking.test.ts` (trava antes de conferir).
+- Integração `tests/integration/admin-panel.int.test.ts` (relógio fixo, quarta 02/01/2030): bloqueio recusado pelo `saveBooking` (home nova e agenda antiga) e escondido no `getDayBookings`; desbloquear; bloquear horário reservado recusado; bloquear e reservar ao mesmo tempo grava só um; bloquear dia inteiro mantém as reservas existentes; desbloquear dia; conta comum não consegue bloquear dia; reserva manual (MANUAL, sem userId, telefone em dígitos, ocupa para o cliente); recusas da reserva manual; cancelamento do admin (`byAdmin`, `source`, métrica); conta comum recusada em todas as actions sem mudar o banco.
+- e2e `e2e/admin-painel.spec.ts` (`ADMIN_PANEL_V2=admin` no `playwright.config.ts`): bloquear com motivo → cliente vê "ocupado" na home nova e não vê o horário na `/barbershop/[id]` → desbloquear; reserva manual com link do WhatsApp → cancelamento pelo admin → "Livre" e canceladas +1; bloquear dia inteiro mantém a reserva → desbloquear dia; 44px e sem rolagem horizontal em 390px; no computador (1280px), coluna de até 672px centralizada e botões na linha do horário.
+
+- `vitest.config.mts`: `AGENDA_V2`, `NEW_HOME` e `ADMIN_PANEL_V2` fixas em `off` nos projetos unit e integração. Antes os testes herdavam as flags do `.env` local (com `AGENDA_V2=all` local, 8 unit e 6 de integração falhavam); cada teste continua ligando a sua com `vi.stubEnv`.
+
+**Validação (local, 2026-10-19, depois do ajuste de layout):** `npm run lint` ✅ · `npm run test:unit` 148 ✅ · `npm run test:int` 33 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 33 ✅ em 2 de 3 rodadas; na 1ª, 3 testes do `login-resume.spec` (não alterado) passaram do tempo e depois passaram 9/9 com `--repeat-each 3`.
+
+**Produção:** publicado em produção — previsto após o merge. Com `ADMIN_PANEL_V2` ausente (= `off`), o `/adm` muda só pelas métricas; o bloqueio escondido na `/barbershop/[id]` e o `getDayBookings` sem dado pessoal valem para todos sem flag.
+
+**Pendências:**
+- [ ] Vercel: criar `ADMIN_PANEL_V2` (Preview `admin` para testar na staging; Production `admin` depois do aceite).
+- [ ] Teste de aceite do dono na staging (localhost ✅ em 2026-10-19).
+- [ ] Lighthouse/axe do `/adm` novo (não rodado neste prompt).
 

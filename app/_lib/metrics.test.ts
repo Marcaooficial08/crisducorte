@@ -10,7 +10,7 @@ vi.mock("@/app/_lib/prisma", () => ({
   },
 }));
 
-import { getBookingMetrics } from "./metrics";
+import { getBookingMetrics, recentWeeksWindow } from "./metrics";
 
 describe("getBookingMetrics", () => {
   beforeEach(() => {
@@ -81,5 +81,21 @@ describe("getBookingMetrics", () => {
     const result = await getBookingMetrics(new Date("2026-10-01"), new Date("2026-10-31"));
 
     expect(result).toEqual({ confirmadas: 0, canceladas: 0, porSemana: [] });
+  });
+});
+
+describe("recentWeeksWindow", () => {
+  it("semana atual + 4 anteriores, de segunda 00:00 a domingo 23:59:59.999 (UTC)", () => {
+    const window = recentWeeksWindow(new Date("2026-10-21T15:00:00.000Z")); // quarta
+
+    expect(window.desde).toEqual(new Date("2026-09-21T00:00:00.000Z"));
+    expect(window.ate).toEqual(new Date("2026-10-25T23:59:59.999Z"));
+    expect(window.semanas).toEqual(["2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12", "2026-10-19"]);
+  });
+
+  it("domingo ainda é da semana que começou na segunda", () => {
+    const window = recentWeeksWindow(new Date("2026-10-25T20:00:00.000Z"), 0);
+
+    expect(window.semanas).toEqual(["2026-10-19"]);
   });
 });

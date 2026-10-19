@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
   create: vi.fn(),
   findBlock: vi.fn(),
+  lock: vi.fn(),
 }));
 
 vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
@@ -14,7 +15,11 @@ vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
 vi.mock("@/app/_lib/prisma", () => ({
   db: {
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
-      fn({ booking: { findFirst: mocks.findFirst, create: mocks.create }, slotBlock: { findUnique: mocks.findBlock } }),
+      fn({
+        $executeRaw: mocks.lock,
+        booking: { findFirst: mocks.findFirst, create: mocks.create },
+        slotBlock: { findUnique: mocks.findBlock },
+      }),
   },
 }));
 
@@ -40,6 +45,7 @@ describe("saveBooking", () => {
     mocks.findFirst.mockResolvedValue(null);
     mocks.create.mockResolvedValue({});
     mocks.findBlock.mockResolvedValue(null);
+    mocks.lock.mockResolvedValue(1);
   });
 
   it("recusa sem sessão e não grava nada", async () => {
@@ -70,6 +76,16 @@ describe("saveBooking", () => {
 
     expect(result).toEqual({ success: false, code: "SLOT_TAKEN", error: BOOKING_ERROR_MESSAGES.SLOT_TAKEN });
     expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("trava o horário (barbearia + instante em UTC) antes de conferir e gravar", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
+
+    await saveBooking(params);
+
+    expect(mocks.lock).toHaveBeenCalledTimes(1);
+    expect(mocks.lock.mock.calls[0][1]).toBe("slot:shop-1:2026-10-16T12:00:00.000Z");
+    expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(mocks.findFirst.mock.invocationCallOrder[0]);
   });
 
   it("P2002 (dois gravando juntos) vira horário tomado", async () => {

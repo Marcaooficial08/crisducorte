@@ -20,6 +20,34 @@ const weekStartUTC = (date: Date) => {
   return monday.toISOString().slice(0, 10);
 };
 
+// Data em que o registro de cancelamentos (BookingCancellation) começou a valer em produção.
+export const CANCELLATIONS_SINCE_LABEL = "19/10/2026";
+
+export interface MetricsWindow {
+  desde: Date;
+  ate: Date;
+  // Segundas-feiras (YYYY-MM-DD, UTC) de cada semana da janela, da mais antiga para a atual.
+  semanas: string[];
+}
+
+// Semana atual + as `previousWeeks` anteriores, de segunda 00:00 a domingo 23:59:59.999 (UTC),
+// a mesma semana de getBookingMetrics.
+export const recentWeeksWindow = (now: Date, previousWeeks = 4): MetricsWindow => {
+  const currentMonday = new Date(`${weekStartUTC(now)}T00:00:00.000Z`);
+  const desde = new Date(currentMonday);
+  desde.setUTCDate(desde.getUTCDate() - 7 * previousWeeks);
+  const ate = new Date(currentMonday);
+  ate.setUTCDate(ate.getUTCDate() + 7);
+  ate.setUTCMilliseconds(-1);
+
+  const semanas = Array.from({ length: previousWeeks + 1 }, (_, index) => {
+    const monday = new Date(desde);
+    monday.setUTCDate(monday.getUTCDate() + 7 * index);
+    return monday.toISOString().slice(0, 10);
+  });
+  return { desde, ate, semanas };
+};
+
 // Métricas de reserva lidas do próprio banco (independem do plano da Vercel).
 // Conta reservas com `date` (data do horário) entre `desde` e `ate` (inclusive).
 //

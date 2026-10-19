@@ -1,8 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getServerSession: vi.fn(),
   findMany: vi.fn(),
+  findBarbershop: vi.fn(),
+  getBookingMetrics: vi.fn(),
+  getAdminAgenda: vi.fn(),
   redirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
   }),
@@ -11,9 +14,17 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
-vi.mock("@/app/_lib/prisma", () => ({ db: { booking: { findMany: mocks.findMany } } }));
+vi.mock("@/app/_lib/prisma", () => ({
+  db: { booking: { findMany: mocks.findMany }, barbershop: { findFirst: mocks.findBarbershop } },
+}));
+vi.mock("@/app/_lib/metrics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/app/_lib/metrics")>()),
+  getBookingMetrics: mocks.getBookingMetrics,
+}));
+vi.mock("@/app/_lib/admin-agenda", () => ({ getAdminAgenda: mocks.getAdminAgenda }));
 vi.mock("@/app/_components/header", () => ({ default: () => null }));
 vi.mock("@/app/_components/booking-item-adm", () => ({ default: () => null }));
+vi.mock("./_components/admin-agenda", () => ({ default: () => null }));
 
 import BookingsPageAdm from "./page";
 
@@ -26,6 +37,13 @@ describe("/adm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.findMany.mockResolvedValue([]);
+    mocks.findBarbershop.mockResolvedValue({ id: "shop-1", services: [{ id: "s1", name: "Corte" }] });
+    mocks.getBookingMetrics.mockResolvedValue({ confirmadas: 0, canceladas: 0, porSemana: [] });
+    mocks.getAdminAgenda.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("sem sessão volta para a home sem ler reservas", async () => {
@@ -33,13 +51,17 @@ describe("/adm", () => {
 
     await expect(BookingsPageAdm()).rejects.toThrow("NEXT_REDIRECT:/");
     expect(mocks.findMany).not.toHaveBeenCalled();
+    expect(mocks.getBookingMetrics).not.toHaveBeenCalled();
   });
 
-  it("conta comum volta para a home sem ler reservas", async () => {
+  it("conta comum volta para a home sem ler reservas nem métricas", async () => {
     mocks.getServerSession.mockResolvedValue(sessionOf(false));
+    vi.stubEnv("ADMIN_PANEL_V2", "all");
 
     await expect(BookingsPageAdm()).rejects.toThrow("NEXT_REDIRECT:/");
     expect(mocks.findMany).not.toHaveBeenCalled();
+    expect(mocks.getBookingMetrics).not.toHaveBeenCalled();
+    expect(mocks.getAdminAgenda).not.toHaveBeenCalled();
   });
 
   it("admin abre a página e vê todas as reservas", async () => {
@@ -50,5 +72,25 @@ describe("/adm", () => {
     expect(mocks.findMany).toHaveBeenCalledWith(
       expect.not.objectContaining({ where: expect.objectContaining({ userId: expect.anything() }) }),
     );
+  });
+
+  it("ADMIN_PANEL_V2 off: lista antiga + métricas, sem a grade", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf(true));
+
+    await BookingsPageAdm();
+
+    expect(mocks.getBookingMetrics).toHaveBeenCalledTimes(1);
+    expect(mocks.getAdminAgenda).not.toHaveBeenCalled();
+  });
+
+  it("ADMIN_PANEL_V2 ligada: grade da semana aberta da barbearia + métricas de 5 semanas", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf(true));
+    vi.stubEnv("ADMIN_PANEL_V2", "admin");
+
+    await BookingsPageAdm();
+
+    expect(mocks.getAdminAgenda).toHaveBeenCalledWith("shop-1", expect.any(Date));
+    const [desde, ate] = mocks.getBookingMetrics.mock.calls[0] as [Date, Date];
+    expect(Math.round((ate.getTime() - desde.getTime()) / (24 * 60 * 60 * 1000))).toBe(35);
   });
 });

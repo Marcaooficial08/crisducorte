@@ -14,7 +14,16 @@ vi.mock("@/app/_lib/prisma", () => ({
   },
 }));
 
-import { getDaySlots, getInstantStatus, getSlotStatus, isSlotAvailable, slotFromInstant, slotInstant } from "./availability";
+import {
+  dayRange,
+  getDaySlots,
+  getInstantStatus,
+  getSlotStatus,
+  getTakenInstants,
+  isSlotAvailable,
+  slotFromInstant,
+  slotInstant,
+} from "./availability";
 import { TIME_GRID } from "./schedule";
 
 // Quarta 14/10/2026 12:00 em São Paulo: liberados sexta 16 e sábado 17.
@@ -130,5 +139,31 @@ describe("getDaySlots", () => {
     const fridayAfternoon = new Date("2026-10-16T17:00:00.000Z"); // 14:00 SP
     const day = await getDaySlots("2026-10-16", { ...options, now: fridayAfternoon });
     expect(day?.slots.map((slot) => slot.time)).toEqual(["14:30", "15:30", "16:30", "17:30", "18:30", "19:30"]);
+  });
+});
+
+describe("getTakenInstants / dayRange", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("dia inteiro em São Paulo", () => {
+    expect(dayRange("2026-10-16")).toEqual({
+      gte: new Date("2026-10-16T03:00:00.000Z"),
+      lt: new Date("2026-10-17T03:00:00.000Z"),
+    });
+  });
+
+  it("junta reservas e bloqueios e devolve só as datas", async () => {
+    const booked = new Date("2026-10-16T12:00:00.000Z");
+    const blocked = new Date("2026-10-16T13:30:00.000Z");
+    mocks.findMany.mockResolvedValue([{ date: booked }]);
+    mocks.findBlocks.mockResolvedValue([{ date: blocked }]);
+
+    expect(await getTakenInstants("shop-1", dayRange("2026-10-16"))).toEqual([booked, blocked]);
+    expect(mocks.findMany).toHaveBeenCalledWith({
+      where: { barbershopId: "shop-1", date: dayRange("2026-10-16") },
+      select: { date: true },
+    });
   });
 });
