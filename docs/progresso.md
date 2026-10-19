@@ -580,10 +580,15 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Validação (local, 2026-10-19, depois do ajuste de layout):** `npm run lint` ✅ · `npm run test:unit` 148 ✅ · `npm run test:int` 33 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 33 ✅ em 2 de 3 rodadas; na 1ª, 3 testes do `login-resume.spec` (não alterado) passaram do tempo e depois passaram 9/9 com `--repeat-each 3`.
 
+**Staging:** `fase3/painel-admin` enviado para `staging` (Preview com `ADMIN_PANEL_V2=admin`).
+
+**Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-19, no computador e no celular.
+
 **Produção:** publicado em produção — previsto após o merge. Com `ADMIN_PANEL_V2` ausente (= `off`), o `/adm` muda só pelas métricas; o bloqueio escondido na `/barbershop/[id]` e o `getDayBookings` sem dado pessoal valem para todos sem flag.
 
 **Pendências:**
-- [ ] Vercel: criar `ADMIN_PANEL_V2` (Preview `admin` para testar na staging; Production `admin` depois do aceite).
-- [ ] Teste de aceite do dono na staging (localhost ✅ em 2026-10-19).
+- [x] Vercel Preview: `ADMIN_PANEL_V2=admin` (criada pelo dono).
+- [ ] Vercel Production: criar `ADMIN_PANEL_V2=admin` (dono) e fazer redeploy; sem ela o painel novo fica desligado.
+- [x] Teste de aceite do dono: localhost e staging ✅ em 2026-10-19.
 - [ ] Lighthouse/axe do `/adm` novo (não rodado neste prompt).
 
