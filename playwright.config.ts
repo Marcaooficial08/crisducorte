@@ -44,6 +44,8 @@ export default defineConfig({
       AGENDA_V2: "off",
       // Home nova para todos, como em produção desde 2026-10-17; a antiga continua em /classic.
       NEW_HOME: "all",
+      // Painel do admin novo (grade, bloqueios, reserva manual).
+      ADMIN_PANEL_V2: "admin",
       // Relógio fixo do servidor (getNow): a mesma quarta futura que o page.clock usa no navegador.
       E2E: "1",
       SCHEDULE_NOW: futureWednesdayNoon().toISOString(),

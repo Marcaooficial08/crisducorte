@@ -7,6 +7,13 @@ import BookingItemAdm from "../_components/booking-item-adm";
 import { assertAdmin } from "../_lib/auth-guards";
 import EmptyState from "../_components/empty-state";
 import { CalendarIcon } from "lucide-react";
+import { isAdminPanelV2Enabled } from "../_lib/flags";
+import { getBookingMetrics, recentWeeksWindow } from "../_lib/metrics";
+import { getAdminAgenda } from "../_lib/admin-agenda";
+import { visibleBarbershopWhere } from "../_lib/barbershops";
+import { getNow } from "../_lib/schedule";
+import AdminAgenda from "./_components/admin-agenda";
+import BookingMetricsCard from "./_components/booking-metrics";
 
 const BookingsPageAdm = async () => {
     const session = await getServerSession(authOptions);
@@ -18,6 +25,22 @@ const BookingsPageAdm = async () => {
     }
 
     const now = new Date();
+    const panelV2 = isAdminPanelV2Enabled(session);
+    // Relógio da agenda (getNow): no e2e, a mesma semana da grade.
+    const metricsWindow = recentWeeksWindow(getNow());
+
+    // Painel novo (ADMIN_PANEL_V2): grade da semana aberta, com o relógio da agenda (getNow).
+    const barbershop = panelV2
+        ? await db.barbershop.findFirst({
+              where: visibleBarbershopWhere,
+              orderBy: { id: "asc" },
+              include: { services: { orderBy: { id: "asc" }, select: { id: true, name: true } } },
+          })
+        : null;
+    const [agenda, metrics] = await Promise.all([
+        barbershop ? getAdminAgenda(barbershop.id, getNow()) : Promise.resolve(null),
+        getBookingMetrics(metricsWindow.desde, metricsWindow.ate),
+    ]);
 
     // Admin vê todas as reservas — sem filtro de userId
     const confirmedBookings = await db.booking.findMany({
@@ -47,8 +70,27 @@ const BookingsPageAdm = async () => {
     return (
         <>
             <Header />
-            <div className="px-page py-6">
-                <h1 className="text-title font-bold mb-6">Agendamentos dos clientes</h1>
+            {/* Coluna centralizada no computador, coerente com a home nova; o header segue largo. */}
+            <div className="mx-auto w-full max-w-2xl px-page py-6">
+                {barbershop && agenda && (
+                    <section aria-labelledby="agenda-admin" className="mb-8">
+                        <h1 id="agenda-admin" className="text-title font-bold mb-4">Agenda</h1>
+                        <AdminAgenda days={agenda} services={barbershop.services} />
+                    </section>
+                )}
+
+                <section aria-labelledby="metricas-admin" className="mb-8">
+                    <h2 id="metricas-admin" className="text-muted-foreground uppercase font-bold text-label mb-3">
+                        Métricas · últimas 5 semanas
+                    </h2>
+                    <BookingMetricsCard metrics={metrics} semanas={metricsWindow.semanas} />
+                </section>
+
+                {barbershop && agenda ? (
+                    <h2 className="text-title font-bold mb-6">Agendamentos dos clientes</h2>
+                ) : (
+                    <h1 className="text-title font-bold mb-6">Agendamentos dos clientes</h1>
+                )}
                 {confirmedBookings.length > 0 && (
                     <>
                         <h2 className="text-muted-foreground uppercase font-bold text-label mb-3">Confirmados</h2>

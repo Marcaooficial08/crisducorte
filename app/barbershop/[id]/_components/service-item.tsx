@@ -5,7 +5,7 @@ import { Button } from "@/app/_components/ui/button";
 import { Calendar } from "@/app/_components/ui/calendar";
 import { Card, CardContent } from "@/app/_components/ui/card";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/app/_components/ui/sheet";
-import { Barbershop, Booking, Service } from "@prisma/client";
+import { Barbershop, Service } from "@prisma/client";
 import { ptBR } from "date-fns/locale";
 import { addDays, format, isBefore, setHours, setMinutes, startOfDay } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
@@ -38,7 +38,8 @@ const ServiceItem = ({ service, barbershop, isAuthenticated, serviceDays }: Serv
   const [hour, setHour] = useState<string | undefined>();
   const [submitIsLoading, setSubmitIsLoading] = useState(false);
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
-  const [dayBookings, setDayBookings] = useState<Booking[]>([]);
+  // Horários ocupados do dia (reservas e bloqueios), só as datas.
+  const [dayBookings, setDayBookings] = useState<{ date: Date }[]>([]);
   // Dia ("yyyy-MM-dd") a que dayBookings se refere: evita mostrar "lotado" com as reservas do dia anterior.
   const [dayBookingsDay, setDayBookingsDay] = useState<string>();
   const [bookingsVersion, setBookingsVersion] = useState(0);

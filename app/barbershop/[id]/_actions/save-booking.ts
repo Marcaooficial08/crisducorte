@@ -9,6 +9,7 @@ import { checkRateLimit } from "@/app/_lib/rate-limit";
 import { isAgendaV2Enabled, isNewHomeEnabled } from "@/app/_lib/flags";
 import { getNow } from "@/app/_lib/schedule";
 import { SlotStatus, getInstantStatus, getSlotStatus, slotFromInstant } from "@/app/_lib/availability";
+import { lockSlot } from "@/app/_lib/slot-lock";
 import { BOOKING_ERROR_MESSAGES, BookingErrorCode } from "@/app/_lib/booking-errors";
 import { revalidatePath } from "next/cache";
 
@@ -42,6 +43,9 @@ export const saveBooking = async (params: SaveBookingParams): Promise<SaveBookin
     }
 
     await db.$transaction(async (tx) => {
+      // Mesma trava do painel do admin: bloqueio e reserva do mesmo horário não gravam juntos.
+      await lockSlot(tx, params.barbershopId, bookingDate);
+
       // Disponibilidade pelo ponto único (app/_lib/availability.ts). Flags desligadas: só reserva e
       // bloqueio no instante exato, como a agenda antiga (data montada no navegador).
       const status: SlotStatus =
