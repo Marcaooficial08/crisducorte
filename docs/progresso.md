@@ -18,7 +18,7 @@
 | 13 · Menu lateral acessível | ✅ Publicado em produção | 2026-10-16 | `fase2/menu` (PR #13) |
 | 14 · Home nova (NEW_HOME) | ✅ Publicado em produção | 2026-10-17 | `fase2/home-nova` (PR #14) |
 | 15 · Voltar com a seleção após o login | ✅ Publicado em produção | 2026-10-17 | `fase2/login-resume` (PR #15) |
-| 16 · Schema da Fase 3 + disponibilidade | 🧪 Em teste na staging | 2026-10-17 | `fase3/schema` |
+| 16 · Schema da Fase 3 + disponibilidade | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `fase3/schema` (PR #16) |
 
 ## Ambientes
 
@@ -532,15 +532,18 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 **Banco:**
 - Neon dev: o histórico não tinha a migração do Prompt 5 (`userId` ainda `NOT NULL`); o `migrate deploy` aplicou as duas em ordem. Reservas antes: 3; depois: 3, mesmo hash (id, barbearia, serviço, usuário, data), todas com `source = CLIENT`.
 - Neon "Testes": aplicada pelo setup da integração (`migrate deploy`).
-- Produção (Supabase): **não tocada**. Aplicação manual pelo dono com `prisma/sql/fase3-schema-producao.sql`, depois do backup, e `migrate resolve` em seguida.
+- Produção (Supabase): Prompt 16 — schema aplicado em produção em 2026-10-17 (backup prod-2026-10-17.dump). SQL de `prisma/sql/fase3-schema-producao.sql` aplicado à mão pelo dono no SQL Editor e conferido (contagem e hash de `Booking` iguais, 4 tabelas novas vazias). Registrada no histórico com `npx prisma migrate resolve --applied 20261017000000_fase3_schema`; `migrate status` → "4 migrations found" e "Database schema is up to date!".
 
 **Validação (local, 2026-10-17):** `npm run lint` ✅ · `npm run test:unit` 105 ✅ · `npm run test:int` 21 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 28 ✅.
 
 **Staging:** `fase3/schema` enviado para `staging` (banco Neon dev, já migrado).
 
+**Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-19: reserva, cancelamento, horário liberado de volta e linha gravada em `BookingCancellation` (Sex 23 às 09:00, `byAdmin` false, `source` CLIENT).
+
 **Pendências:**
-- [ ] Produção: dono aplica o SQL no Supabase (backup antes) **antes do merge** — o código novo lê `SlotBlock` e grava `BookingCancellation`; sem a migração, reservar e cancelar quebram em produção.
-- [ ] Produção: `npx prisma migrate resolve --applied 20261017000000_fase3_schema` e `migrate status`.
+- [x] Produção: dono aplica o SQL no Supabase (backup antes) **antes do merge** — o código novo lê `SlotBlock` e grava `BookingCancellation`; sem a migração, reservar e cancelar quebram em produção. Feito em 2026-10-17 (backup prod-2026-10-17.dump).
+- [x] Produção: `npx prisma migrate resolve --applied 20261017000000_fase3_schema` e `migrate status` — feito em 2026-10-17, "Database schema is up to date!".
 - [ ] Prompt 17: `/barbershop/[id]` deve esconder os horários bloqueados (`SlotBlock`), usando `availability.ts`.
+- [ ] Prompt 17 (painel do admin): exibir métricas no /adm, incluindo canceladas (getBookingMetrics). Sem flag nova — o /adm já é restrito ao admin. Hoje `getBookingMetrics` não aparece em nenhuma tela.
 - [ ] Pendência do Prompt 3 (12 pares de reservas no mesmo horário antes de um `@@unique` só por data) continua aberta.
 
