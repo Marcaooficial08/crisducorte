@@ -8,6 +8,7 @@ import { authOptions } from "@/app/_lib/auth";
 import { db } from "@/app/_lib/prisma";
 import { getSlotStatus, slotInstant } from "@/app/_lib/availability";
 import { lockSlot } from "@/app/_lib/slot-lock";
+import { INTERACTIVE_TX_OPTIONS, isTransactionTimeout } from "@/app/_lib/transaction";
 import { getNow } from "@/app/_lib/schedule";
 import {
   AdminActionError,
@@ -54,10 +55,13 @@ export const blockSlot = async (input: z.input<typeof inputSchema>): Promise<Adm
         await tx.slotBlock.create({ data: { date: instant, reason } });
       }
       // BLOCKED: já estava bloqueado, nada a fazer.
-    });
+    }, INTERACTIVE_TX_OPTIONS);
   } catch (error) {
     if (error instanceof AdminActionError) {
       return adminFail(error.code);
+    }
+    if (isTransactionTimeout(error)) {
+      return adminFail("BUSY");
     }
     // Bloqueio gravado ao mesmo tempo por outra aba: o horário já está bloqueado.
     if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) {

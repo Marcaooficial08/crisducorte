@@ -61,7 +61,8 @@ Admin = `User.isAdmin` (lido do banco no session callback de `app/_lib/auth.ts`,
 ## Environment
 
 `.env` necessário:
-- `DATABASE_URL` — PostgreSQL
+- `DATABASE_URL` — PostgreSQL. Local: Neon dev. **Production (Supabase), em runtime na Vercel: Transaction pooler, porta 6543, com `?pgbouncer=true&connection_limit=1`** — nunca o Session pooler (5432) em runtime (incidente EMAXCONNSESSION de 2026-10-19, ver `docs/progresso.md`). O código é compatível: interactive transactions, `pg_advisory_xact_lock` (trava de transação, não de sessão) e sem prepared statements (`pgbouncer=true`); `PrismaClient` único em `globalThis` (`app/_lib/prisma.ts`) e interactive transactions com `INTERACTIVE_TX_OPTIONS` (`app/_lib/transaction.ts`, P2028 → mensagem "muita gente reservando")
+- Backup (`pg_dump`) e `npx prisma migrate resolve/status` em produção usam a **porta 5432** (Session pooler, precisam de sessão inteira), lida de `.env.producao-backup` (fora do git, só o dono roda). Nunca usar a 6543 para migrate ou backup
 - `TEST_DATABASE_URL` — banco só de testes (opcional; necessário para `test:int` e `test:e2e`)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 - `NEXTAUTH_SECRET` — único nome lido pelo NextAuth (`app/_lib/auth.ts`); modelo em `.env.example`

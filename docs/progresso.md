@@ -18,13 +18,15 @@
 | 13 · Menu lateral acessível | ✅ Publicado em produção | 2026-10-16 | `fase2/menu` (PR #13) |
 | 14 · Home nova (NEW_HOME) | ✅ Publicado em produção | 2026-10-17 | `fase2/home-nova` (PR #14) |
 | 15 · Voltar com a seleção após o login | ✅ Publicado em produção | 2026-10-17 | `fase2/login-resume` (PR #15) |
-| 16 · Schema da Fase 3 + disponibilidade | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `fase3/schema` (PR #16) |
+| 16 · Schema da Fase 3 + disponibilidade | ✅ Publicado em produção | 2026-10-19 | `fase3/schema` (PR #16) |
+| 17 · Painel do admin (bloqueios, reserva manual, métricas) | ✅ Publicado em produção | 2026-10-19 | `fase3/painel-admin` (PR #17) |
+| Incidente · Conexão de produção (transaction pooler) | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `docs/pool-producao` |
 
 ## Ambientes
 
 | Ambiente | URL | Origem | Banco | Observações |
 |---|---|---|---|---|
-| Produção | https://crisducorte.vercel.app | branch `main` | Supabase | Só leitura para conferências |
+| Produção | https://crisducorte.vercel.app | branch `main` | Supabase | Só leitura para conferências. Runtime: Transaction pooler (6543, `?pgbouncer=true&connection_limit=1`); backup e `migrate resolve/status`: 5432 (`.env.producao-backup`) |
 | Testes (staging) | https://crisducorte-staging.vercel.app | branch `staging` (Preview da Vercel) | Neon dev | `NEXTAUTH_URL` próprio; login Google funcionando. Atualizar com `git push origin <branch>:staging --force` antes do PR, para teste no celular |
 
 ## Prompt 0 · Preparação
@@ -584,11 +586,33 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-19, no computador e no celular.
 
-**Produção:** publicado em produção — previsto após o merge. Com `ADMIN_PANEL_V2` ausente (= `off`), o `/adm` muda só pelas métricas; o bloqueio escondido na `/barbershop/[id]` e o `getDayBookings` sem dado pessoal valem para todos sem flag.
+**Produção (2026-10-19) ✅:** PR #17 mergeado na `main` (`a4a344c`) e publicado pela Vercel. `ADMIN_PANEL_V2` em Production fica a cargo do dono. Com `ADMIN_PANEL_V2` ausente (= `off`), o `/adm` muda só pelas métricas; o bloqueio escondido na `/barbershop/[id]` e o `getDayBookings` sem dado pessoal valem para todos sem flag.
 
 **Pendências:**
 - [x] Vercel Preview: `ADMIN_PANEL_V2=admin` (criada pelo dono).
 - [ ] Vercel Production: criar `ADMIN_PANEL_V2=admin` (dono) e fazer redeploy; sem ela o painel novo fica desligado.
 - [x] Teste de aceite do dono: localhost e staging ✅ em 2026-10-19.
 - [ ] Lighthouse/axe do `/adm` novo (não rodado neste prompt).
+
+## Incidente 2026-10-19 · EMAXCONNSESSION em produção
+
+**O que aconteceu:** por volta das 20:55, depois de 2 redeploys seguidos, a home e o `/adm` de produção deram erro `EMAXCONNSESSION max clients reached in session mode (pool_size 15)`.
+
+**Causa:** a `DATABASE_URL` de Production apontava para o **Session pooler** do Supabase (porta 5432). No modo session cada conexão do Prisma prende uma conexão do pool (15) enquanto a instância vive. Na Vercel cada função (rota) tem instâncias próprias, cada uma com o pool padrão do Prisma (`núcleos × 2 + 1` conexões), e no redeploy as instâncias antigas continuam vivas enquanto as novas sobem: 3 ou 4 instâncias bastam para chegar a 15.
+
+**Correção (feita pelo dono na Vercel, Production):** `DATABASE_URL` trocada para o **Transaction pooler**, porta **6543**, com `?pgbouncer=true&connection_limit=1`, e redeploy. Tudo voltou.
+
+**Conferência no código (sem tocar em produção):**
+- `PrismaClient` era um por processo (topo do módulo). Agora fica em `globalThis` também em produção (`app/_lib/prisma.ts`), para não abrir outro pool se o módulo for carregado de novo.
+- Compatível com transaction pooler + `pgbouncer=true`: interactive transactions e `$transaction([...])` (o pooler prende uma conexão do `BEGIN` ao `COMMIT`), `pg_advisory_xact_lock` (trava de transação, sai no commit; `pg_advisory_lock` de sessão é que não funcionaria) e prepared statements (desligados pelo `pgbouncer=true`). Nada de `SET`, `LISTEN/NOTIFY` ou tabela temporária.
+- Incompatíveis com a 6543: `prisma migrate deploy/resolve/status` (trava de sessão) e `pg_dump`. Continuam na **5432**, pelo `.env.producao-backup` (fora do git). O build da Vercel é só `next build` (não roda migrate).
+- Com `connection_limit=1`, requests simultâneos na mesma instância fazem fila. As interactive transactions (`saveBooking`, `blockSlot`, `blockDay`, `createManualBooking`) usam `INTERACTIVE_TX_OPTIONS` (`app/_lib/transaction.ts`): `maxWait` 10s (padrão do Prisma: 2s) e `timeout` 10s (o `blockDay` tinha 15s). P2028 (não começou a tempo / passou do tempo) vira "Muita gente reservando agora, tente de novo em instantes." em vez do erro genérico (`BUSY` em `booking-errors.ts` e nas actions do admin).
+
+**Documentação:** `CLAUDE.md` (Environment), `.env.example` (comentário sem segredos) e a tabela de ambientes acima.
+
+**Testes:** unit `prisma.test.ts` (mesmo cliente em `globalThis` com `NODE_ENV=production`), `save-booking.test.ts` e `admin-actions.test.ts` (opções da transação e P2028 → BUSY), `booking-errors.test.ts`.
+
+**Validação (local, 2026-10-19):** `npm run lint` ✅ · `npm run test:unit` 153 ✅ · `npm run test:int` 33 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 33 ✅ em 2 rodadas seguidas.
+
+**Produção:** publicado em produção — previsto após o merge. Nenhuma variável da Vercel alterada por este PR.
 

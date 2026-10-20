@@ -8,6 +8,7 @@ import { authOptions } from "@/app/_lib/auth";
 import { db } from "@/app/_lib/prisma";
 import { getSlotStatus, slotInstant } from "@/app/_lib/availability";
 import { lockSlot } from "@/app/_lib/slot-lock";
+import { INTERACTIVE_TX_OPTIONS, isTransactionTimeout } from "@/app/_lib/transaction";
 import { normalizePhone } from "@/app/_lib/phone";
 import { getNow, serviceDayLabel } from "@/app/_lib/schedule";
 import {
@@ -83,13 +84,16 @@ export const createManualBooking = async (input: z.input<typeof inputSchema>): P
           source: "MANUAL",
         },
       });
-    });
+    }, INTERACTIVE_TX_OPTIONS);
   } catch (error) {
     if (error instanceof AdminActionError) {
       return adminFail(error.code);
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return adminFail("SLOT_TAKEN");
+    }
+    if (isTransactionTimeout(error)) {
+      return adminFail("BUSY");
     }
     console.error("Erro ao criar reserva manual:", error);
     return adminFail("GENERIC");

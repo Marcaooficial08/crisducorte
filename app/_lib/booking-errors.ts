@@ -1,11 +1,13 @@
 import { RATE_LIMIT_MESSAGE } from "./rate-limit";
 import { SLOT_UNAVAILABLE_MESSAGE } from "./schedule";
+import { BUSY_MESSAGE } from "./transaction";
 
 // Erros da reserva e as mensagens da spec §4.2.
 export type BookingErrorCode =
   | "SLOT_TAKEN" // outra pessoa reservou antes (P2002)
   | "SLOT_UNAVAILABLE" // horário fora da agenda ou já passou (AGENDA_V2)
   | "RATE_LIMIT"
+  | "BUSY" // fila na conexão do banco (P2028)
   | "UNAUTHENTICATED"
   | "NETWORK" // só no navegador: a action nem chegou ao servidor
   | "GENERIC";
@@ -14,6 +16,7 @@ export const BOOKING_ERROR_MESSAGES: Record<BookingErrorCode, string> = {
   SLOT_TAKEN: "Esse horário acabou de ser reservado por outra pessoa. Escolha outro.",
   SLOT_UNAVAILABLE: SLOT_UNAVAILABLE_MESSAGE,
   RATE_LIMIT: RATE_LIMIT_MESSAGE,
+  BUSY: BUSY_MESSAGE,
   UNAUTHENTICATED: "Faça login para agendar.",
   NETWORK: "Sem conexão. Verifique a internet e tente de novo.",
   GENERIC: "Não conseguimos reservar agora. Tente de novo em instantes.",
