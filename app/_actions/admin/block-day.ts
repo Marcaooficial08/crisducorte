@@ -7,6 +7,7 @@ import { authOptions } from "@/app/_lib/auth";
 import { db } from "@/app/_lib/prisma";
 import { slotInstant } from "@/app/_lib/availability";
 import { lockSlot } from "@/app/_lib/slot-lock";
+import { INTERACTIVE_TX_OPTIONS, isTransactionTimeout } from "@/app/_lib/transaction";
 import { getNextServiceDays, getNow } from "@/app/_lib/schedule";
 import {
   AdminActionResult,
@@ -67,9 +68,12 @@ export const blockDay = async (input: z.input<typeof inputSchema>): Promise<Admi
         blocked = free.length;
         kept = booked.size;
       },
-      { timeout: 15_000 },
+      INTERACTIVE_TX_OPTIONS,
     );
   } catch (error) {
+    if (isTransactionTimeout(error)) {
+      return adminFail("BUSY");
+    }
     console.error("Erro ao bloquear o dia:", error);
     return adminFail("GENERIC");
   }

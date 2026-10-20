@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   findBlock: vi.fn(),
   lock: vi.fn(),
+  txOptions: vi.fn(),
 }));
 
 vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
@@ -14,12 +15,14 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
 vi.mock("@/app/_lib/prisma", () => ({
   db: {
-    $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
-      fn({
+    $transaction: async (fn: (tx: unknown) => Promise<unknown>, options?: unknown) => {
+      mocks.txOptions(options);
+      return fn({
         $executeRaw: mocks.lock,
         booking: { findFirst: mocks.findFirst, create: mocks.create },
         slotBlock: { findUnique: mocks.findBlock },
-      }),
+      });
+    },
   },
 }));
 
@@ -97,6 +100,22 @@ describe("saveBooking", () => {
     const result = await saveBooking(params);
 
     expect(result).toEqual({ success: false, code: "SLOT_TAKEN", error: BOOKING_ERROR_MESSAGES.SLOT_TAKEN });
+  });
+
+  it("espera a conexão até 10s (maxWait) e P2028 vira a mensagem de muita gente reservando", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
+    mocks.lock.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("Unable to start a transaction in the given time.", {
+        code: "P2028",
+        clientVersion: "test",
+      }),
+    );
+
+    const result = await saveBooking(params);
+
+    expect(mocks.txOptions).toHaveBeenCalledWith({ maxWait: 10_000, timeout: 10_000 });
+    expect(result).toEqual({ success: false, code: "BUSY", error: "Muita gente reservando agora, tente de novo em instantes." });
+    expect(mocks.create).not.toHaveBeenCalled();
   });
 
   it("erro inesperado vira a mensagem genérica", async () => {

@@ -4,6 +4,7 @@ import { db } from "@/app/_lib/prisma";
 import { assertAdmin } from "@/app/_lib/auth-guards";
 import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
 import { TIME_GRID } from "@/app/_lib/schedule";
+import { BUSY_MESSAGE } from "@/app/_lib/transaction";
 
 // Peças comuns das Server Actions do painel do admin (app/_actions/admin/).
 
@@ -18,6 +19,7 @@ export type AdminErrorCode =
   | "SLOT_BLOCKED"
   | "NOT_FOUND"
   | "NO_BARBERSHOP"
+  | "BUSY"
   | "GENERIC";
 
 export const ADMIN_ERROR_MESSAGES: Record<AdminErrorCode, string> = {
@@ -31,6 +33,7 @@ export const ADMIN_ERROR_MESSAGES: Record<AdminErrorCode, string> = {
   SLOT_BLOCKED: "Esse horário está bloqueado. Desbloqueie antes de reservar.",
   NOT_FOUND: "Reserva não encontrada.",
   NO_BARBERSHOP: "Nenhuma barbearia disponível.",
+  BUSY: BUSY_MESSAGE,
   GENERIC: "Não deu certo agora. Tente de novo em instantes.",
 };
 

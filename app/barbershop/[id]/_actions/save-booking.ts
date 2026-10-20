@@ -10,6 +10,7 @@ import { isAgendaV2Enabled, isNewHomeEnabled } from "@/app/_lib/flags";
 import { getNow } from "@/app/_lib/schedule";
 import { SlotStatus, getInstantStatus, getSlotStatus, slotFromInstant } from "@/app/_lib/availability";
 import { lockSlot } from "@/app/_lib/slot-lock";
+import { INTERACTIVE_TX_OPTIONS, isTransactionTimeout } from "@/app/_lib/transaction";
 import { BOOKING_ERROR_MESSAGES, BookingErrorCode } from "@/app/_lib/booking-errors";
 import { revalidatePath } from "next/cache";
 
@@ -68,7 +69,7 @@ export const saveBooking = async (params: SaveBookingParams): Promise<SaveBookin
           barbershopId: params.barbershopId,
         },
       });
-    });
+    }, INTERACTIVE_TX_OPTIONS);
 
     revalidatePath("/");
     revalidatePath("/bookings");
@@ -88,6 +89,9 @@ export const saveBooking = async (params: SaveBookingParams): Promise<SaveBookin
     }
     if (error instanceof Error && error.message === "SLOT_UNAVAILABLE") {
       return fail("SLOT_UNAVAILABLE");
+    }
+    if (isTransactionTimeout(error)) {
+      return fail("BUSY");
     }
     console.error("Erro ao criar reserva:", error);
     return fail("GENERIC");

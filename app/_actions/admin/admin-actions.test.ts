@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   createBlocks: vi.fn(),
   deleteBlocks: vi.fn(),
   createCancellation: vi.fn(),
+  txOptions: vi.fn(),
 }));
 
 vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
@@ -47,8 +48,13 @@ vi.mock("@/app/_lib/prisma", () => {
     db: {
       ...client,
       // Forma interativa (fn) ou lista de operações, como o Prisma.
-      $transaction: async (arg: unknown) =>
-        typeof arg === "function" ? (arg as (tx: unknown) => Promise<unknown>)(client) : Promise.all(arg as unknown[]),
+      $transaction: async (arg: unknown, options?: unknown) => {
+        if (typeof arg !== "function") {
+          return Promise.all(arg as unknown[]);
+        }
+        mocks.txOptions(options);
+        return (arg as (tx: unknown) => Promise<unknown>)(client);
+      },
     },
   };
 });
@@ -136,6 +142,29 @@ describe("Server Actions do painel do admin", () => {
         for (const mock of [...writeMocks(), mocks.findBarbershop, mocks.findUniqueBooking]) {
           expect(mock).not.toHaveBeenCalled();
         }
+      });
+    }
+  });
+
+  describe("fila na conexão (interactive transactions)", () => {
+    const p2028 = () =>
+      new Prisma.PrismaClientKnownRequestError("Unable to start a transaction in the given time.", {
+        code: "P2028",
+        clientVersion: "test",
+      });
+    const calls = {
+      blockSlot: () => blockSlot({ date: "2026-10-16", time: "09:00" }),
+      blockDay: () => blockDay({ date: "2026-10-16" }),
+      createManualBooking: () => createManualBooking(manualInput),
+    };
+
+    for (const [name, call] of Object.entries(calls)) {
+      it(`${name}: espera até 10s pela conexão e P2028 vira a mensagem de muita gente reservando`, async () => {
+        mocks.lock.mockRejectedValue(p2028());
+
+        expect(await call()).toEqual(failed("BUSY"));
+        expect(mocks.txOptions).toHaveBeenCalledWith({ maxWait: 10_000, timeout: 10_000 });
+        expect(ADMIN_ERROR_MESSAGES.BUSY).toBe("Muita gente reservando agora, tente de novo em instantes.");
       });
     }
   });

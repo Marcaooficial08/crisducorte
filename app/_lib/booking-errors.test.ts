@@ -7,6 +7,7 @@ describe("booking-errors", () => {
     expect(BOOKING_ERROR_MESSAGES.NETWORK).toBe("Sem conexão. Verifique a internet e tente de novo.");
     expect(BOOKING_ERROR_MESSAGES.RATE_LIMIT).toBe("Muitas tentativas seguidas. Aguarde 1 minuto.");
     expect(BOOKING_ERROR_MESSAGES.GENERIC).toBe("Não conseguimos reservar agora. Tente de novo em instantes.");
+    expect(BOOKING_ERROR_MESSAGES.BUSY).toBe("Muita gente reservando agora, tente de novo em instantes.");
   });
 
   it("recarrega a grade só quando o horário deixou de valer", () => {
@@ -14,6 +15,7 @@ describe("booking-errors", () => {
     expect(shouldReloadSlots("SLOT_UNAVAILABLE")).toBe(true);
     expect(shouldReloadSlots("RATE_LIMIT")).toBe(false);
     expect(shouldReloadSlots("GENERIC")).toBe(false);
+    expect(shouldReloadSlots("BUSY")).toBe(false);
   });
 
   it("exceção no navegador: sem internet ou fetch que caiu = sem conexão; o resto = genérico", () => {
