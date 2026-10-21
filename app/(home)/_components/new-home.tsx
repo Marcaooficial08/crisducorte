@@ -12,7 +12,7 @@ import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
 import { AGENDA_CLOSED_MESSAGE, DaySlots, TIME_ZONE, getNextServiceDays, getNow } from "@/app/_lib/schedule";
 import { getDaySlots } from "@/app/_lib/availability";
 import { getNextBooking } from "@/app/_lib/next-booking";
-import { isMensalistasEnabled } from "@/app/_lib/flags";
+import { isMensalistasEnabled, isNotificacoesEnabled } from "@/app/_lib/flags";
 import BookingPicker from "./booking-picker";
 
 interface NewHomeProps {
@@ -84,6 +84,11 @@ const NewHome = async ({ session }: NewHomeProps) => {
                   services={barbershop.services.map((service) => ({ id: service.id, name: service.name, price: Number(service.price) }))}
                   days={days}
                   isAuthenticated={!!user}
+                  whatsapp={
+                    isNotificacoesEnabled(session) && barbershop.phone
+                      ? { phone: barbershop.phone, address: barbershop.address }
+                      : null
+                  }
                 />
               )}
             </>

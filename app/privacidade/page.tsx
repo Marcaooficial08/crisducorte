@@ -3,7 +3,10 @@
  */
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
 import Header from "../_components/header";
+import { authOptions } from "../_lib/auth";
+import { isNotificacoesEnabled } from "../_lib/flags";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
@@ -13,6 +16,8 @@ const CONTROLLER = "Cris du Corte";
 const WHATSAPP_LABEL = "WhatsApp (31) 97357-6347";
 const WHATSAPP_URL = "https://wa.me/5531973576347";
 const LAST_UPDATED = "16/10/2026";
+// Data da versão com o parágrafo dos e-mails (Prompt 19), mostrada junto com ele.
+const LAST_UPDATED_NOTIFICATIONS = "21/10/2026";
 
 const WhatsAppLink = () => (
   <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="underline text-foreground">
@@ -27,7 +32,10 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
   </section>
 );
 
-const PrivacyPage = () => {
+const PrivacyPage = async () => {
+  // Parágrafo dos e-mails só aparece com a flag NOTIFICACOES (mesma regra de quem recebe).
+  const showNotifications = isNotificacoesEnabled(await getServerSession(authOptions));
+
   return (
     <>
       <Header />
@@ -35,7 +43,7 @@ const PrivacyPage = () => {
       <div className="px-page py-6 flex flex-col gap-6 max-w-2xl">
         <div className="flex flex-col gap-1">
           <h1 className="text-title font-bold">Política de Privacidade</h1>
-          <p className="text-caption text-muted-foreground">Última atualização: {LAST_UPDATED}</p>
+          <p className="text-caption text-muted-foreground">Última atualização: {showNotifications ? LAST_UPDATED_NOTIFICATIONS : LAST_UPDATED}</p>
         </div>
 
         <p className="text-body text-gray-300 leading-relaxed">
@@ -69,6 +77,15 @@ const PrivacyPage = () => {
             <li>permitir que a barbearia saiba quem vem em cada horário;</li>
             <li>ver números gerais de uso (quantos agendamentos por semana), sem identificar ninguém.</li>
           </ul>
+          {showNotifications && (
+            <p>
+              Usamos o e-mail da sua conta Google para enviar a confirmação da reserva, um lembrete na véspera do
+              horário e o aviso caso a barbearia cancele a sua reserva (os e-mails saem por uma conta Gmail da
+              barbearia). Os lembretes podem ser desligados a qualquer
+              momento no Perfil ou pelo link no próprio e-mail; a confirmação e o aviso de cancelamento sempre são
+              enviados, porque fazem parte do agendamento.
+            </p>
+          )}
           <p>Não vendemos seus dados nem os usamos para propaganda.</p>
         </Section>
 

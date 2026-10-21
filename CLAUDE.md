@@ -70,6 +70,10 @@ Admin = `User.isAdmin` (lido do banco no session callback de `app/_lib/auth.ts`,
 - `NEW_HOME` — home nova (`off | admin | all`, padrão `off`); ligada, a home antiga fica em `/classic`
 - `ADMIN_PANEL_V2` — painel do admin com grade, bloqueios e reserva manual (`off | admin | all`, padrão `off`); desligada, o `/adm` mostra a lista antiga + métricas
 - `MENSALISTAS` — aba Mensalistas do `/adm` (`off | admin | all`, padrão `off`); com `all`, o mensalista com conta (mesmo e-mail) vê a reserva em "Meu próximo agendamento"
+- `NOTIFICACOES` — e-mails (confirmação, lembrete da véspera, avisos ao cliente e ao Cris) e botão do WhatsApp na reserva (`off | admin | all`, padrão `off`). Fora da tela não há sessão: `isNotificacoesEnabledForUser` decide pelo cliente da reserva (`admin` = só reservas de quem é admin). Código em `app/_lib/notifications/`; envio sempre depois do commit (`runInBackground`), nunca bloqueia reserva/cancelamento; idempotência por `NotificationLog.key` única
+- `SMTP_USER` / `SMTP_PASS` — conta Gmail dedicada + senha de app (nodemailer). Testes zeram as duas (`vitest.config.mts`, `playwright.config.ts`): nada sai dos testes
+- `CRON_SECRET` — protege `/api/cron/notificacoes` (Cron da Vercel em `vercel.json`: qui e sex 23:00 UTC = 20h em SP; Hobby = 1x/dia, minuto impreciso; só roda em Production). `?dia=yyyy-MM-dd` só fora de produção
+- `NOTIFY_ALLOWLIST` — só na staging: e-mails que podem receber; o resto vira `SKIPPED`
 - `SCHEDULE_NOW` — relógio fixo da agenda, só no e2e (`getNow` em `app/_lib/schedule.ts` exige `E2E=1` e ignora na Vercel)
 
 ## Workflow

@@ -8,11 +8,14 @@ const mocks = vi.hoisted(() => ({
   findBlock: vi.fn(),
   lock: vi.fn(),
   txOptions: vi.fn(),
+  notifyBookingCreated: vi.fn(),
 }));
 
 vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
+// E-mail mockado: só confere que sai depois do commit e que falha nele não muda o resultado.
+vi.mock("@/app/_lib/notifications/notify", () => ({ notifyBookingCreated: mocks.notifyBookingCreated }));
 vi.mock("@/app/_lib/prisma", () => ({
   db: {
     $transaction: async (fn: (tx: unknown) => Promise<unknown>, options?: unknown) => {
@@ -46,7 +49,8 @@ describe("saveBooking", () => {
     vi.clearAllMocks();
     resetRateLimit();
     mocks.findFirst.mockResolvedValue(null);
-    mocks.create.mockResolvedValue({});
+    mocks.create.mockResolvedValue({ id: "booking-1" });
+    mocks.notifyBookingCreated.mockResolvedValue([]);
     mocks.findBlock.mockResolvedValue(null);
     mocks.lock.mockResolvedValue(1);
   });
@@ -68,7 +72,33 @@ describe("saveBooking", () => {
     expect(result).toEqual({ success: true });
     expect(mocks.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ userId: "user-sessao" }),
+      select: { id: true },
     });
+  });
+
+  it("envia a notificação da reserva gravada, depois do commit", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("user-sessao"));
+
+    await expect(saveBooking(params)).resolves.toEqual({ success: true });
+    expect(mocks.notifyBookingCreated).toHaveBeenCalledWith("booking-1");
+  });
+
+  it("falha no e-mail não impede a reserva", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("user-sessao"));
+    mocks.notifyBookingCreated.mockRejectedValue(new Error("SMTP fora do ar"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(saveBooking(params)).resolves.toEqual({ success: true });
+    await vi.waitFor(() => expect(consoleError).toHaveBeenCalledWith("Erro ao enviar notificação:", expect.any(Error)));
+    consoleError.mockRestore();
+  });
+
+  it("reserva recusada não envia notificação", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("user-sessao"));
+    mocks.findFirst.mockResolvedValue({ id: "outra" });
+
+    await saveBooking(params);
+    expect(mocks.notifyBookingCreated).not.toHaveBeenCalled();
   });
 
   it("recusa horário já reservado", async () => {

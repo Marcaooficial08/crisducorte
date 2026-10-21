@@ -177,7 +177,7 @@ Todos os componentes ficam em `app/_components/` e usam só os tokens da seção
 | **RenewalAlert** | MEL-025 | Card warning: "[Nome] · ciclo terminou. Usou 4 de 4 · 15/09 → 11/10. Renovar mensalista?" + [Renovar (OK)] [Excluir] | — | — | Excluir abre AlertDialog de confirmação |
 | **ConflictWarning** | MEL-025, 019 | Faixa warning `role=status`: "Sex 23 às 12:30 já tem reserva de um cliente. Essa semana não será sobrescrita." | — | — | — |
 | **AdminTabs** | MEL-019, 025 | Segmentado com 2 abas, Agenda e Mensalistas, 44px | Aba ativa #7354F5 + aria-current=page | — | Badge com número de renovações pendentes |
-| **WhatsAppButton** | MEL-022 | Botão secundário na tela de sucesso: "Enviar confirmação no WhatsApp" | — | Sem telefone do Cris configurado: oculto | Abre `wa.me` com texto pronto |
+| **WhatsAppButton** | MEL-022 | Botão secundário na tela de sucesso: "Enviar confirmação no WhatsApp" | — | Sem telefone do Cris configurado (`Barbershop.phone`): oculto | Abre `wa.me` com texto pronto: "Olá, Cris! Reservei {serviço} para {sexta 23/10} às {10:30} pelo app. Endereço: {endereço}." |
 | **InstallHint** | MEL-023 | Faixa fechável: Android "Instalar app"; iPhone "Toque em Compartilhar → Adicionar à Tela de Início" | — | Já instalado ou fechado: não aparece | Lembra o fechamento por 30 dias |
 
 Componentes do shadcn mantidos sem mudança de API: Sheet, AlertDialog, Avatar, Sonner, Form, Input, Label.
@@ -245,6 +245,21 @@ Referência: tela Admin · Novo mensalista. Campos: nome*, WhatsApp*, e-mail Goo
 - `metadata` com `openGraph` (título "Cris du Corte — Agende seu horário", imagem 1200 × 630 com o logo), `twitter`, `robots.ts`, `sitemap.ts` e JSON-LD `HairSalon` com endereço e horário (sex/sáb 09:00–20:30).
 - `app/manifest.ts`: name "Cris du Corte", short_name "Cris du Corte", display `standalone`, background e theme #15161A, ícones 192, 512 e maskable a partir do logo.
 - "Adicionar ao calendário": arquivo `.ics` gerado na hora (serve para iPhone e Android) + link do Google Agenda.
+
+### 4.9 Notificações por e-mail (MEL-022, Prompt 19)
+
+Canal: Gmail SMTP com conta dedicada da barbearia (sem domínio próprio; Resend exige domínio verificado). Web Push fica para o Prompt 20. WhatsApp só por link `wa.me` (sem API). Textos aprovados pelo dono em 21/10/2026:
+
+| Evento | Para | Assunto |
+| --- | --- | --- |
+| Cliente reservou | Cliente | "Reservado! Sex 23/10 às 10:30 — Corte" |
+| Cliente reservou | Cris (todos os `isAdmin`) | "Nova reserva: João · Sex 23/10 às 10:30" |
+| Cliente cancelou | Cris | "Cancelou: João · Sex 23/10 às 10:30" |
+| Cris cancelou | Cliente | "Sua reserva de Sex 23/10 às 10:30 foi cancelada pelo Cris" |
+| Véspera (Cron qui e sex, 20h) | Cliente | "Amanhã às 10:30 com o Cris" + link de cancelar + "Não quero mais lembretes" |
+| Último fim de semana do ciclo | Cris | "Renovar: Pedro, Ana — último fim de semana do ciclo" (1x por ciclo) |
+
+Rodapé de todos: "Cris du Corte · {endereço} · Não responda este e-mail — fale com o Cris pelo WhatsApp: {wa.me}". Sem e-mail: reserva manual, reserva feita pelo próprio Cris, Pausar/Excluir mensalista. Opt-out ("Lembretes por e-mail" no Perfil ou link do e-mail) desliga **só o lembrete**; confirmação e "o Cris cancelou" sempre saem. Reserva feita depois do Cron da véspera não tem lembrete (a confirmação cumpre o papel).
 
 ## 5. Banco de dados e regras
 
@@ -343,7 +358,7 @@ Toda mudança é testada em localhost, passa nos testes automáticos e, quando m
 | `NEW_THEME` | Tokens e visual B (MEL-005, 006) | Junto com `NEW_HOME` |
 | `ADMIN_PANEL_V2` | Bloqueios e reserva manual (MEL-019) | Só admin desde o início |
 | `MENSALISTAS` | Aba Mensalistas (MEL-025) | Só admin; ligar após cadastrar 1 mensalista de teste |
-| `NOTIFY_EMAIL` | Lembrete por e-mail (MEL-022) | Ligar depois de 1 semana só com o botão do WhatsApp |
+| `NOTIFICACOES` (era `NOTIFY_EMAIL`) | E-mails de confirmação, lembrete da véspera e avisos + botão do WhatsApp (MEL-022, Prompt 19) | Só admin primeiro (`admin`), depois todos (`all`) |
 | `PWA_INSTALL` | Dica de instalação (MEL-023) | Todos |
 
 **Cuidados por fase**
