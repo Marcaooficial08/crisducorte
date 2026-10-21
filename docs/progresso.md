@@ -586,11 +586,11 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-19, no computador e no celular.
 
-**Produção (2026-10-19) ✅:** PR #17 mergeado na `main` (`a4a344c`) e publicado pela Vercel. `ADMIN_PANEL_V2` em Production fica a cargo do dono. Com `ADMIN_PANEL_V2` ausente (= `off`), o `/adm` muda só pelas métricas; o bloqueio escondido na `/barbershop/[id]` e o `getDayBookings` sem dado pessoal valem para todos sem flag.
+**Produção (2026-10-19) ✅:** PR #17 mergeado na `main` (`a4a344c`) e publicado pela Vercel. `ADMIN_PANEL_V2=admin` criada pelo dono em Production; painel novo funcionando em produção. O bloqueio escondido na `/barbershop/[id]` e o `getDayBookings` sem dado pessoal valem para todos sem flag.
 
 **Pendências:**
 - [x] Vercel Preview: `ADMIN_PANEL_V2=admin` (criada pelo dono).
-- [ ] Vercel Production: criar `ADMIN_PANEL_V2=admin` (dono) e fazer redeploy; sem ela o painel novo fica desligado.
+- [x] Vercel Production: `ADMIN_PANEL_V2=admin` criada pelo dono; painel novo funcionando em produção.
 - [x] Teste de aceite do dono: localhost e staging ✅ em 2026-10-19.
 - [ ] Lighthouse/axe do `/adm` novo (não rodado neste prompt).
 
@@ -616,3 +616,47 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Produção:** publicado em produção — previsto após o merge. Nenhuma variável da Vercel alterada por este PR.
 
+## Prompt 18 · Mensalistas (MEL-025)
+
+**Feito:**
+- Flag `MENSALISTAS` (`off | admin | all`, padrão `off`; `isMensalistasEnabled` em `app/_lib/flags.ts`). Aba e actions: `admin` ou `all` ligam para o admin. "Meu próximo agendamento" do mensalista com conta: com `admin` só o admin se vê; `all` liga para todos os clientes.
+- AdminTabs (`app/adm/_components/admin-tabs.tsx`): Agenda | Mensalistas no topo do `/adm` e do `/adm/mensalistas`, 44px, aba ativa `#7354F5` com `aria-current="page"` e badge com o número de renovações pendentes.
+- `/adm/mensalistas` (só `isAdmin`; flag desligada volta para o `/adm`): cartão por mensalista com nome, WhatsApp (`wa.me`), "Toda sexta · 10:30", barra de 4 segmentos + "2 de 4 — termina 08/11", próximo atendimento e ações (Registrar pagamento/Renovar, Editar, Pausar/Reativar, Excluir com AlertDialog). Ordem: renovações no topo, ativos pelo próximo atendimento, pausados. Excluídos não aparecem.
+- Cadastro/edição (`save-mensalista.ts`): nome, WhatsApp (só dígitos), e-mail da conta Google opcional (minúsculo), dia (sexta/sábado) e horário fixos da grade. Dois mensalistas **ativos** não dividem dia e horário (trava `mensalista-fixo:<dia>:<hora>`). Mudar dia/horário vale a partir do próximo ciclo (D4h).
+- Registrar pagamento (`register-mensalista-payment.ts`): escolhe o serviço (padrão: o do ciclo anterior) e, para quem já estava no meio de um ciclo, "Ciclo já em andamento" com "Fins de semana restantes" (1–4). Numa transação: trava o mensalista, trava os horários em ordem (`lockSlot`) e confere reserva e bloqueio. **Tudo ou nada**: com conflito nada é gravado e o Sheet lista "Sex 23/10 às 10:30 — Reserva de João" / "Mensalista Pedro" / "Bloqueado · Feriado". Sem conflito: `MensalistaCycle` (`weekends` = sextas geradas, `endsAt` = domingo depois do último) e 1 `Booking` por fim de semana (`source = MENSALISTA`, `cycleId`, `userId = null`, nome e WhatsApp copiados). Prévia das datas antes de confirmar.
+- Regras do ciclo (`app/_lib/mensalista-cycle.ts`, funções puras): 1º fim de semana = o primeiro cujo horário fixo ainda está por vir (D4a); a renovação começa depois do último fim de semana do ciclo anterior (D4b) e só é aceita no último fim de semana ou depois de vencido (dois cliques não criam dois ciclos); `paidAt` = agora (D4c). "x de 4" = fim de semana atual ou próximo, contando os que já tinham passado antes do cadastro: 2 restantes → "3 de 4". Aviso de renovação no último fim de semana ou vencido (D4d).
+- Pausar/Excluir (`mensalista-status.ts`): cancelam as reservas futuras do mensalista, cada uma com `BookingCancellation` (`byAdmin = true`, `source = MENSALISTA`), e encurtam o `endsAt` do ciclo para o último fim de semana já começado. Reativar volta a ATIVO sem recriar reservas (precisa de novo pagamento) e confere se o horário fixo não foi para outro ativo. Excluir só marca `EXCLUIDO`; ciclos e reservas passadas ficam.
+- Grade do `/adm`: reserva de mensalista com selo "Mensalista" e botão "Desmarcar esta semana" (o diálogo avisa que conta como usado). Usa o `adminCancelBooking` existente.
+- Home nova: "Meu próximo agendamento" busca também a reserva de mensalista ativo com o e-mail da conta, sem diferenciar maiúsculas (`app/_lib/next-booking.ts`). O cartão mostra "· Mensalista" e "Para remarcar, fale com o Cris.", sem link (não está em `/bookings` e o cliente não cancela).
+- A regra "agenda abre na segunda" continua só no caminho do cliente (`getNextServiceDays`); a geração do ciclo valida grade, futuro e reserva/bloqueio sem essa regra. Quando a semana abre, o horário do mensalista já aparece ocupado.
+- Sem migração.
+
+**Decisões (aprovadas pelo dono em 2026-10-19):**
+- D2: falta ou "Desmarcar esta semana" conta como usado; o ciclo não estende.
+- D3: nunca sobrescrever; pagamento tudo ou nada com a lista de conflitos (substitui o "pula conflitos" da spec §5/§6).
+- D4 a–l como no plano; serviço escolhido no pagamento, sem coluna nova (D5).
+- Ajuste do dono: "Ciclo já em andamento" com 1–4 fins de semana restantes, sem migração (`weekends[]` guarda só os gerados; o progresso conta `4 − weekends.length` como já usados).
+- Pausar no meio do fim de semana (sexta ou sábado) conta aquele fim de semana como usado, mesmo que o horário de sábado ainda não tenha chegado.
+
+**Testes:**
+- Unit: `mensalista-cycle.test.ts` (sexta da semana, início do ciclo em seg/sex/sáb/dom antes e depois do horário, 2 restantes, renovação, progresso "2 de 4"/"3 de 4"/vencido/pausado, `truncatedEndsAt`), `mensalista-actions.test.ts` (sem sessão e conta comum recusadas sem tocar no banco, validação, P2028 → BUSY), `adm/mensalistas/page.test.ts`, `adm/page.test.ts` (badge só com a flag), `flags.test.ts`.
+- Integração `tests/integration/mensalistas.int.test.ts` (relógio fixo, quarta 02/01/2030): conta comum recusada em todas as actions; cadastro e validações; mesmo horário fixo recusado e pausado liberando; geração das 4 reservas; conflito com cliente e bloqueio sem gravar nada; conflito com outro mensalista; dois pagamentos simultâneos geram 1 ciclo; pausado/excluído recusados; cliente não reserva o horário do mensalista quando a semana abre; **2 restantes** (gera 2, "3 de 4", renovação recusada antes do último fim de semana e começando depois do 2º); falta não estende; pausar (canceladas com registro, ciclo encurtado, horário livre, reativar exige pagamento); excluir mantém histórico; "Meu próximo agendamento" por e-mail com e sem flag.
+- e2e `e2e/mensalistas.spec.ts` (`MENSALISTAS=all` no `playwright.config.ts`, relógio `SCHEDULE_NOW`): cadastrar → pagamento com 2 restantes → "3 de 4" → selo e "Desmarcar esta semana" na grade → home do mensalista com conta mostra a reserva e outro cliente vê ocupado → conflito lista a data e não grava → pausar cancela 2 reservas.
+- `vitest.config.mts`: `MENSALISTAS` fixa em `off` nos projetos.
+
+**Validação (local, 2026-10-19; repetida em 2026-10-20 antes do commit):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 200 ✅ · `npm run test:int` 48 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 34 ✅.
+
+**Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-20: cadastro, ciclo em andamento ("3 de 4"), selo "Mensalista" na grade, reserva em "Meu próximo agendamento" do mensalista, horário ocupado para outra conta, conflito sem gravar nada, pausar com as reservas futuras canceladas e excluir. O botão "Registrar pagamento" some durante o ciclo (só volta como "Renovar" no último fim de semana ou vencido) — comportamento aprovado.
+
+**Staging:** `fase3/mensalistas` enviado para `staging` (Preview precisa de `MENSALISTAS=admin`).
+
+**Produção:** publicado em produção — previsto após o merge. Sem migração. Depois do merge, o dono cria `MENSALISTAS=admin` na Vercel (Production) e faz redeploy; sem ela a aba fica escondida.
+
+**Pendências:**
+- [x] Teste de aceite do dono no localhost ✅ em 2026-10-20.
+- [ ] Teste de aceite do dono na staging.
+- [ ] Vercel Preview/Production: `MENSALISTAS=admin` (dono).
+- [ ] Cadastrar os mensalistas atuais do Cris com "Ciclo já em andamento".
+- [ ] Mensalista "sem horário fixo" (reserva na mão, spec §5.3) não entrou: o cadastro exige dia e horário.
+- [ ] `/bookings` não lista a reserva de mensalista (só a home nova mostra).
+- [ ] Lighthouse/axe do `/adm/mensalistas` (não rodado).

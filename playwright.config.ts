@@ -46,6 +46,8 @@ export default defineConfig({
       NEW_HOME: "all",
       // Painel do admin novo (grade, bloqueios, reserva manual).
       ADMIN_PANEL_V2: "admin",
+      // Mensalistas (aba do /adm e "Meu próximo agendamento" do mensalista com conta).
+      MENSALISTAS: "all",
       // Relógio fixo do servidor (getNow): a mesma quarta futura que o page.clock usa no navegador.
       E2E: "1",
       SCHEDULE_NOW: futureWednesdayNoon().toISOString(),

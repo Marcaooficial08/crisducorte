@@ -20,7 +20,15 @@ export type AdminErrorCode =
   | "NOT_FOUND"
   | "NO_BARBERSHOP"
   | "BUSY"
-  | "GENERIC";
+  | "GENERIC"
+  | "INVALID_EMAIL"
+  | "FIXED_SLOT_TAKEN"
+  | "MENSALISTA_NOT_FOUND"
+  | "MENSALISTA_INACTIVE"
+  | "INVALID_STATUS"
+  | "NO_FIXED_SLOT"
+  | "CYCLE_ACTIVE"
+  | "CYCLE_CONFLICT";
 
 export const ADMIN_ERROR_MESSAGES: Record<AdminErrorCode, string> = {
   UNAUTHORIZED: "Acesso restrito ao administrador.",
@@ -35,11 +43,31 @@ export const ADMIN_ERROR_MESSAGES: Record<AdminErrorCode, string> = {
   NO_BARBERSHOP: "Nenhuma barbearia disponível.",
   BUSY: BUSY_MESSAGE,
   GENERIC: "Não deu certo agora. Tente de novo em instantes.",
+  INVALID_EMAIL: "E-mail inválido. Deixe em branco se não tiver.",
+  FIXED_SLOT_TAKEN: "Outro mensalista ativo já tem esse dia e horário.",
+  MENSALISTA_NOT_FOUND: "Mensalista não encontrado.",
+  MENSALISTA_INACTIVE: "Reative o mensalista antes de registrar o pagamento.",
+  INVALID_STATUS: "Essa ação não vale para a situação atual do mensalista.",
+  NO_FIXED_SLOT: "Defina o dia e o horário fixos antes de registrar o pagamento.",
+  CYCLE_ACTIVE: "O ciclo atual ainda está em andamento. A renovação libera no último fim de semana.",
+  CYCLE_CONFLICT: "Nada foi reservado: há horários ocupados no ciclo.",
 };
 
 export type AdminActionResult =
   | { success: true; message: string }
   | { success: false; code: AdminErrorCode; error: string };
+
+// Horário do ciclo do mensalista que já está ocupado (o pagamento não grava nada, D3).
+export interface CycleConflict {
+  date: string; // "yyyy-MM-dd"
+  time: string;
+  label: string; // "Sex 23/10 às 10:30"
+  reason: string; // "Reserva de João", "Mensalista Pedro", "Bloqueado · Feriado"
+}
+
+export type PaymentResult =
+  | AdminActionResult
+  | { success: false; code: "CYCLE_CONFLICT"; error: string; conflicts: CycleConflict[] };
 
 export const adminOk = (message: string): AdminActionResult => ({ success: true, message });
 

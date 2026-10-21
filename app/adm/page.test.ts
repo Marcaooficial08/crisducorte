@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   findBarbershop: vi.fn(),
   getBookingMetrics: vi.fn(),
   getAdminAgenda: vi.fn(),
+  countPendingRenewals: vi.fn(),
   redirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
   }),
@@ -22,6 +23,7 @@ vi.mock("@/app/_lib/metrics", async (importOriginal) => ({
   getBookingMetrics: mocks.getBookingMetrics,
 }));
 vi.mock("@/app/_lib/admin-agenda", () => ({ getAdminAgenda: mocks.getAdminAgenda }));
+vi.mock("@/app/_lib/mensalistas", () => ({ countPendingRenewals: mocks.countPendingRenewals }));
 vi.mock("@/app/_components/header", () => ({ default: () => null }));
 vi.mock("@/app/_components/booking-item-adm", () => ({ default: () => null }));
 vi.mock("./_components/admin-agenda", () => ({ default: () => null }));
@@ -40,6 +42,7 @@ describe("/adm", () => {
     mocks.findBarbershop.mockResolvedValue({ id: "shop-1", services: [{ id: "s1", name: "Corte" }] });
     mocks.getBookingMetrics.mockResolvedValue({ confirmadas: 0, canceladas: 0, porSemana: [] });
     mocks.getAdminAgenda.mockResolvedValue([]);
+    mocks.countPendingRenewals.mockResolvedValue(0);
   });
 
   afterEach(() => {
@@ -92,5 +95,15 @@ describe("/adm", () => {
     expect(mocks.getAdminAgenda).toHaveBeenCalledWith("shop-1", expect.any(Date));
     const [desde, ate] = mocks.getBookingMetrics.mock.calls[0] as [Date, Date];
     expect(Math.round((ate.getTime() - desde.getTime()) / (24 * 60 * 60 * 1000))).toBe(35);
+  });
+
+  it("MENSALISTAS: off não conta renovações; ligada conta para o badge da aba", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf(true));
+    await BookingsPageAdm();
+    expect(mocks.countPendingRenewals).not.toHaveBeenCalled();
+
+    vi.stubEnv("MENSALISTAS", "admin");
+    await BookingsPageAdm();
+    expect(mocks.countPendingRenewals).toHaveBeenCalledTimes(1);
   });
 });

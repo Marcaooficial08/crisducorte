@@ -11,6 +11,8 @@ import { db } from "@/app/_lib/prisma";
 import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
 import { AGENDA_CLOSED_MESSAGE, DaySlots, TIME_ZONE, getNextServiceDays, getNow } from "@/app/_lib/schedule";
 import { getDaySlots } from "@/app/_lib/availability";
+import { getNextBooking } from "@/app/_lib/next-booking";
+import { isMensalistasEnabled } from "@/app/_lib/flags";
 import BookingPicker from "./booking-picker";
 
 interface NewHomeProps {
@@ -43,13 +45,7 @@ const NewHome = async ({ session }: NewHomeProps) => {
     barbershop
       ? Promise.all(serviceDays.map((day) => getDaySlots(day.date, { barbershopId: barbershop.id, now })))
       : Promise.resolve([]),
-    user
-      ? db.booking.findFirst({
-          where: { userId: user.id, date: { gte: now } },
-          include: { service: true },
-          orderBy: { date: "asc" },
-        })
-      : Promise.resolve(null),
+    user ? getNextBooking(user, now, isMensalistasEnabled(session)) : Promise.resolve(null),
     isAdmin && rangeEnd
       ? db.booking.findMany({
           where: { date: { gte: now, lt: rangeEnd } },
@@ -98,7 +94,11 @@ const NewHome = async ({ session }: NewHomeProps) => {
               <h2 id="proximo-agendamento" className="mb-3 text-label font-bold uppercase text-muted-foreground">
                 Meu próximo agendamento
               </h2>
-              <NextBookingCard date={nextBooking.date} serviceName={nextBooking.service.name} />
+              <NextBookingCard
+                date={nextBooking.date}
+                serviceName={nextBooking.service.name}
+                mensalista={nextBooking.source === "MENSALISTA"}
+              />
             </section>
           )}
         </div>

@@ -308,10 +308,10 @@ model MensalistaCycle {
 
 **Regras do ciclo do mensalista**
 
-1. Ao salvar ou renovar: `paidAt` = data do pagamento; os 4 fins de semana são os 4 primeiros com sexta ≥ `paidAt` (pagou numa sexta ou sábado: aquele fim de semana conta como o 1º).
-2. Com horário fixo: em uma transação, criar 1 `Booking` (`source = MENSALISTA`) por fim de semana no dia e hora fixos. Se o horário estiver ocupado ou bloqueado naquela semana, **não cria** e devolve a lista de conflitos para o ConflictWarning.
+1. Ao registrar o pagamento: `paidAt` = agora; o 1º fim de semana é o primeiro cujo horário fixo ainda está por vir. Renovar só no último fim de semana ou depois de vencido, começando depois do último fim de semana do ciclo anterior. "Ciclo já em andamento": gera só os N fins de semana restantes (1–4). *(Prompt 18.)*
+2. Com horário fixo: em uma transação, criar 1 `Booking` (`source = MENSALISTA`) por fim de semana no dia e hora fixos. Se algum horário estiver ocupado ou bloqueado, **não grava nada** (tudo ou nada) e devolve a lista de conflitos para o ConflictWarning. *(Decisão do dono em 19/10/2026, Prompt 18.)*
 3. Sem horário fixo: o Cris reserva cada fim de semana na mão; o painel só permite 1 reserva de mensalista por fim de semana do ciclo.
-4. Uso: cada fim de semana do ciclo que já passou conta como usado, tendo ido ou faltado. Contador "x de 4" = fins de semana do ciclo já iniciados.
+4. Uso: cada fim de semana do ciclo que já passou conta como usado, tendo ido ou faltado (o ciclo não estende). Contador "x de 4" = fim de semana atual ou próximo, contando os que já tinham passado antes do cadastro (2 restantes → "3 de 4"). *(Prompt 18.)*
 5. Fim do ciclo: quando hoje > `endsAt` e `renewedAt` vazio, o mensalista entra em RenewalAlert. Renovar = novo ciclo com `paidAt` = data informada (padrão hoje). Excluir = `status = EXCLUIDO` e cancela as reservas futuras.
 6. Pausar = `status = PAUSADO`, cancela as reservas futuras de mensalista e libera os horários.
 
@@ -354,7 +354,7 @@ Toda mudança é testada em localhost, passa nos testes automáticos e, quando m
 | 1 | Login cair ao corrigir o nome da chave | Confirmar `NEXTAUTH_SECRET` na Vercel com o mesmo valor da chave atual; sessões continuam válidas |
 | 1 | Remover o card "Indisponivel" apagar algo usado | Antes, conferir se há reservas ligadas a ele; se houver, só esconder |
 | 2 | Clientes estranharem a home nova | Rollout só para admin primeiro; comparar reservas confirmadas antes e depois |
-| 3 | Reserva automática de mensalista sobrescrever cliente | Geração em transação que **pula** conflitos e mostra o aviso; teste dedicado |
+| 3 | Reserva automática de mensalista sobrescrever cliente | Geração em transação **tudo ou nada**: com conflito não grava e mostra o aviso; teste dedicado |
 | 3 | `userId` opcional quebrar telas que assumem usuário | Toda tela usa `customerName ?? user.name`; teste com reserva manual |
 | 4 | Service worker deixar versão velha em cache | Sem cache offline das páginas de reserva; só ícones e fontes |
 

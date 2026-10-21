@@ -7,7 +7,9 @@ import BookingItemAdm from "../_components/booking-item-adm";
 import { assertAdmin } from "../_lib/auth-guards";
 import EmptyState from "../_components/empty-state";
 import { CalendarIcon } from "lucide-react";
-import { isAdminPanelV2Enabled } from "../_lib/flags";
+import { isAdminPanelV2Enabled, isMensalistasEnabled } from "../_lib/flags";
+import { countPendingRenewals } from "../_lib/mensalistas";
+import AdminTabs from "./_components/admin-tabs";
 import { getBookingMetrics, recentWeeksWindow } from "../_lib/metrics";
 import { getAdminAgenda } from "../_lib/admin-agenda";
 import { visibleBarbershopWhere } from "../_lib/barbershops";
@@ -37,9 +39,11 @@ const BookingsPageAdm = async () => {
               include: { services: { orderBy: { id: "asc" }, select: { id: true, name: true } } },
           })
         : null;
-    const [agenda, metrics] = await Promise.all([
+    const mensalistas = isMensalistasEnabled(session);
+    const [agenda, metrics, pendingRenewals] = await Promise.all([
         barbershop ? getAdminAgenda(barbershop.id, getNow()) : Promise.resolve(null),
         getBookingMetrics(metricsWindow.desde, metricsWindow.ate),
+        mensalistas ? countPendingRenewals(getNow()) : Promise.resolve(0),
     ]);
 
     // Admin vê todas as reservas — sem filtro de userId
@@ -72,6 +76,7 @@ const BookingsPageAdm = async () => {
             <Header />
             {/* Coluna centralizada no computador, coerente com a home nova; o header segue largo. */}
             <div className="mx-auto w-full max-w-2xl px-page py-6">
+                {mensalistas && <AdminTabs current="agenda" pendingRenewals={pendingRenewals} />}
                 {barbershop && agenda && (
                     <section aria-labelledby="agenda-admin" className="mb-8">
                         <h1 id="agenda-admin" className="text-title font-bold mb-4">Agenda</h1>

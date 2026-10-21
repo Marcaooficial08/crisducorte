@@ -69,6 +69,7 @@ Admin = `User.isAdmin` (lido do banco no session callback de `app/_lib/auth.ts`,
 - `AGENDA_V2` — feature flag `off | admin | all` (padrão `off`), lida por `isEnabled` em `app/_lib/flags.ts`
 - `NEW_HOME` — home nova (`off | admin | all`, padrão `off`); ligada, a home antiga fica em `/classic`
 - `ADMIN_PANEL_V2` — painel do admin com grade, bloqueios e reserva manual (`off | admin | all`, padrão `off`); desligada, o `/adm` mostra a lista antiga + métricas
+- `MENSALISTAS` — aba Mensalistas do `/adm` (`off | admin | all`, padrão `off`); com `all`, o mensalista com conta (mesmo e-mail) vê a reserva em "Meu próximo agendamento"
 - `SCHEDULE_NOW` — relógio fixo da agenda, só no e2e (`getNow` em `app/_lib/schedule.ts` exige `E2E=1` e ignora na Vercel)
 
 ## Workflow
