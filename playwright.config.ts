@@ -51,6 +51,8 @@ export default defineConfig({
       // Notificações (switch do Perfil e WhatsAppButton) só para o admin, como no rollout. Sem credenciais
       // do Gmail: nada sai do e2e, mesmo que o .env local tenha SMTP_USER/SMTP_PASS.
       NOTIFICACOES: "admin",
+      // "Adicionar ao calendário" só para o admin, como no rollout (Prompt 20).
+      CALENDARIO: "admin",
       SMTP_USER: "",
       SMTP_PASS: "",
       NOTIFY_ALLOWLIST: "",

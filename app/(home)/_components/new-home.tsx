@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Session } from "next-auth";
-import { fromZonedTime } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { CalendarClockIcon, CalendarIcon, StoreIcon } from "lucide-react";
 import Header from "@/app/_components/header";
 import ShopCard from "@/app/_components/shop-card";
@@ -12,7 +12,8 @@ import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
 import { AGENDA_CLOSED_MESSAGE, DaySlots, TIME_ZONE, getNextServiceDays, getNow } from "@/app/_lib/schedule";
 import { getDaySlots } from "@/app/_lib/availability";
 import { getNextBooking } from "@/app/_lib/next-booking";
-import { isMensalistasEnabled, isNotificacoesEnabled } from "@/app/_lib/flags";
+import { isCalendarioEnabled, isMensalistasEnabled, isNotificacoesEnabled } from "@/app/_lib/flags";
+import { appUrl } from "@/app/_lib/notifications/templates";
 import BookingPicker from "./booking-picker";
 
 interface NewHomeProps {
@@ -57,6 +58,8 @@ const NewHome = async ({ session }: NewHomeProps) => {
 
   const days = daySlots.filter((day): day is DaySlots => day !== null);
   const firstName = user?.name?.split(" ")[0];
+  const calendarEnabled = isCalendarioEnabled(session);
+  const bookingsUrl = appUrl("/bookings");
 
   return (
     <div className="pb-10">
@@ -85,6 +88,7 @@ const NewHome = async ({ session }: NewHomeProps) => {
                   days={days}
                   isAuthenticated={!!user}
                   emailConfirmation={isNotificacoesEnabled(session) && !!user?.email}
+                  calendar={calendarEnabled ? { address: barbershop.address, bookingsUrl } : null}
                   whatsapp={
                     isNotificacoesEnabled(session) && barbershop.phone
                       ? { phone: barbershop.phone, address: barbershop.address }
@@ -104,6 +108,18 @@ const NewHome = async ({ session }: NewHomeProps) => {
                 date={nextBooking.date}
                 serviceName={nextBooking.service.name}
                 mensalista={nextBooking.source === "MENSALISTA"}
+                calendar={
+                  calendarEnabled
+                    ? {
+                        date: formatInTimeZone(nextBooking.date, TIME_ZONE, "yyyy-MM-dd"),
+                        time: formatInTimeZone(nextBooking.date, TIME_ZONE, "HH:mm"),
+                        serviceId: nextBooking.service.id,
+                        serviceName: nextBooking.service.name,
+                        address: nextBooking.barbershop.address,
+                        bookingsUrl,
+                      }
+                    : undefined
+                }
               />
             </section>
           )}

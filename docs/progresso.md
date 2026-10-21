@@ -712,3 +712,27 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [ ] Primeira quinta depois do deploy: conferir que os lembretes saíram (`NotificationLog` com `REMINDER`/`SENT`).
 - [ ] Revisão jurídica da Política de Privacidade (continua pendente, agora com o parágrafo dos e-mails).
 - [ ] Ao atualizar o `next-auth`, conferir se o `overrides` do `nodemailer` ainda é necessário.
+
+## Prompt 20 · PR A · Adicionar ao calendário (MEL-023)
+
+**Decisões (aprovadas pelo dono em 2026-10-21):** plano do Prompt 20 em 3 PRs (A calendário → B PWA → C Web Push); calendário atrás da flag `CALENDARIO` (regra "todo visível atrás de flag"); evento com **60 minutos fixos** (mesmo no 09:00, cuja grade vai até 10:30); **nenhum merge em produção antes de sexta 23/10**, depois que o dono confirmar os primeiros lembretes reais (qui 22/10, 20h).
+
+**Feito:**
+- Flag `CALENDARIO` (`off | admin | all`, padrão `off`), `isCalendarioEnabled` em `app/_lib/flags.ts`.
+- `app/_lib/calendar.ts` (funções puras): link do Google Agenda (`dates` em UTC + `ctz=America/Sao_Paulo`) e `.ics` (RFC 5545: CRLF, linhas dobradas em 75 octetos sem cortar acento, escape de `\ ; ,` e quebra de linha, `UID` estável por dia e hora — adicionar de novo atualiza em vez de duplicar —, `VALARM` 1 hora antes). Horário de SP → UTC por `fromZonedTime`. Título "{Serviço} · Cris du Corte"; descrição "Ver ou cancelar a reserva: {NEXTAUTH_URL}/bookings" (na staging, o link é dela).
+- `GET /api/calendario?data=yyyy-MM-dd&hora=HH:mm&servico=<id>`: sem id de reserva e sem dado pessoal; valida a data real e o horário da grade (400), lê serviço e endereço da barbearia do banco (404 sem serviço), 404 com a flag desligada para quem pede. `text/calendar`, `inline` (no iPhone o Safari abre direto "Adicionar ao Calendário"), `private, no-store`.
+- `AddToCalendar` (cliente): botão "Adicionar ao calendário" (`aria-expanded`, 44px) que abre "Google Agenda" (nova aba) e "Apple / Outlook" (.ics). No cartão de sucesso da reserva (home nova), antes do WhatsApp; o cartão passa a aparecer também só com a flag do calendário. Em "Meu próximo agendamento", abaixo do cartão (fora do link para `/bookings`), inclusive para a reserva de mensalista. `getNextBooking` passa a trazer o endereço da barbearia.
+
+**Testes:**
+- Unit: `calendar.test.ts` (09:00 e 19:30 de SP em UTC com 1 hora, data/horário inválidos, link do Google, `.ics` com CRLF/UID/DTSTAMP/alarme/endereço escapado, dobra de linha com acento), `api/calendario/route.test.ts` (flag off/admin/all, 400 sem ler o banco, 404, cabeçalhos e corpo com o link da staging), `flags.test.ts`.
+- e2e `e2e/calendario.spec.ts` (`CALENDARIO=admin` no `playwright.config.ts`): admin reserva → botão no cartão (fechado, 44px) → link do Google com `dates` certas → `.ics` da rota com `DTSTART`/`DTEND` certos → mesmo botão em "Meu próximo agendamento"; cliente comum não vê o botão e a rota responde 404.
+- `vitest.config.mts`: `CALENDARIO` fixa em `off`.
+
+**Validação (local, 2026-10-21):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 251 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 41 ✅.
+
+**Produção:** publicado em produção — previsto após o merge (não antes de sexta 23/10, depois da confirmação dos lembretes). Sem migração. Variável nova: `CALENDARIO` (Preview: `admin`; Production: `admin` no deploy, `all` depois do aceite no iPhone).
+
+**Pendências:**
+- [ ] Teste de aceite do dono no localhost.
+- [ ] Staging (com autorização): `CALENDARIO=admin` no Preview; aceite no iPhone (.ics abre "Adicionar ao Calendário") e no Android (Google Agenda).
+- [ ] Vercel Production: `CALENDARIO=admin` e depois `all` (dono).

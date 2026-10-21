@@ -19,7 +19,7 @@ export const getNextBooking = (user: NextBookingUser, now: Date, includeMensalis
   }
   return db.booking.findFirst({
     where: { date: { gte: now }, OR: owners },
-    include: { service: true },
+    include: { service: true, barbershop: { select: { address: true } } },
     orderBy: { date: "asc" },
   });
 };

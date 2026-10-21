@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getFlagMode,
   isAdminPanelV2Enabled,
+  isCalendarioEnabled,
   isEnabled,
   isMensalistasEnabled,
   isNewHomeEnabled,
@@ -96,5 +97,19 @@ describe("feature flags", () => {
 
     vi.stubEnv("NOTIFICACOES", "all");
     expect(isNotificacoesEnabledForUser({ isAdmin: false })).toBe(true);
+  });
+
+  it("CALENDARIO pela sessão: admin só para quem é admin, all para todos", () => {
+    vi.stubEnv("CALENDARIO", undefined);
+    expect(isCalendarioEnabled(sessionOf(true))).toBe(false);
+
+    vi.stubEnv("CALENDARIO", "admin");
+    expect(isCalendarioEnabled(sessionOf(true))).toBe(true);
+    expect(isCalendarioEnabled(sessionOf(false))).toBe(false);
+    expect(isCalendarioEnabled(null)).toBe(false);
+
+    vi.stubEnv("CALENDARIO", "all");
+    expect(isCalendarioEnabled(sessionOf(false))).toBe(true);
+    expect(isCalendarioEnabled(null)).toBe(true);
   });
 });
