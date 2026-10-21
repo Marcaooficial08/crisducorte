@@ -21,7 +21,7 @@
 | 16 · Schema da Fase 3 + disponibilidade | ✅ Publicado em produção | 2026-10-19 | `fase3/schema` (PR #16) |
 | 17 · Painel do admin (bloqueios, reserva manual, métricas) | ✅ Publicado em produção | 2026-10-19 | `fase3/painel-admin` (PR #17) |
 | Incidente · Conexão de produção (transaction pooler) | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `docs/pool-producao` |
-| 19 · Notificações (MEL-022) | 🟡 Implementado — aguardando aceite, SQL de produção e variáveis | 2026-10-21 | `fase3/notificacoes` |
+| 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
 
 ## Ambientes
 
@@ -697,16 +697,18 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Validação (local, 2026-10-21, depois da entregabilidade):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 239 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 39 ✅ (o teste da home nova agora espera o toast e o cartão de sucesso do admin).
 
-**Staging:** `a9e7b2e` enviado para `staging`; deploy da Vercel **falhou** sem log acessível daqui (CLI sem login). Em aberto: ver o Build Log antes do merge.
+**Staging:** `a9e7b2e` enviado para `staging`; o deploy da Vercel falhou (sem log acessível daqui; não se repetiu). `f42fe82` (entregabilidade) enviado para `staging` em 2026-10-21: deploy ✅, com as variáveis de Preview criadas pelo dono.
 
-**Produção:** não publicado. Ordem: backup → SQL (ANTES/MIGRAÇÃO/CONFERÊNCIA, uma consulta por vez) → UPDATE do telefone → `migrate resolve --applied 20261021000000_notificacoes` (5432) → PR e merge → variáveis de Production → redeploy. Sem a migração aplicada, o código novo quebra (lê as colunas novas).
+**Produção:** publicado em produção — previsto após o merge. Em 2026-10-21, antes do merge: backup `prod-2026-10-21-notificacoes.dump` (dono, fora do Git); `prisma/sql/notificacoes-producao.sql` aplicado à mão pelo dono no Supabase e conferido (usuários, hash e reservas iguais; colunas e tabela novas; telefone do Cris gravado); `npx prisma migrate resolve --applied 20261021000000_notificacoes` pela 5432 (autorizado pelo dono) e `migrate status` = "Database schema is up to date!". Variáveis de Production criadas pelo dono: `NOTIFICACOES=all`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET` (sem `NOTIFY_ALLOWLIST`). O Cron (`vercel.json`) passa a valer com o deploy de Production; o primeiro lembrete real sai na quinta seguinte, entre 20:00 e 20:59.
 
 **Pendências:**
 - [x] Dono: conta Gmail dedicada e senha de app (envio real `SENT` no Neon dev).
 - [x] Vercel Preview: variáveis criadas pelo dono.
-- [ ] Descobrir por que o deploy da staging falhou (Build Log da Vercel) e repetir o push.
+- [x] Push repetido (`f42fe82`): deploy da staging ✅.
 - [ ] Teste de aceite do dono na staging (celular): e-mails na caixa de entrada (não no spam), Reply-To, botão do WhatsApp, aviso no cartão, switch e link de opt-out.
-- [ ] Produção: SQL à mão + `migrate resolve`; a consulta 1.1 mostra quantos `User.isAdmin` com e-mail existem (todos recebem os avisos ao Cris **e aparecem no Reply-To dos clientes**: esperado 1); preencher `Barbershop.phone`.
-- [ ] Vercel Production: `NOTIFICACOES=all`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET` (outro valor); sem `NOTIFY_ALLOWLIST`.
+- [x] Produção: SQL aplicado à mão e conferido, telefone do Cris gravado e `migrate resolve` registrado (2026-10-21).
+- [x] Vercel Production: `NOTIFICACOES=all`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET` (criadas pelo dono); sem `NOTIFY_ALLOWLIST`.
+- [ ] Depois do deploy: reserva de teste em produção (confirmação, "Nova reserva", cartão de sucesso) e conferir o Cron em Vercel → Settings → Cron Jobs.
+- [ ] Primeira quinta depois do deploy: conferir que os lembretes saíram (`NotificationLog` com `REMINDER`/`SENT`).
 - [ ] Revisão jurídica da Política de Privacidade (continua pendente, agora com o parágrafo dos e-mails).
 - [ ] Ao atualizar o `next-auth`, conferir se o `overrides` do `nodemailer` ainda é necessário.
