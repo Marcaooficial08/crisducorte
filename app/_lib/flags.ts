@@ -2,7 +2,7 @@ import { Session } from "next-auth";
 
 // Feature flags lidas de variáveis de ambiente, só no servidor.
 // Valor: off | admin | all. Ausente ou inválido = off.
-export type FlagName = "AGENDA_V2" | "NEW_HOME" | "ADMIN_PANEL_V2";
+export type FlagName = "AGENDA_V2" | "NEW_HOME" | "ADMIN_PANEL_V2" | "MENSALISTAS";
 export type FlagMode = "off" | "admin" | "all";
 
 const MODES: readonly FlagMode[] = ["off", "admin", "all"];
@@ -30,3 +30,7 @@ export const isNewHomeEnabled = (session: Session | null | undefined) => isEnabl
 // Painel do admin com grade, bloqueios e reserva manual (MEL-019). O /adm já é só do admin:
 // "admin" e "all" ligam igual.
 export const isAdminPanelV2Enabled = (session: Session | null | undefined) => isEnabled("ADMIN_PANEL_V2", session);
+
+// Mensalistas (MEL-025): aba do /adm e, para o cliente, a reserva de mensalista em
+// "Meu próximo agendamento". "admin" liga a aba e só o admin se vê como mensalista; "all" liga para todos.
+export const isMensalistasEnabled = (session: Session | null | undefined) => isEnabled("MENSALISTAS", session);

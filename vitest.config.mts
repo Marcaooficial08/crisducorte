@@ -11,7 +11,7 @@ if (!testDatabaseUrl) {
 }
 
 // Flags fixas em off: os testes não dependem do .env local (cada teste liga a sua com vi.stubEnv).
-const FLAGS_OFF = { AGENDA_V2: "off", NEW_HOME: "off", ADMIN_PANEL_V2: "off" };
+const FLAGS_OFF = { AGENDA_V2: "off", NEW_HOME: "off", ADMIN_PANEL_V2: "off", MENSALISTAS: "off" };
 
 export default defineConfig({
   resolve: {

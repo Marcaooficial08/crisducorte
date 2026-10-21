@@ -51,6 +51,9 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
     }
   };
 
+  // Mensalista: "Desmarcar esta semana" (spec §4.4); a falta conta como usada no ciclo (D2).
+  const isMensalista = booking?.source === "MENSALISTA";
+
   const handleCancel = () =>
     booking && run(() => adminCancelBooking(booking.id), () => track("booking_cancelled", { by: "admin" }));
 
@@ -77,6 +80,7 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
                   Reserva na mão
                 </Badge>
               )}
+              {booking.source === "MENSALISTA" && <Badge className="w-fit">Mensalista</Badge>}
               {booking.customerPhone && (
                 <a
                   href={whatsappUrl(booking.customerPhone)}
@@ -106,22 +110,30 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
           {booking && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" disabled={loading} aria-label={`Cancelar reserva das ${time}`}>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={loading}
+                  aria-label={isMensalista ? `Desmarcar esta semana ${time}` : `Cancelar reserva das ${time}`}
+                >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
-                  Cancelar
+                  {isMensalista ? "Desmarcar esta semana" : "Cancelar"}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent className="w-[90%]">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Cancelar reserva de {booking.customerName}?</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {isMensalista ? `Desmarcar ${booking.customerName} esta semana?` : `Cancelar reserva de ${booking.customerName}?`}
+                  </AlertDialogTitle>
                   <AlertDialogDescription>
                     {dayLabel} às {time} · {booking.serviceName}. O horário volta a ficar livre.
+                    {isMensalista && " Conta como usado no ciclo do mensalista."}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="flex-row gap-3">
                   <AlertDialogCancel className="mt-0 w-full">Voltar</AlertDialogCancel>
                   <AlertDialogAction className="w-full" onClick={handleCancel}>
-                    Cancelar reserva
+                    {isMensalista ? "Desmarcar" : "Cancelar reserva"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

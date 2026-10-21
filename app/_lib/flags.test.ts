@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getFlagMode, isAdminPanelV2Enabled, isEnabled, isNewHomeEnabled } from "./flags";
+import { getFlagMode, isAdminPanelV2Enabled, isEnabled, isMensalistasEnabled, isNewHomeEnabled } from "./flags";
 
 const sessionOf = (isAdmin: boolean) => ({
   user: { id: "user-1", name: "Teste", email: "teste@example.com", isAdmin },
@@ -63,5 +63,14 @@ describe("feature flags", () => {
     expect(isAdminPanelV2Enabled(sessionOf(false))).toBe(false);
     vi.stubEnv("ADMIN_PANEL_V2", "all");
     expect(isAdminPanelV2Enabled(sessionOf(true))).toBe(true);
+  });
+
+  it("MENSALISTAS: padrão off; admin liga só para o admin; all para todos", () => {
+    expect(isMensalistasEnabled(sessionOf(true))).toBe(false);
+    vi.stubEnv("MENSALISTAS", "admin");
+    expect(isMensalistasEnabled(sessionOf(true))).toBe(true);
+    expect(isMensalistasEnabled(sessionOf(false))).toBe(false);
+    vi.stubEnv("MENSALISTAS", "all");
+    expect(isMensalistasEnabled(sessionOf(false))).toBe(true);
   });
 });
