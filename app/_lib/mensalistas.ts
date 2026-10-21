@@ -103,6 +103,7 @@ export interface MensalistaItem {
   fixedTime: string | null;
   status: Exclude<MensalistaStatus, "EXCLUIDO">;
   cycle: MensalistaCycleView | null;
+  cycleId: string | null; // ciclo mais recente (aviso de renovação por e-mail, 1x por ciclo)
   nextBooking: string | null; // "Sex 23/10 às 10:30"
   lastServiceId: string | null; // serviço da última reserva do ciclo (padrão no próximo pagamento)
   needsRenewal: boolean; // ativo, com ciclo no último fim de semana ou vencido
@@ -148,6 +149,7 @@ export const getMensalistas = async (now: Date): Promise<MensalistaItem[]> => {
       fixedTime: mensalista.fixedTime,
       status,
       cycle,
+      cycleId: latest?.id ?? null,
       nextBooking: next ? `${slotDayLabel(dateOf(next))} às ${formatInTimeZone(next, TIME_ZONE, "HH:mm")}` : null,
       lastServiceId: latest?.bookings[0]?.serviceId ?? null,
       needsRenewal: status === "ATIVO" && !!cycle?.needsRenewal && !latest?.renewedAt,

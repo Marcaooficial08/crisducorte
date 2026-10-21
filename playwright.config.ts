@@ -48,6 +48,13 @@ export default defineConfig({
       ADMIN_PANEL_V2: "admin",
       // Mensalistas (aba do /adm e "Meu próximo agendamento" do mensalista com conta).
       MENSALISTAS: "all",
+      // Notificações (switch do Perfil e WhatsAppButton) só para o admin, como no rollout. Sem credenciais
+      // do Gmail: nada sai do e2e, mesmo que o .env local tenha SMTP_USER/SMTP_PASS.
+      NOTIFICACOES: "admin",
+      SMTP_USER: "",
+      SMTP_PASS: "",
+      NOTIFY_ALLOWLIST: "",
+      CRON_SECRET: "",
       // Relógio fixo do servidor (getNow): a mesma quarta futura que o page.clock usa no navegador.
       E2E: "1",
       SCHEDULE_NOW: futureWednesdayNoon().toISOString(),

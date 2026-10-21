@@ -6,11 +6,17 @@ const mocks = vi.hoisted(() => ({
   delete: vi.fn(),
   createCancellation: vi.fn(),
   transaction: vi.fn(),
+  notifyBookingCancelled: vi.fn(),
 }));
 
 vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
+// Só o envio é mockado; loadBookingSnapshot continua lendo pelo db mockado abaixo.
+vi.mock("@/app/_lib/notifications/notify", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/app/_lib/notifications/notify")>()),
+  notifyBookingCancelled: mocks.notifyBookingCancelled,
+}));
 vi.mock("@/app/_lib/prisma", () => ({
   db: {
     booking: { findUnique: mocks.findUnique, delete: mocks.delete },
@@ -37,6 +43,7 @@ describe("cancelBooking", () => {
     mocks.delete.mockResolvedValue({});
     mocks.createCancellation.mockResolvedValue({});
     mocks.transaction.mockResolvedValue([]);
+    mocks.notifyBookingCancelled.mockResolvedValue([]);
   });
 
   it("recusa sem sessão", async () => {
@@ -78,5 +85,38 @@ describe("cancelBooking", () => {
 
     await expect(cancelBooking("booking-1")).resolves.toEqual({ success: true });
     expect(mocks.createCancellation).toHaveBeenCalledWith({ data: expect.objectContaining({ byAdmin: false }) });
+  });
+
+  it("cliente cancela: aviso ao Cris (byAdmin false) com a reserva lida antes do delete", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("cliente-a"));
+
+    await cancelBooking("booking-1");
+    expect(mocks.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "booking-1" }, include: expect.any(Object) }));
+    expect(mocks.notifyBookingCancelled).toHaveBeenCalledWith(expect.objectContaining({ id: "booking-1" }), false);
+  });
+
+  it("admin cancela a de outro cliente: aviso ao cliente (byAdmin true)", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("admin", true));
+
+    await cancelBooking("booking-1");
+    expect(mocks.notifyBookingCancelled).toHaveBeenCalledWith(expect.objectContaining({ id: "booking-1" }), true);
+  });
+
+  it("falha no e-mail não impede o cancelamento", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("cliente-a"));
+    mocks.notifyBookingCancelled.mockRejectedValue(new Error("SMTP fora do ar"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(cancelBooking("booking-1")).resolves.toEqual({ success: true });
+    expect(mocks.transaction).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(consoleError).toHaveBeenCalledWith("Erro ao enviar notificação:", expect.any(Error)));
+    consoleError.mockRestore();
+  });
+
+  it("cancelamento recusado não envia aviso", async () => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("cliente-b"));
+
+    await expect(cancelBooking("booking-1")).rejects.toThrow();
+    expect(mocks.notifyBookingCancelled).not.toHaveBeenCalled();
   });
 });

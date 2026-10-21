@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getFlagMode, isAdminPanelV2Enabled, isEnabled, isMensalistasEnabled, isNewHomeEnabled } from "./flags";
+import {
+  getFlagMode,
+  isAdminPanelV2Enabled,
+  isEnabled,
+  isMensalistasEnabled,
+  isNewHomeEnabled,
+  isNotificacoesEnabled,
+  isNotificacoesEnabledForUser,
+} from "./flags";
 
 const sessionOf = (isAdmin: boolean) => ({
   user: { id: "user-1", name: "Teste", email: "teste@example.com", isAdmin },
@@ -72,5 +80,21 @@ describe("feature flags", () => {
     expect(isMensalistasEnabled(sessionOf(false))).toBe(false);
     vi.stubEnv("MENSALISTAS", "all");
     expect(isMensalistasEnabled(sessionOf(false))).toBe(true);
+  });
+
+  it("NOTIFICACOES pela sessão (tela) e pelo usuário do banco (Cron e avisos)", () => {
+    vi.stubEnv("NOTIFICACOES", undefined);
+    expect(isNotificacoesEnabled(sessionOf(true))).toBe(false);
+    expect(isNotificacoesEnabledForUser({ isAdmin: true })).toBe(false);
+
+    vi.stubEnv("NOTIFICACOES", "admin");
+    expect(isNotificacoesEnabled(sessionOf(true))).toBe(true);
+    expect(isNotificacoesEnabled(sessionOf(false))).toBe(false);
+    expect(isNotificacoesEnabledForUser({ isAdmin: true })).toBe(true);
+    expect(isNotificacoesEnabledForUser({ isAdmin: false })).toBe(false);
+    expect(isNotificacoesEnabledForUser(null)).toBe(false);
+
+    vi.stubEnv("NOTIFICACOES", "all");
+    expect(isNotificacoesEnabledForUser({ isAdmin: false })).toBe(true);
   });
 });

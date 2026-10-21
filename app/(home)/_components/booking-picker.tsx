@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { fromZonedTime } from "date-fns-tz";
-import { CalendarXIcon, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { CalendarCheckIcon, CalendarXIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import DayChip from "@/app/_components/day-chip";
 import TimeSlot from "@/app/_components/time-slot";
 import BookingCTA from "@/app/_components/booking-cta";
 import EmptyState from "@/app/_components/empty-state";
+import WhatsAppButton from "@/app/_components/whatsapp-button";
 import { Button } from "@/app/_components/ui/button";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/app/_components/ui/sheet";
 import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
@@ -36,6 +38,17 @@ interface BookingPickerProps {
   services: PickerService[];
   days: DaySlots[]; // calculados no servidor; não vazio
   isAuthenticated: boolean;
+  // WhatsAppButton (MEL-022): só com a flag NOTIFICACOES e telefone cadastrado na barbearia.
+  whatsapp?: { phone: string; address: string } | null;
+  // Notificações ligadas para este usuário (flag NOTIFICACOES): avisa que a confirmação foi por e-mail.
+  emailConfirmation?: boolean;
+}
+
+interface BookingSuccess {
+  date: string;
+  dayLabel: string;
+  time: string;
+  serviceName: string;
 }
 
 const WEEKDAY_NAMES: Record<string, string> = { Sex: "sexta", Sáb: "sábado" };
@@ -48,13 +61,14 @@ const firstFreeDay = (days: DaySlots[]) => (days.find((day) => day.freeCount > 0
 const weekdayName = (day: DaySlots) => WEEKDAY_NAMES[day.label.split(" ")[0]] ?? day.label;
 
 // Escolha de dia e horário da home nova + Sheet de serviço e confirmação (spec §4.1).
-const BookingPicker = ({ barbershop, services, days, isAuthenticated }: BookingPickerProps) => {
+const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp, emailConfirmation = false }: BookingPickerProps) => {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(() => firstFreeDay(days));
   const [time, setTime] = useState<string>();
   const [serviceId, setServiceId] = useState(services[0]?.id);
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState<BookingSuccess>();
   const resumeChecked = useRef(false);
 
   const day = days.find((d) => d.date === selectedDate);
@@ -112,6 +126,12 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated }: BookingP
   const selectDay = (date: string) => {
     setSelectedDate(date);
     setTime(undefined);
+    setSuccess(undefined);
+  };
+
+  const selectTime = (value: string) => {
+    setTime(value);
+    setSuccess(undefined);
   };
 
   const submit = async () => {
@@ -144,6 +164,9 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated }: BookingP
       track("booking_confirmed", { service: service.name, weekday: day.label, hour: time });
       setSheetIsOpen(false);
       setTime(undefined);
+      if (whatsapp || emailConfirmation) {
+        setSuccess({ date: day.date, dayLabel: day.label, time, serviceName: service.name });
+      }
       toast(`Reservado! ${day.label} às ${time}.`, {
         action: { label: "Visualizar", onClick: () => router.push("/bookings") },
       });
@@ -212,7 +235,7 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated }: BookingP
           ) : (
             <div role="group" aria-label={`Horários de ${day.label}`} className="grid grid-cols-4 gap-2">
               {day.slots.map((slot) => (
-                <TimeSlot key={slot.time} time={slot.time} booked={slot.booked} selected={slot.time === time} onSelect={() => setTime(slot.time)} />
+                <TimeSlot key={slot.time} time={slot.time} booked={slot.booked} selected={slot.time === time} onSelect={() => selectTime(slot.time)} />
               ))}
             </div>
           )}
@@ -222,6 +245,36 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated }: BookingP
       <div className="mt-6">
         <BookingCTA dayLabel={time ? day?.label : undefined} time={time} loading={submitting && !sheetIsOpen} onClick={handleCTAClick} />
       </div>
+
+      {success && (whatsapp || emailConfirmation) && (
+        <section
+          role="status"
+          aria-labelledby="reserva-sucesso"
+          className="mt-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent/60 bg-accent/[0.08] p-4"
+        >
+          <p id="reserva-sucesso" className="flex items-center gap-2 font-bold">
+            <CalendarCheckIcon className="h-5 w-5 text-accent" aria-hidden="true" />
+            Reservado! {success.dayLabel} às {success.time}.
+          </p>
+          {emailConfirmation && (
+            <p className="text-body text-muted-foreground">
+              Enviamos a confirmação para o seu e-mail. Se não encontrar, olhe no Spam e marque &apos;Não é spam&apos;.
+            </p>
+          )}
+          {whatsapp && (
+            <WhatsAppButton
+              phone={whatsapp.phone}
+              address={whatsapp.address}
+              serviceName={success.serviceName}
+              date={success.date}
+              time={success.time}
+            />
+          )}
+          <Link href="/bookings" className="inline-flex min-h-11 items-center justify-center text-body font-bold text-accent-soft underline underline-offset-4">
+            Ver meus agendamentos
+          </Link>
+        </section>
+      )}
 
       <Sheet open={sheetIsOpen} onOpenChange={setSheetIsOpen}>
         <SheetContent className="w-full overflow-auto p-0" aria-describedby={undefined}>

@@ -18,11 +18,17 @@ const mocks = vi.hoisted(() => ({
   deleteBlocks: vi.fn(),
   createCancellation: vi.fn(),
   txOptions: vi.fn(),
+  notifyBookingCancelled: vi.fn(),
 }));
 
 vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
+// Só o envio é mockado; loadBookingSnapshot continua lendo pelo db mockado abaixo.
+vi.mock("@/app/_lib/notifications/notify", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/app/_lib/notifications/notify")>()),
+  notifyBookingCancelled: mocks.notifyBookingCancelled,
+}));
 vi.mock("@/app/_lib/prisma", () => {
   const client = {
     $executeRaw: mocks.lock,
@@ -345,6 +351,26 @@ describe("Server Actions do painel do admin", () => {
       await adminCancelBooking("booking-1");
 
       expect(mocks.createCancellation).toHaveBeenCalledWith({ data: expect.objectContaining({ byAdmin: true, source: "CLIENT" }) });
+    });
+
+    it("avisa o cliente (byAdmin) depois do commit; falha no e-mail não muda o resultado", async () => {
+      mocks.findUniqueBooking.mockResolvedValue({ id: "booking-1", date: FRIDAY_0900, source: "CLIENT", userId: "u" });
+      mocks.notifyBookingCancelled.mockRejectedValueOnce(new Error("SMTP fora do ar"));
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      expect(await adminCancelBooking("booking-1")).toEqual({
+        success: true,
+        message: "Reserva cancelada. O horário voltou a ficar livre.",
+      });
+      expect(mocks.notifyBookingCancelled).toHaveBeenCalledWith(expect.objectContaining({ id: "booking-1" }), true);
+      await vi.waitFor(() => expect(consoleError).toHaveBeenCalledWith("Erro ao enviar notificação:", expect.any(Error)));
+      consoleError.mockRestore();
+    });
+
+    it("cancelamento que falha não avisa ninguém", async () => {
+      mocks.findUniqueBooking.mockResolvedValueOnce(null);
+      await adminCancelBooking("booking-1");
+      expect(mocks.notifyBookingCancelled).not.toHaveBeenCalled();
     });
 
     it("reserva que não existe (ou cancelada junto, P2025)", async () => {

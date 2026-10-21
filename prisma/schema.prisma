@@ -38,15 +38,16 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  bookings      Booking[]
-  isAdmin       Boolean   @default(false)
+  id             String    @id @default(cuid())
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime?
+  image          String?
+  accounts       Account[]
+  sessions       Session[]
+  bookings       Booking[]
+  isAdmin        Boolean   @default(false)
+  emailReminders Boolean   @default(true) // opt-out só do lembrete da véspera (Prompt 19)
 }
 
 model VerificationToken {
@@ -62,6 +63,7 @@ model Barbershop {
   name     String
   address  String
   imageUrl String
+  phone    String? // WhatsApp do Cris (só dígitos, DDD + número); null = botão e link ocultos
   bookings Booking[]
   services Service[]
 }
@@ -163,4 +165,27 @@ model VerificationRequest {
   updatedAt  DateTime @updatedAt
 
   @@unique([identifier, token])
+}
+
+enum NotificationStatus {
+  SENDING // reservada por quem vai enviar (trava contra envio duplicado)
+  SENT
+  FAILED
+  SKIPPED // não enviada de propósito (ex.: reserva depois do Cron, fora da allowlist)
+}
+
+// Uma linha por notificação (Prompt 19). key única = idempotência: o mesmo evento nunca envia duas
+// vezes. Sem e-mail nem texto (LGPD): só a chave, o tipo e o status.
+model NotificationLog {
+  id        String             @id @default(cuid())
+  key       String             @unique // "confirm:<bookingId>", "reminder:<bookingId>", "renewal:<cycleId>"…
+  kind      String
+  status    NotificationStatus
+  attempts  Int                @default(1)
+  lastError String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  sentAt    DateTime?
+
+  @@index([status, updatedAt])
 }

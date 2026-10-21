@@ -21,6 +21,7 @@
 | 16 · Schema da Fase 3 + disponibilidade | ✅ Publicado em produção | 2026-10-19 | `fase3/schema` (PR #16) |
 | 17 · Painel do admin (bloqueios, reserva manual, métricas) | ✅ Publicado em produção | 2026-10-19 | `fase3/painel-admin` (PR #17) |
 | Incidente · Conexão de produção (transaction pooler) | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `docs/pool-producao` |
+| 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
 
 ## Ambientes
 
@@ -663,3 +664,51 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [ ] Mensalista "sem horário fixo" (reserva na mão, spec §5.3) não entrou: o cadastro exige dia e horário.
 - [ ] `/bookings` não lista a reserva de mensalista (só a home nova mostra).
 - [ ] Lighthouse/axe do `/adm/mensalistas` (não rodado).
+
+## Prompt 19 · Notificações (MEL-022)
+
+**Feito:**
+- Flag `NOTIFICACOES` (`off | admin | all`, padrão `off`; substitui o `NOTIFY_EMAIL` da spec). Na tela, pela sessão (`isNotificacoesEnabled`); no Cron e nos avisos, pelo cliente da reserva lido do banco (`isNotificacoesEnabledForUser`): com `admin`, só reservas e cancelamentos de quem é admin geram e-mail.
+- E-mail por Gmail SMTP (`nodemailer` 10, com `overrides` no `package.json`: o peer opcional do `next-auth` pede a 7, que tem avisos de segurança altos, corrigidos só depois da 10.0.5; o `next-auth` só usa o nodemailer no provider de e-mail, que não usamos) com conta dedicada (`SMTP_USER`/`SMTP_PASS`), ponto único em `app/_lib/notifications/transport.ts`. Textos aprovados (spec §4.9) em `templates.ts`: texto puro + HTML leve, sem imagem, rodapé "Cris du Corte · {endereço} · Não responda este e-mail — fale com o Cris pelo WhatsApp: {wa.me}" (sem telefone: sem link).
+- Eventos: reserva do cliente → confirmação + "Nova reserva" para todos os `User.isAdmin`; cliente cancela → "Cancelou" para o Cris; Cris cancela (painel ou `cancelBooking` de outra pessoa) → aviso ao cliente; véspera → lembrete; mensalista no último fim de semana do ciclo (ou vencido sem renovação) → 1 e-mail ao Cris com todos, 1x por ciclo. Reserva manual, reserva do próprio Cris e Pausar/Excluir mensalista não enviam nada. Lembrete de mensalista vai para a conta com o mesmo e-mail (sem diferenciar maiúsculas).
+- Envio sempre depois do commit, em segundo plano (`runInBackground` com `waitUntil` do `@vercel/functions`), e nunca lança: falha no e-mail não desfaz nem atrasa reserva/cancelamento. No cancelamento, a reserva é lida (usuário, serviço, barbearia) antes do delete.
+- Idempotência (`NotificationLog`, `log.ts`): key única por evento (`confirm:<reserva>`, `reminder:<reserva>`, `admin-new:<reserva>:<admin>`, `renewal:<ciclo>:<admin>`…). Só quem cria a linha em `SENDING` (ou retoma uma `FAILED` com tentativa sobrando) envia. `SENDING` parado há 10 min vira `FAILED` final sem reenviar (na dúvida, não manda dois). Confirmação e "Nova reserva" que falharam: até 3 tentativas nos próximos Crons, se a reserva ainda for futura. Lembrete: 2ª tentativa na mesma rodada. Avisos de cancelamento: 1 tentativa (a reserva já foi apagada). Sem e-mail nem texto no registro (LGPD); erro do SMTP gravado com os endereços trocados por `<e-mail>`.
+- Cron (`vercel.json`): `0 23 * * 4,5` = qui e sex às 20h em SP (Hobby: 1x/dia, em algum minuto da hora; só roda em Production). `/api/cron/notificacoes` exige `Authorization: Bearer <CRON_SECRET>`; `?dia=yyyy-MM-dd` só fora de produção (teste na staging). Reserva feita depois do Cron da véspera não recebe lembrete (a confirmação já chegou).
+- Opt-out (decisão do dono: só o lembrete): switch "Lembretes por e-mail" no Perfil (só com a flag; linha inteira de 44px, `role="switch"`) e link "Não quero mais lembretes" no lembrete → `/notificacoes/lembretes` (abrir não desliga; só o botão), mais `List-Unsubscribe` + `List-Unsubscribe-Post` (one-click do Gmail, `POST /api/notificacoes/lembretes`). Token HMAC do id do usuário com o `NEXTAUTH_SECRET`, em contexto próprio. Confirmação e "o Cris cancelou" sempre saem.
+- `NOTIFY_ALLOWLIST` (só staging): com a lista definida, ninguém fora dela recebe (`SKIPPED`).
+- WhatsAppButton (MEL-022): depois da reserva na home nova, cartão "Reservado! Sex 23 às 10:30." com "Enviar confirmação no WhatsApp" (`wa.me` do `Barbershop.phone` com serviço, dia, hora e endereço) e "Ver meus agendamentos". Só com a flag e com telefone cadastrado; sem isso a tela fica como antes (só o toast).
+- Política de Privacidade: parágrafo sobre o uso do e-mail (confirmação, lembrete, aviso de cancelamento; lembrete pode ser desligado; envio por conta Gmail da barbearia), mostrado com a flag e com a data 21/10/2026. **A revisão jurídica continua pendente.**
+- Migração `20261021000000_notificacoes` (só aditiva): `User.emailReminders` (default true), `Barbershop.phone` (opcional; decisão do dono: telefone no banco, sem número no código), enum `NotificationStatus` e tabela `NotificationLog`. Aplicada no Neon dev e no Neon "Testes". Produção: `prisma/sql/notificacoes-producao.sql` (o dono roda à mão).
+- Neon dev: telefone do Cris gravado na barbearia "Cris Du Corte" (o mesmo de `/privacidade`), para o teste na staging. O Neon dev tem 1 admin com e-mail.
+
+**Testes:**
+- Unit: `templates.test.ts` (assuntos aprovados, fuso, rodapé com/sem telefone, escape de HTML, links pelo `NEXTAUTH_URL`), `unsubscribe-token.test.ts`, `transport.test.ts` (sem credenciais não envia; senha de app sem espaços), `log.test.ts` (erro sem e-mail), `route.test.ts` do Cron (401 sem Bearer, com Bearer errado e sem segredo; flag off; `?dia` recusado em produção), `whatsapp-message.test.ts`, `set-email-reminders.test.ts`, `flags.test.ts`. `save-booking`, `cancel-booking` e `admin-actions` conferem o envio depois do commit e que falha no e-mail não muda o resultado.
+- Integração `tests/integration/notificacoes.int.test.ts` (Postgres real, envio mockado, 22 casos): flag off/admin/all; confirmação + "Nova reserva"; evento repetido e concorrente envia 1x; SMTP fora → reserva gravada, `FAILED`, Cron tenta até 3; falha passageira reenviada; allowlist; `SENDING` parado não reenvia; avisos de cancelamento (cliente, painel, `cancelBooking` do admin, manual sem conta, SMTP fora); lembrete 1 por reserva com one-click, Cron duplo/concorrente 1x, opt-out (lembrete `SKIPPED`, confirmação sai), mensalista pela conta com o mesmo e-mail, link do e-mail; renovação 1x por ciclo, com todos num e-mail.
+- e2e `e2e/notificacoes.spec.ts` (`NOTIFICACOES=admin`, Gmail zerado no `playwright.config.ts`): cliente não vê o switch; admin desliga e fica salvo; botão do WhatsApp com o texto pronto; link de opt-out inválido.
+- `vitest.config.mts` e `playwright.config.ts` zeram `SMTP_USER`/`SMTP_PASS`/`NOTIFY_ALLOWLIST`/`CRON_SECRET`: nada sai dos testes.
+
+**Entregabilidade (decisão do dono em 2026-10-21, conta remetente nova; spec §4.9):**
+- Assuntos sem "!" e mais pessoais ("Sua reserva com o Cris — sex 23/10 às 09:00"); multipart texto + HTML; no máximo 2 links por e-mail, sempre com texto (o `compose` recusa um 3º); `Reply-To` = e-mails dos `User.isAdmin` nos e-mails ao cliente (avisos ao Cris sem Reply-To); `List-Unsubscribe` só no lembrete.
+- Rodapé ao cliente: "Dúvidas? Responda este e-mail ou chame o Cris no WhatsApp: (31) 9xxxx-xxxx" (número com link só se couber no limite; no lembrete vai como texto). Rodapé ao Cris: "Aviso automático do app de agendamento."
+- Cartão de sucesso da reserva (home nova), com a flag ligada para o usuário: "Enviamos a confirmação para o seu e-mail. Se não encontrar, olhe no Spam e marque 'Não é spam'." (aparece mesmo sem telefone; o WhatsAppButton continua dependendo do telefone).
+- Rollout: o dono decidiu ligar `NOTIFICACOES=all` direto em produção (sem a fase `admin`).
+- `prisma/sql/notificacoes-producao.sql` reorganizado em consultas numeradas, para rodar uma por vez (1.1–1.6, bloco 2, 3.1–3.9, bloco 4 + 4.1); testadas no Neon dev (16 consultas de leitura).
+- Neon dev: 2 reservas com envio real (`CONFIRMATION` e `ADMIN_NEW_BOOKING` em `SENT`, 21/10 às 20:07 e 20:29 UTC): o Gmail SMTP do dono funciona.
+
+**Validação (local, 2026-10-21, depois da entregabilidade):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 239 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 39 ✅ (o teste da home nova agora espera o toast e o cartão de sucesso do admin).
+
+**Staging:** `a9e7b2e` enviado para `staging`; o deploy da Vercel falhou (sem log acessível daqui; não se repetiu). `f42fe82` (entregabilidade) enviado para `staging` em 2026-10-21: deploy ✅, com as variáveis de Preview criadas pelo dono.
+
+**Produção:** publicado em produção — previsto após o merge. Em 2026-10-21, antes do merge: backup `prod-2026-10-21-notificacoes.dump` (dono, fora do Git); `prisma/sql/notificacoes-producao.sql` aplicado à mão pelo dono no Supabase e conferido (usuários, hash e reservas iguais; colunas e tabela novas; telefone do Cris gravado); `npx prisma migrate resolve --applied 20261021000000_notificacoes` pela 5432 (autorizado pelo dono) e `migrate status` = "Database schema is up to date!". Variáveis de Production criadas pelo dono: `NOTIFICACOES=all`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET` (sem `NOTIFY_ALLOWLIST`). O Cron (`vercel.json`) passa a valer com o deploy de Production; o primeiro lembrete real sai na quinta seguinte, entre 20:00 e 20:59.
+
+**Pendências:**
+- [x] Dono: conta Gmail dedicada e senha de app (envio real `SENT` no Neon dev).
+- [x] Vercel Preview: variáveis criadas pelo dono.
+- [x] Push repetido (`f42fe82`): deploy da staging ✅.
+- [ ] Teste de aceite do dono na staging (celular): e-mails na caixa de entrada (não no spam), Reply-To, botão do WhatsApp, aviso no cartão, switch e link de opt-out.
+- [x] Produção: SQL aplicado à mão e conferido, telefone do Cris gravado e `migrate resolve` registrado (2026-10-21).
+- [x] Vercel Production: `NOTIFICACOES=all`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET` (criadas pelo dono); sem `NOTIFY_ALLOWLIST`.
+- [ ] Depois do deploy: reserva de teste em produção (confirmação, "Nova reserva", cartão de sucesso) e conferir o Cron em Vercel → Settings → Cron Jobs.
+- [ ] Primeira quinta depois do deploy: conferir que os lembretes saíram (`NotificationLog` com `REMINDER`/`SENT`).
+- [ ] Revisão jurídica da Política de Privacidade (continua pendente, agora com o parágrafo dos e-mails).
+- [ ] Ao atualizar o `next-auth`, conferir se o `overrides` do `nodemailer` ainda é necessário.

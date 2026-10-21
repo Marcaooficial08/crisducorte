@@ -6,6 +6,8 @@ import { authOptions } from "../_lib/auth";
 import { db } from "../_lib/prisma";
 import { assertUser } from "../_lib/auth-guards";
 import { RATE_LIMIT_MESSAGE, checkRateLimit } from "../_lib/rate-limit";
+import { runInBackground } from "../_lib/notifications/background";
+import { loadBookingSnapshot, notifyBookingCancelled } from "../_lib/notifications/notify";
 
 export const cancelBooking = async (bookingId: string): Promise<{ success: boolean; error?: string }> => {
   const user = assertUser(await getServerSession(authOptions));
@@ -15,9 +17,8 @@ export const cancelBooking = async (bookingId: string): Promise<{ success: boole
     return { success: false, error: RATE_LIMIT_MESSAGE };
   }
 
-  const booking = await db.booking.findUnique({
-    where: { id: bookingId },
-  });
+  // Lida com usuário, serviço e barbearia: depois do delete a reserva some (aviso por e-mail).
+  const booking = await loadBookingSnapshot(bookingId);
 
   if (!booking) {
     throw new Error("Reserva não encontrada.");
@@ -43,6 +44,9 @@ export const cancelBooking = async (bookingId: string): Promise<{ success: boole
   revalidatePath("/");
   revalidatePath("/bookings");
   revalidatePath("/adm");
+
+  // Depois do commit e em segundo plano: falha no e-mail nunca impede o cancelamento.
+  runInBackground(() => notifyBookingCancelled(booking, !isOwner));
 
   return { success: true };
 };

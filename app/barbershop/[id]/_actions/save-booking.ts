@@ -13,6 +13,8 @@ import { lockSlot } from "@/app/_lib/slot-lock";
 import { INTERACTIVE_TX_OPTIONS, isTransactionTimeout } from "@/app/_lib/transaction";
 import { BOOKING_ERROR_MESSAGES, BookingErrorCode } from "@/app/_lib/booking-errors";
 import { revalidatePath } from "next/cache";
+import { runInBackground } from "@/app/_lib/notifications/background";
+import { notifyBookingCreated } from "@/app/_lib/notifications/notify";
 
 interface SaveBookingParams {
   barbershopId: string;
@@ -43,7 +45,7 @@ export const saveBooking = async (params: SaveBookingParams): Promise<SaveBookin
       return fail("SLOT_UNAVAILABLE");
     }
 
-    await db.$transaction(async (tx) => {
+    const booking = await db.$transaction(async (tx) => {
       // Mesma trava do painel do admin: bloqueio e reserva do mesmo horário não gravam juntos.
       await lockSlot(tx, params.barbershopId, bookingDate);
 
@@ -61,19 +63,23 @@ export const saveBooking = async (params: SaveBookingParams): Promise<SaveBookin
         throw new Error("SLOT_UNAVAILABLE");
       }
 
-      await tx.booking.create({
+      return tx.booking.create({
         data: {
           serviceId: params.serviceId,
           userId: user.id,
           date: bookingDate,
           barbershopId: params.barbershopId,
         },
+        select: { id: true },
       });
     }, INTERACTIVE_TX_OPTIONS);
 
     revalidatePath("/");
     revalidatePath("/bookings");
     revalidatePath("/adm");
+
+    // Depois do commit e em segundo plano: falha no e-mail nunca desfaz nem atrasa a reserva.
+    runInBackground(() => notifyBookingCreated(booking.id));
 
     return { success: true };
   } catch (error) {
