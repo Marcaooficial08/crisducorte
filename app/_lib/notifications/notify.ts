@@ -71,10 +71,11 @@ interface Delivery {
   to: string | null;
   content: () => EmailContent;
   headers?: Record<string, string>;
+  replyTo?: string[];
   retryable: boolean;
 }
 
-const deliver = async ({ key, kind, to, content, headers, retryable }: Delivery): Promise<DeliveryResult> => {
+const deliver = async ({ key, kind, to, content, headers, replyTo, retryable }: Delivery): Promise<DeliveryResult> => {
   if (!to) {
     return "SKIPPED";
   }
@@ -86,7 +87,7 @@ const deliver = async ({ key, kind, to, content, headers, retryable }: Delivery)
     return "DUPLICATE";
   }
   try {
-    await sendEmail({ to, ...content(), headers });
+    await sendEmail({ to, ...content(), headers, replyTo });
   } catch (error) {
     console.error(`Falha ao enviar ${kind}:`, error);
     await markFailed(key, error, retryable);
@@ -98,7 +99,11 @@ const deliver = async ({ key, kind, to, content, headers, retryable }: Delivery)
 };
 
 // Avisos ao Cris: todos os User.isAdmin com e-mail (nada de e-mail no código).
-const getAdmins = () => db.user.findMany({ where: { isAdmin: true, email: { not: null } }, select: RECIPIENT_SELECT });
+const getAdmins = () =>
+  db.user.findMany({ where: { isAdmin: true, email: { not: null } }, select: RECIPIENT_SELECT, orderBy: { id: "asc" } });
+
+// Reply-To dos e-mails ao cliente: "Dúvidas? Responda este e-mail" chega no Cris.
+const replyToOf = (admins: Recipient[]): string[] => admins.flatMap((admin) => (admin.email ? [admin.email] : []));
 
 const slotOf = (booking: BookingSnapshot) => ({ date: booking.date, serviceName: booking.service.name });
 
@@ -111,17 +116,19 @@ export const notifyBookingCreated = async (bookingId: string): Promise<DeliveryR
   }
   const shop = booking.barbershop;
   const slot = slotOf(booking);
+  const admins = await getAdmins();
   const results = [
     await deliver({
       key: `confirm:${booking.id}`,
       kind: "CONFIRMATION",
       to: user.email,
       content: () => confirmationEmail({ name: user.name, slot, shop }),
+      replyTo: replyToOf(admins),
       retryable: true,
     }),
   ];
   const customerName = getCustomerName(booking);
-  for (const admin of await getAdmins()) {
+  for (const admin of admins) {
     results.push(
       await deliver({
         key: `admin-new:${booking.id}:${admin.id}`,
@@ -144,6 +151,7 @@ export const notifyBookingCancelled = async (booking: BookingSnapshot, byAdmin: 
   }
   const shop = booking.barbershop;
   const slot = slotOf(booking);
+  const admins = await getAdmins();
   if (byAdmin) {
     return [
       await deliver({
@@ -151,13 +159,14 @@ export const notifyBookingCancelled = async (booking: BookingSnapshot, byAdmin: 
         kind: "CANCELLED_BY_ADMIN",
         to: user.email,
         content: () => cancelledByCrisEmail({ name: user.name, slot, shop }),
+        replyTo: replyToOf(admins),
         retryable: false,
       }),
     ];
   }
   const customerName = getCustomerName(booking);
   const results: DeliveryResult[] = [];
-  for (const admin of await getAdmins()) {
+  for (const admin of admins) {
     results.push(
       await deliver({
         key: `admin-cancelled:${booking.id}:${admin.id}`,
@@ -201,6 +210,7 @@ export const sendReminders = async (date: string, now: Date): Promise<ReminderSu
   });
   const summary: ReminderSummary = { date, bookings: bookings.length, sent: 0, failed: 0, skipped: 0 };
   const pending: Delivery[] = [];
+  const replyTo = replyToOf(await getAdmins());
 
   for (const booking of bookings) {
     const user = await reminderRecipient(booking);
@@ -221,7 +231,9 @@ export const sendReminders = async (date: string, now: Date): Promise<ReminderSu
       to: user.email,
       content: () =>
         reminderEmail({ name: user.name, slot: slotOf(booking), shop: booking.barbershop, unsubscribeUrl: unsubscribePageUrl(user.id) }),
+      // List-Unsubscribe só no lembrete: confirmação e avisos são transacionais.
       headers: { "List-Unsubscribe": `<${oneClick}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+      replyTo,
       retryable: true,
     });
   }

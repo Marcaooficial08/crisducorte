@@ -9,6 +9,7 @@ export interface EmailMessage {
   text: string;
   html: string;
   headers?: Record<string, string>;
+  replyTo?: string[]; // e-mails do Cris (User.isAdmin): a resposta do cliente vai para ele
 }
 
 export class TransportNotConfiguredError extends Error {
@@ -60,5 +61,6 @@ export const sendEmail = async (message: EmailMessage): Promise<void> => {
     text: message.text,
     html: message.html,
     headers: message.headers,
+    replyTo: message.replyTo && message.replyTo.length > 0 ? message.replyTo : undefined,
   });
 };

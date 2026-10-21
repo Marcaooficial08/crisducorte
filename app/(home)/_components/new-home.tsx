@@ -84,6 +84,7 @@ const NewHome = async ({ session }: NewHomeProps) => {
                   services={barbershop.services.map((service) => ({ id: service.id, name: service.name, price: Number(service.price) }))}
                   days={days}
                   isAuthenticated={!!user}
+                  emailConfirmation={isNotificacoesEnabled(session) && !!user?.email}
                   whatsapp={
                     isNotificacoesEnabled(session) && barbershop.phone
                       ? { phone: barbershop.phone, address: barbershop.address }

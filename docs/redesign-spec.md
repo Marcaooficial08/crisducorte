@@ -248,18 +248,22 @@ Referência: tela Admin · Novo mensalista. Campos: nome*, WhatsApp*, e-mail Goo
 
 ### 4.9 Notificações por e-mail (MEL-022, Prompt 19)
 
-Canal: Gmail SMTP com conta dedicada da barbearia (sem domínio próprio; Resend exige domínio verificado). Web Push fica para o Prompt 20. WhatsApp só por link `wa.me` (sem API). Textos aprovados pelo dono em 21/10/2026:
+Canal: Gmail SMTP com conta dedicada da barbearia (sem domínio próprio; Resend exige domínio verificado). Web Push fica para o Prompt 20. WhatsApp só por link `wa.me` (sem API). Textos aprovados pelo dono em 21/10/2026, ajustados no mesmo dia para entregabilidade (conta remetente nova):
 
 | Evento | Para | Assunto |
 | --- | --- | --- |
-| Cliente reservou | Cliente | "Reservado! Sex 23/10 às 10:30 — Corte" |
-| Cliente reservou | Cris (todos os `isAdmin`) | "Nova reserva: João · Sex 23/10 às 10:30" |
-| Cliente cancelou | Cris | "Cancelou: João · Sex 23/10 às 10:30" |
-| Cris cancelou | Cliente | "Sua reserva de Sex 23/10 às 10:30 foi cancelada pelo Cris" |
-| Véspera (Cron qui e sex, 20h) | Cliente | "Amanhã às 10:30 com o Cris" + link de cancelar + "Não quero mais lembretes" |
-| Último fim de semana do ciclo | Cris | "Renovar: Pedro, Ana — último fim de semana do ciclo" (1x por ciclo) |
+| Cliente reservou | Cliente | "Sua reserva com o Cris — sex 23/10 às 09:00" |
+| Cliente reservou | Cris (todos os `isAdmin`) | "Nova reserva: João — sex 23/10 às 09:00" |
+| Cliente cancelou | Cris | "Cancelamento: João — sex 23/10 às 09:00" |
+| Cris cancelou | Cliente | "Sua reserva de sex 23/10 às 09:00 foi cancelada pelo Cris" |
+| Véspera (Cron qui e sex, 20h) | Cliente | "Amanhã às 09:00 com o Cris — sex 23/10" + "Ver ou cancelar a reserva" + "Não quero mais lembretes" |
+| Último fim de semana do ciclo | Cris | "Renovar mensalistas: Pedro, Ana" (1x por ciclo) |
 
-Rodapé de todos: "Cris du Corte · {endereço} · Não responda este e-mail — fale com o Cris pelo WhatsApp: {wa.me}". Sem e-mail: reserva manual, reserva feita pelo próprio Cris, Pausar/Excluir mensalista. Opt-out ("Lembretes por e-mail" no Perfil ou link do e-mail) desliga **só o lembrete**; confirmação e "o Cris cancelou" sempre saem. Reserva feita depois do Cron da véspera não tem lembrete (a confirmação cumpre o papel).
+Regras de entregabilidade: multipart (texto puro + HTML leve, sem imagens); assunto sem "!"; no máximo 2 links por e-mail, sempre com texto (sem URL nua no HTML); `Reply-To` = e-mails dos `User.isAdmin` nos e-mails ao cliente; `List-Unsubscribe` (+ one-click) só no lembrete. Rodapé ao cliente: "Cris du Corte · {endereço} · Dúvidas? Responda este e-mail ou chame o Cris no WhatsApp: {(31) 9xxxx-xxxx}" (o número é link só quando o e-mail ainda tem espaço no limite; no lembrete vai como texto). Rodapé ao Cris: "Aviso automático do app de agendamento."
+
+Cartão de sucesso da reserva (home nova), com a flag ligada para o usuário: "Enviamos a confirmação para o seu e-mail. Se não encontrar, olhe no Spam e marque 'Não é spam'." + WhatsAppButton (se houver telefone).
+
+Sem e-mail: reserva manual, reserva feita pelo próprio Cris, Pausar/Excluir mensalista. Opt-out ("Lembretes por e-mail" no Perfil ou link do e-mail) desliga **só o lembrete**; confirmação e "o Cris cancelou" sempre saem. Reserva feita depois do Cron da véspera não tem lembrete (a confirmação cumpre o papel).
 
 ## 5. Banco de dados e regras
 

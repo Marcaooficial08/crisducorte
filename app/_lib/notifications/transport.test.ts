@@ -31,7 +31,7 @@ describe("transport (Gmail SMTP)", () => {
     vi.stubEnv("SMTP_USER", "agenda.teste@gmail.com");
     vi.stubEnv("SMTP_PASS", "abcd efgh ijkl mnop");
 
-    await sendEmail({ ...message, headers: { "List-Unsubscribe": "<https://x.test>" } });
+    await sendEmail({ ...message, headers: { "List-Unsubscribe": "<https://x.test>" }, replyTo: ["cris@example.com"] });
 
     expect(mocks.createTransport).toHaveBeenCalledWith(
       expect.objectContaining({ service: "gmail", auth: { user: "agenda.teste@gmail.com", pass: "abcdefghijklmnop" } }),
@@ -40,6 +40,16 @@ describe("transport (Gmail SMTP)", () => {
       from: { name: "Cris du Corte", address: "agenda.teste@gmail.com" },
       ...message,
       headers: { "List-Unsubscribe": "<https://x.test>" },
+      replyTo: ["cris@example.com"],
     });
+  });
+
+  it("sem Reply-To (avisos ao Cris): campo fica de fora", async () => {
+    vi.stubEnv("SMTP_USER", "agenda.teste@gmail.com");
+    vi.stubEnv("SMTP_PASS", "abcdefghijklmnop");
+
+    await sendEmail({ ...message, replyTo: [] });
+
+    expect(mocks.sendMail.mock.calls[0][0].replyTo).toBeUndefined();
   });
 });

@@ -13,13 +13,15 @@ const friday = (() => {
 })();
 const fridayLabel = `Sex ${friday.getUTCDate()}`;
 const mySlot = atSaoPauloTime(friday, "15:30");
+const slotWithoutPhone = atSaoPauloTime(friday, "16:30");
+const EMAIL_NOTICE = "Enviamos a confirmação para o seu e-mail. Se não encontrar, olhe no Spam e marque 'Não é spam'.";
 const PHONE = "31999998888";
 
 // Telefone da barbearia só durante este arquivo: sem ele, o botão some (e os outros testes não mudam).
 const restore = async () => {
   const db = testDb();
   try {
-    await db.booking.deleteMany({ where: { barbershopId: barbershop.id, date: mySlot } });
+    await db.booking.deleteMany({ where: { barbershopId: barbershop.id, date: { in: [mySlot, slotWithoutPhone] } } });
     await db.barbershop.update({ where: { id: barbershop.id }, data: { phone: null } });
     await db.user.update({ where: { id: admin.id }, data: { emailReminders: true } });
   } finally {
@@ -82,6 +84,22 @@ test("admin reserva e vê o botão do WhatsApp com o texto pronto", async ({ pag
   expect(`${url.origin}${url.pathname}`).toBe(`https://wa.me/55${PHONE}`);
   expect(url.searchParams.get("text")).toContain("às 15:30 pelo app. Endereço: Rua dos Testes, 1.");
   await expect(whatsapp).toHaveAttribute("target", "_blank");
+  await expect(page.getByText(EMAIL_NOTICE)).toBeVisible();
+});
+
+test("sem telefone cadastrado: cartão só com o aviso do e-mail, sem WhatsApp", async ({ page, context }) => {
+  await restore();
+  await loginAs(context, admin.sessionToken);
+  await gotoLoggedIn(page, "/", admin.id);
+
+  await page.getByRole("button", { name: "16:30", exact: true }).click();
+  await page.getByRole("button", { name: `Reservar ${fridayLabel} às 16:30` }).click();
+  const saved = waitForServerActions(page);
+  await page.getByRole("dialog", { name: "Confirmar reserva" }).getByRole("button", { name: "Confirmar reserva" }).click();
+  await saved;
+
+  await expect(page.getByText(EMAIL_NOTICE)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Enviar confirmação no WhatsApp" })).toHaveCount(0);
 });
 
 test("link de opt-out inválido não desliga nada", async ({ page }) => {

@@ -687,15 +687,26 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - e2e `e2e/notificacoes.spec.ts` (`NOTIFICACOES=admin`, Gmail zerado no `playwright.config.ts`): cliente não vê o switch; admin desliga e fica salvo; botão do WhatsApp com o texto pronto; link de opt-out inválido.
 - `vitest.config.mts` e `playwright.config.ts` zeram `SMTP_USER`/`SMTP_PASS`/`NOTIFY_ALLOWLIST`/`CRON_SECRET`: nada sai dos testes.
 
-**Validação (local, 2026-10-21):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 237 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 38 ✅.
+**Entregabilidade (decisão do dono em 2026-10-21, conta remetente nova; spec §4.9):**
+- Assuntos sem "!" e mais pessoais ("Sua reserva com o Cris — sex 23/10 às 09:00"); multipart texto + HTML; no máximo 2 links por e-mail, sempre com texto (o `compose` recusa um 3º); `Reply-To` = e-mails dos `User.isAdmin` nos e-mails ao cliente (avisos ao Cris sem Reply-To); `List-Unsubscribe` só no lembrete.
+- Rodapé ao cliente: "Dúvidas? Responda este e-mail ou chame o Cris no WhatsApp: (31) 9xxxx-xxxx" (número com link só se couber no limite; no lembrete vai como texto). Rodapé ao Cris: "Aviso automático do app de agendamento."
+- Cartão de sucesso da reserva (home nova), com a flag ligada para o usuário: "Enviamos a confirmação para o seu e-mail. Se não encontrar, olhe no Spam e marque 'Não é spam'." (aparece mesmo sem telefone; o WhatsAppButton continua dependendo do telefone).
+- Rollout: o dono decidiu ligar `NOTIFICACOES=all` direto em produção (sem a fase `admin`).
+- `prisma/sql/notificacoes-producao.sql` reorganizado em consultas numeradas, para rodar uma por vez (1.1–1.6, bloco 2, 3.1–3.9, bloco 4 + 4.1); testadas no Neon dev (16 consultas de leitura).
+- Neon dev: 2 reservas com envio real (`CONFIRMATION` e `ADMIN_NEW_BOOKING` em `SENT`, 21/10 às 20:07 e 20:29 UTC): o Gmail SMTP do dono funciona.
 
-**Produção:** não publicado. Ordem: 1) backup; 2) `prisma/sql/notificacoes-producao.sql` (ANTES → MIGRAÇÃO → CONFERÊNCIA; TELEFONE à parte) e `migrate resolve --applied 20261021000000_notificacoes` pela 5432; 3) merge; 4) variáveis na Vercel e redeploy. Sem a migração aplicada, o código novo quebra (lê as colunas novas).
+**Validação (local, 2026-10-21, depois da entregabilidade):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 239 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 39 ✅ (o teste da home nova agora espera o toast e o cartão de sucesso do admin).
+
+**Staging:** `a9e7b2e` enviado para `staging`; deploy da Vercel **falhou** sem log acessível daqui (CLI sem login). Em aberto: ver o Build Log antes do merge.
+
+**Produção:** não publicado. Ordem: backup → SQL (ANTES/MIGRAÇÃO/CONFERÊNCIA, uma consulta por vez) → UPDATE do telefone → `migrate resolve --applied 20261021000000_notificacoes` (5432) → PR e merge → variáveis de Production → redeploy. Sem a migração aplicada, o código novo quebra (lê as colunas novas).
 
 **Pendências:**
-- [ ] Dono: criar a conta Gmail dedicada, a verificação em 2 etapas e a senha de app.
-- [ ] Vercel Preview: `NOTIFICACOES=admin`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET`, `NOTIFY_ALLOWLIST=<e-mail do dono>`; teste de envio real na staging.
-- [ ] Teste de aceite do dono no localhost e na staging (celular): e-mails na caixa de entrada (não no spam), botão do WhatsApp, switch e link de opt-out.
-- [ ] Produção: SQL à mão + `migrate resolve`; conferir quantos `User.isAdmin` com e-mail existem (todos recebem os avisos ao Cris); preencher `Barbershop.phone`.
-- [ ] Vercel Production: `NOTIFICACOES=admin` → `all`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET` (outro valor); sem `NOTIFY_ALLOWLIST`.
+- [x] Dono: conta Gmail dedicada e senha de app (envio real `SENT` no Neon dev).
+- [x] Vercel Preview: variáveis criadas pelo dono.
+- [ ] Descobrir por que o deploy da staging falhou (Build Log da Vercel) e repetir o push.
+- [ ] Teste de aceite do dono na staging (celular): e-mails na caixa de entrada (não no spam), Reply-To, botão do WhatsApp, aviso no cartão, switch e link de opt-out.
+- [ ] Produção: SQL à mão + `migrate resolve`; a consulta 1.1 mostra quantos `User.isAdmin` com e-mail existem (todos recebem os avisos ao Cris **e aparecem no Reply-To dos clientes**: esperado 1); preencher `Barbershop.phone`.
+- [ ] Vercel Production: `NOTIFICACOES=all`, `SMTP_USER`, `SMTP_PASS`, `CRON_SECRET` (outro valor); sem `NOTIFY_ALLOWLIST`.
 - [ ] Revisão jurídica da Política de Privacidade (continua pendente, agora com o parágrafo dos e-mails).
 - [ ] Ao atualizar o `next-auth`, conferir se o `overrides` do `nodemailer` ainda é necessário.

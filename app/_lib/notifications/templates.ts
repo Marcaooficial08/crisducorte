@@ -1,15 +1,15 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { TIME_ZONE } from "@/app/_lib/schedule";
 import { SITE_NAME, SITE_URL } from "@/app/_lib/site";
-import { dateOf, slotDayLabel } from "@/app/_lib/mensalista-cycle";
-import { whatsappUrl } from "@/app/_lib/phone";
+import { formatPhone, whatsappUrl } from "@/app/_lib/phone";
 
-// Textos dos e-mails (Prompt 19, aprovados pelo dono em 2026-10-21). Funções puras: português simples,
-// texto puro + HTML leve, sem imagens. Todo e-mail termina com o rodapé da barbearia.
+// Textos dos e-mails (Prompt 19; ajustados para entregabilidade em 2026-10-21). Funções puras: português
+// simples, multipart (texto puro + HTML leve, sem imagens), assunto sem "!", no máximo 2 links por e-mail,
+// sempre com texto (nada de URL nua no HTML). Todo e-mail termina com o rodapé da barbearia.
 
 export interface Shop {
   address: string;
-  phone: string | null; // só dígitos; null = rodapé sem o link do WhatsApp
+  phone: string | null; // só dígitos; null = rodapé sem o WhatsApp
 }
 
 export interface Slot {
@@ -26,18 +26,19 @@ export interface EmailContent {
 // Links do e-mail: na staging o NEXTAUTH_URL aponta para ela; em produção, o site.
 export const appUrl = (path = "/"): string => `${(process.env.NEXTAUTH_URL ?? SITE_URL).replace(/\/$/, "")}${path}`;
 
+export const MAX_LINKS = 2;
+
 const WEEKDAY_NAMES = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 
 const time = (date: Date) => formatInTimeZone(date, TIME_ZONE, "HH:mm");
+const dayMonth = (date: Date) => formatInTimeZone(date, TIME_ZONE, "dd/MM");
+const weekdayOf = (date: Date) => WEEKDAY_NAMES[Number(formatInTimeZone(date, TIME_ZONE, "i")) % 7];
 
-// "Sex 23/10 às 10:30"
-export const slotLabel = (date: Date): string => `${slotDayLabel(dateOf(date))} às ${time(date)}`;
+// "sex 23/10 às 10:30" (assuntos)
+export const slotLabel = (date: Date): string => `${weekdayOf(date).slice(0, 3)} ${dayMonth(date)} às ${time(date)}`;
 
-// "sexta 23/10 às 10:30"
-export const longSlotLabel = (date: Date): string => {
-  const weekday = WEEKDAY_NAMES[Number(formatInTimeZone(date, TIME_ZONE, "i")) % 7];
-  return `${weekday} ${formatInTimeZone(date, TIME_ZONE, "dd/MM")} às ${time(date)}`;
-};
+// "sexta 23/10 às 10:30" (corpo)
+export const longSlotLabel = (date: Date): string => `${weekdayOf(date)} ${dayMonth(date)} às ${time(date)}`;
 
 const greeting = (name: string | null | undefined) => {
   const first = name?.trim().split(/\s+/)[0];
@@ -50,17 +51,38 @@ const escapeHtml = (value: string) =>
 // Bloco de conteúdo: parágrafo de texto ou link. Vira texto puro e HTML do mesmo jeito.
 type Block = string | { label: string; url: string };
 
-const footerBlocks = (shop: Shop): { text: string; html: string } => {
-  const base = `${SITE_NAME} · ${shop.address} · Não responda este e-mail — fale com o Cris pelo WhatsApp`;
+const linkHtml = (label: string, url: string, style: string) =>
+  `<a href="${escapeHtml(url)}" style="${style}">${escapeHtml(label)}</a>`;
+
+// Cliente pode responder (Reply-To = Cris) ou chamar no WhatsApp. O número entra como link só se o
+// e-mail ainda tiver espaço no limite de links; senão vai como texto.
+const clientFooter = (shop: Shop, linkAllowed: boolean): { text: string; html: string } => {
+  const base = `${SITE_NAME} · ${shop.address} · Dúvidas? Responda este e-mail ou chame o Cris no WhatsApp`;
   if (!shop.phone) {
-    return { text: `${base}.`, html: `${escapeHtml(base)}.` };
+    const text = `${SITE_NAME} · ${shop.address} · Dúvidas? Responda este e-mail.`;
+    return { text, html: escapeHtml(text) };
   }
-  const url = whatsappUrl(shop.phone);
-  return { text: `${base}: ${url}`, html: `${escapeHtml(base)}: <a href="${url}" style="color:#5B3FD6">${url}</a>` };
+  const number = formatPhone(shop.phone);
+  const html = linkAllowed
+    ? `${escapeHtml(base)}: ${linkHtml(number, whatsappUrl(shop.phone), "color:#5B3FD6")}.`
+    : `${escapeHtml(`${base}: ${number}`)}.`;
+  return { text: `${base}: ${number}.`, html };
 };
 
-const compose = (subject: string, blocks: Block[], shop: Shop): EmailContent => {
-  const footer = footerBlocks(shop);
+// Avisos para o próprio Cris: sem convite a responder.
+const adminFooter = (shop: Shop): { text: string; html: string } => {
+  const text = `${SITE_NAME} · ${shop.address} · Aviso automático do app de agendamento.`;
+  return { text, html: escapeHtml(text) };
+};
+
+type Audience = "client" | "admin";
+
+const compose = (subject: string, blocks: Block[], shop: Shop, audience: Audience): EmailContent => {
+  const links = blocks.filter((block) => typeof block !== "string").length;
+  if (links > MAX_LINKS) {
+    throw new Error(`E-mail com ${links} links (máximo ${MAX_LINKS}).`);
+  }
+  const footer = audience === "client" ? clientFooter(shop, links < MAX_LINKS) : adminFooter(shop);
   const text = [...blocks.map((block) => (typeof block === "string" ? block : `${block.label}: ${block.url}`)), "--", footer.text].join(
     "\n\n",
   );
@@ -68,7 +90,7 @@ const compose = (subject: string, blocks: Block[], shop: Shop): EmailContent => 
     .map((block) =>
       typeof block === "string"
         ? `<p style="margin:0 0 16px">${escapeHtml(block)}</p>`
-        : `<p style="margin:0 0 16px"><a href="${escapeHtml(block.url)}" style="color:#5B3FD6;font-weight:bold">${escapeHtml(block.label)}</a></p>`,
+        : `<p style="margin:0 0 16px">${linkHtml(block.label, block.url, "color:#5B3FD6;font-weight:bold")}</p>`,
     )
     .join("");
   const html =
@@ -81,18 +103,19 @@ const compose = (subject: string, blocks: Block[], shop: Shop): EmailContent => 
 
 export const confirmationEmail = (input: { name: string | null; slot: Slot; shop: Shop }): EmailContent =>
   compose(
-    `Reservado! ${slotLabel(input.slot.date)} — ${input.slot.serviceName}`,
+    `Sua reserva com o Cris — ${slotLabel(input.slot.date)}`,
     [
       greeting(input.name),
       `Sua reserva está confirmada: ${input.slot.serviceName}, ${longSlotLabel(input.slot.date)}, em ${input.shop.address}.`,
       { label: "Ver ou cancelar a reserva", url: appUrl("/bookings") },
     ],
     input.shop,
+    "client",
   );
 
 export const reminderEmail = (input: { name: string | null; slot: Slot; shop: Shop; unsubscribeUrl: string }): EmailContent =>
   compose(
-    `Amanhã às ${time(input.slot.date)} com o Cris`,
+    `Amanhã às ${time(input.slot.date)} com o Cris — ${weekdayOf(input.slot.date).slice(0, 3)} ${dayMonth(input.slot.date)}`,
     [
       greeting(input.name),
       `Lembrete: amanhã, ${longSlotLabel(input.slot.date)}, ${input.slot.serviceName}, em ${input.shop.address}.`,
@@ -101,6 +124,7 @@ export const reminderEmail = (input: { name: string | null; slot: Slot; shop: Sh
       { label: "Não quero mais lembretes", url: input.unsubscribeUrl },
     ],
     input.shop,
+    "client",
   );
 
 export const cancelledByCrisEmail = (input: { name: string | null; slot: Slot; shop: Shop }): EmailContent =>
@@ -113,26 +137,29 @@ export const cancelledByCrisEmail = (input: { name: string | null; slot: Slot; s
       { label: "Reservar de novo", url: appUrl("/") },
     ],
     input.shop,
+    "client",
   );
 
 export const adminNewBookingEmail = (input: { customerName: string; slot: Slot; shop: Shop }): EmailContent =>
   compose(
-    `Nova reserva: ${input.customerName} · ${slotLabel(input.slot.date)}`,
+    `Nova reserva: ${input.customerName} — ${slotLabel(input.slot.date)}`,
     [
       `${input.customerName} reservou ${input.slot.serviceName} para ${longSlotLabel(input.slot.date)}.`,
       { label: "Abrir a agenda", url: appUrl("/adm") },
     ],
     input.shop,
+    "admin",
   );
 
 export const adminCancelledEmail = (input: { customerName: string; slot: Slot; shop: Shop }): EmailContent =>
   compose(
-    `Cancelou: ${input.customerName} · ${slotLabel(input.slot.date)}`,
+    `Cancelamento: ${input.customerName} — ${slotLabel(input.slot.date)}`,
     [
       `${input.customerName} cancelou ${input.slot.serviceName} de ${longSlotLabel(input.slot.date)}. O horário voltou a ficar livre.`,
       { label: "Abrir a agenda", url: appUrl("/adm") },
     ],
     input.shop,
+    "admin",
   );
 
 export interface RenewalItem {
@@ -142,7 +169,7 @@ export interface RenewalItem {
 
 export const renewalEmail = (input: { items: RenewalItem[]; shop: Shop }): EmailContent =>
   compose(
-    `Renovar: ${input.items.map((item) => item.name).join(", ")} — último fim de semana do ciclo`,
+    `Renovar mensalistas: ${input.items.map((item) => item.name).join(", ")}`,
     [
       input.items.length === 1
         ? "Este mensalista está no último fim de semana do ciclo:"
@@ -151,4 +178,5 @@ export const renewalEmail = (input: { items: RenewalItem[]; shop: Shop }): Email
       { label: "Abrir Mensalistas", url: appUrl("/adm/mensalistas") },
     ],
     input.shop,
+    "admin",
   );

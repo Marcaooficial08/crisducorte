@@ -100,8 +100,14 @@ describe("notificações (banco real, envio mockado)", () => {
       await flush();
 
       expect(sentTo().sort()).toEqual([admin.email, clienteA.email].sort());
-      expect(subjects()).toContain("Reservado! Sex 04/01 às 10:30 — Corte de Cabelo");
-      expect(subjects()).toContain("Nova reserva: Cliente A · Sex 04/01 às 10:30");
+      expect(subjects()).toContain("Sua reserva com o Cris — sex 04/01 às 10:30");
+      expect(subjects()).toContain("Nova reserva: Cliente A — sex 04/01 às 10:30");
+      // Reply-To: cliente responde para o Cris; aviso ao Cris sem Reply-To. List-Unsubscribe só no lembrete.
+      const byTo = Object.fromEntries(mocks.sendEmail.mock.calls.map(([message]) => [message.to, message]));
+      expect(byTo[clienteA.email].replyTo).toEqual([admin.email]);
+      expect(byTo[admin.email].replyTo).toBeUndefined();
+      expect(byTo[clienteA.email].headers).toBeUndefined();
+      expect(byTo[admin.email].headers).toBeUndefined();
       const rows = await logs();
       expect(rows.map((row) => [row.kind, row.status])).toEqual([
         ["ADMIN_NEW_BOOKING", "SENT"],
@@ -204,7 +210,7 @@ describe("notificações (banco real, envio mockado)", () => {
       await flush();
 
       expect(sentTo()).toEqual([admin.email]);
-      expect(subjects()).toEqual(["Cancelou: Cliente A · Sex 04/01 às 10:30"]);
+      expect(subjects()).toEqual(["Cancelamento: Cliente A — sex 04/01 às 10:30"]);
     });
 
     it("Cris cancela pelo painel: aviso ao cliente (mesmo com lembretes desligados)", async () => {
@@ -214,7 +220,9 @@ describe("notificações (banco real, envio mockado)", () => {
       await flush();
 
       expect(sentTo()).toEqual([clienteA.email]);
-      expect(subjects()).toEqual(["Sua reserva de Sex 04/01 às 10:30 foi cancelada pelo Cris"]);
+      expect(subjects()).toEqual(["Sua reserva de sex 04/01 às 10:30 foi cancelada pelo Cris"]);
+      expect(mocks.sendEmail.mock.calls[0][0].replyTo).toEqual([admin.email]);
+      expect(mocks.sendEmail.mock.calls[0][0].headers).toBeUndefined();
     });
 
     it("Cris cancela pelo cancelBooking (não dono): aviso ao cliente", async () => {
@@ -260,8 +268,9 @@ describe("notificações (banco real, envio mockado)", () => {
 
       expect(summary.reminders).toEqual({ date: FRIDAY, bookings: 2, sent: 2, failed: 0, skipped: 0 });
       expect(sentTo().sort()).toEqual([clienteA.email, clienteB.email].sort());
-      expect(subjects()).toEqual(["Amanhã às 10:30 com o Cris", "Amanhã às 11:30 com o Cris"]);
+      expect(subjects()).toEqual(["Amanhã às 10:30 com o Cris — sex 04/01", "Amanhã às 11:30 com o Cris — sex 04/01"]);
       const [message] = mocks.sendEmail.mock.calls[0];
+      expect(message.replyTo).toEqual([admin.email]);
       expect(message.headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
       expect(message.headers["List-Unsubscribe"]).toContain("/api/notificacoes/lembretes?u=");
     });
@@ -359,7 +368,7 @@ describe("notificações (banco real, envio mockado)", () => {
 
       expect((await runNotificationsCron(THURSDAY_20H)).renewals).toBe(1);
       expect(sentTo()).toEqual([admin.email]);
-      expect(subjects()).toEqual(["Renovar: Ana, Pedro — último fim de semana do ciclo"]);
+      expect(subjects()).toEqual(["Renovar mensalistas: Ana, Pedro"]);
 
       // Cron de sexta: nada de novo.
       expect((await runNotificationsCron(new Date("2030-01-04T23:00:00.000Z"))).renewals).toBe(0);
@@ -373,10 +382,7 @@ describe("notificações (banco real, envio mockado)", () => {
 
       await runNotificationsCron(new Date("2030-01-04T23:00:00.000Z"));
 
-      expect(subjects()).toEqual([
-        "Renovar: Pedro — último fim de semana do ciclo",
-        "Renovar: Ana — último fim de semana do ciclo",
-      ]);
+      expect(subjects()).toEqual(["Renovar mensalistas: Pedro", "Renovar mensalistas: Ana"]);
     });
   });
 });

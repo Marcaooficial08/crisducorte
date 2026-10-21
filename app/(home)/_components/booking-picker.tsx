@@ -40,6 +40,8 @@ interface BookingPickerProps {
   isAuthenticated: boolean;
   // WhatsAppButton (MEL-022): só com a flag NOTIFICACOES e telefone cadastrado na barbearia.
   whatsapp?: { phone: string; address: string } | null;
+  // Notificações ligadas para este usuário (flag NOTIFICACOES): avisa que a confirmação foi por e-mail.
+  emailConfirmation?: boolean;
 }
 
 interface BookingSuccess {
@@ -59,7 +61,7 @@ const firstFreeDay = (days: DaySlots[]) => (days.find((day) => day.freeCount > 0
 const weekdayName = (day: DaySlots) => WEEKDAY_NAMES[day.label.split(" ")[0]] ?? day.label;
 
 // Escolha de dia e horário da home nova + Sheet de serviço e confirmação (spec §4.1).
-const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp }: BookingPickerProps) => {
+const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp, emailConfirmation = false }: BookingPickerProps) => {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(() => firstFreeDay(days));
   const [time, setTime] = useState<string>();
@@ -162,7 +164,7 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp }
       track("booking_confirmed", { service: service.name, weekday: day.label, hour: time });
       setSheetIsOpen(false);
       setTime(undefined);
-      if (whatsapp) {
+      if (whatsapp || emailConfirmation) {
         setSuccess({ date: day.date, dayLabel: day.label, time, serviceName: service.name });
       }
       toast(`Reservado! ${day.label} às ${time}.`, {
@@ -244,7 +246,7 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp }
         <BookingCTA dayLabel={time ? day?.label : undefined} time={time} loading={submitting && !sheetIsOpen} onClick={handleCTAClick} />
       </div>
 
-      {success && whatsapp && (
+      {success && (whatsapp || emailConfirmation) && (
         <section
           role="status"
           aria-labelledby="reserva-sucesso"
@@ -254,13 +256,20 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp }
             <CalendarCheckIcon className="h-5 w-5 text-accent" aria-hidden="true" />
             Reservado! {success.dayLabel} às {success.time}.
           </p>
-          <WhatsAppButton
-            phone={whatsapp.phone}
-            address={whatsapp.address}
-            serviceName={success.serviceName}
-            date={success.date}
-            time={success.time}
-          />
+          {emailConfirmation && (
+            <p className="text-body text-muted-foreground">
+              Enviamos a confirmação para o seu e-mail. Se não encontrar, olhe no Spam e marque &apos;Não é spam&apos;.
+            </p>
+          )}
+          {whatsapp && (
+            <WhatsAppButton
+              phone={whatsapp.phone}
+              address={whatsapp.address}
+              serviceName={success.serviceName}
+              date={success.date}
+              time={success.time}
+            />
+          )}
           <Link href="/bookings" className="inline-flex min-h-11 items-center justify-center text-body font-bold text-accent-soft underline underline-offset-4">
             Ver meus agendamentos
           </Link>
