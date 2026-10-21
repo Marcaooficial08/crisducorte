@@ -648,14 +648,17 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-20: cadastro, ciclo em andamento ("3 de 4"), selo "Mensalista" na grade, reserva em "Meu próximo agendamento" do mensalista, horário ocupado para outra conta, conflito sem gravar nada, pausar com as reservas futuras canceladas e excluir. O botão "Registrar pagamento" some durante o ciclo (só volta como "Renovar" no último fim de semana ou vencido) — comportamento aprovado.
 
-**Staging:** `fase3/mensalistas` enviado para `staging` (Preview precisa de `MENSALISTAS=admin`).
+**Staging:** `fase3/mensalistas` enviado para `staging` (`d49c9a6`), com `MENSALISTAS=admin` no Preview (criada pelo dono).
+
+**Teste de aceite (staging) ✅:** aprovado pelo dono em 2026-10-20, no celular: abas, cadastro, pagamento, selo "Mensalista" na agenda e exclusão.
 
 **Produção:** publicado em produção — previsto após o merge. Sem migração. Depois do merge, o dono cria `MENSALISTAS=admin` na Vercel (Production) e faz redeploy; sem ela a aba fica escondida.
 
 **Pendências:**
 - [x] Teste de aceite do dono no localhost ✅ em 2026-10-20.
-- [ ] Teste de aceite do dono na staging.
-- [ ] Vercel Preview/Production: `MENSALISTAS=admin` (dono).
+- [x] Teste de aceite do dono na staging ✅ em 2026-10-20 (celular).
+- [x] Vercel Preview: `MENSALISTAS=admin` (criada pelo dono).
+- [ ] Vercel Production: criar `MENSALISTAS=admin` (dono) e fazer redeploy; sem ela a aba fica escondida.
 - [ ] Cadastrar os mensalistas atuais do Cris com "Ciclo já em andamento".
 - [ ] Mensalista "sem horário fixo" (reserva na mão, spec §5.3) não entrou: o cadastro exige dia e horário.
 - [ ] `/bookings` não lista a reserva de mensalista (só a home nova mostra).
