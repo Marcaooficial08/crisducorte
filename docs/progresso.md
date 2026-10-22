@@ -730,9 +730,41 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Validação (local, 2026-10-21):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 251 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 41 ✅.
 
+**Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-21: Google Agenda com título, horário (11:30–12:30, fuso certo) e endereço; `.ics` ok; botão em "Meu próximo agendamento" ok.
+
+**Staging:** `d2bc8f6` enviado para `staging` em 2026-10-21 (autorizado pelo dono).
+
 **Produção:** publicado em produção — previsto após o merge (não antes de sexta 23/10, depois da confirmação dos lembretes). Sem migração. Variável nova: `CALENDARIO` (Preview: `admin`; Production: `admin` no deploy, `all` depois do aceite no iPhone).
 
 **Pendências:**
-- [ ] Teste de aceite do dono no localhost.
-- [ ] Staging (com autorização): `CALENDARIO=admin` no Preview; aceite no iPhone (.ics abre "Adicionar ao Calendário") e no Android (Google Agenda).
+- [x] Teste de aceite do dono no localhost ✅ em 2026-10-21.
+- [ ] Staging: `CALENDARIO=admin` no Preview (dono); aceite no iPhone (.ics abre "Adicionar ao Calendário") e no Android (Google Agenda).
 - [ ] Vercel Production: `CALENDARIO=admin` e depois `all` (dono).
+
+## Prompt 20 · PR B · PWA: manifest, ícones, service worker e dica de instalação (MEL-023)
+
+**Decisões (aprovadas pelo dono em 2026-10-21):** SW escrito à mão (sem next-pwa/serwist); cache só de assets imutáveis, sem modo offline; manifest e `theme-color` **sempre publicados** (fora de flag); SW e dica atrás de `PWA_INSTALL`.
+
+**Feito:**
+- `app/manifest.ts` (`/manifest.webmanifest`): "Cris du Corte", `standalone`, `start_url`/`scope`/`id` `/`, `pt-BR`, fundo e tema `#15161A` (`BRAND_BACKGROUND` em `site.ts`), ícones `any` e `maskable` em 192 e 512 (`public/icons`, gerados uma vez a partir de `app/icon.png` com sharp fora do projeto; maskable com o logo em 72% do quadro, dentro da zona segura). `apple-icon.png` (180, opaco) mantido. `viewport.themeColor` e `appleWebApp` (abre sem a barra do Safari quando instalado) no `layout.tsx`.
+- Service worker (`app/_lib/pwa/service-worker.ts`, servido por `app/sw.js/route.ts` com `no-cache, no-store`): `/_next/static/*` cache-first; `/icons/*` e `/brand/*` stale-while-revalidate; **todo o resto não é interceptado** (páginas, RSC, Server Actions, `/api`, login do NextAuth, POST, `Range`). Versão = `VERCEL_GIT_COMMIT_SHA`: cada deploy instala o SW novo, que assume na hora (`skipWaiting` + `clients.claim`) e apaga os caches das versões anteriores. Com `PWA_INSTALL=off`, o `/sw.js` vira um script que apaga os caches e se desinstala (rollback sem deploy de código).
+- `SwRegister` (no layout): registra depois do `load`, em `requestIdleCallback` (Safari: `setTimeout`), só no build de produção; `updateViaCache: "none"`. Flag desligada para o usuário (ex.: `admin` e cliente comum) → remove o SW que houver.
+- `InstallHint` (home nova, com a flag; **ajuste de design do dono em 2026-10-21**): cartão compacto de 1 linha fixo no rodapé da tela (ícone + "Instale o app do Cris" + "Instalar" + ✕ com `aria-label="Agora não"`, alvos de 44px). Android/computador: "Instalar" abre o prompt nativo (`beforeinstallprompt`). iPhone/iPad (inclusive iPadOS como Mac): "Instalar" abre a linha "No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início" (`aria-expanded`). Navegador do Instagram/Facebook: nada. **Só aparece depois de uma reserva com sucesso (evento `cdc:booking-success` do BookingPicker, guardado em `cdc-booked`) ou a partir da 2ª visita** (`cdc-visits` no `localStorage`, contado 1x por sessão do navegador via `sessionStorage`; tudo com try/catch); nunca na primeira tela da primeira visita. Enquanto visível, o `body` ganha `padding-bottom` igual à altura do cartão (ResizeObserver acompanha a linha extra do iPhone), então nada fica escondido atrás dele; ao fechar, volta a zero. Some se já estiver instalado (`display-mode: standalone`/`navigator.standalone`), no `appinstalled` ou no ✕. Fixo, fora do fluxo: aparecer não desloca nada (a 1ª versão, no meio da página, empurrava o rodapé: CLS 0,011 → 0,038).
+
+**Testes:**
+- Unit: `app/_lib/pwa/install-hint.test.ts` (iPhone, iPad como Mac, Mac, Android, Instagram; standalone; 2ª visita ou reserva; 1 visita por sessão; armazenamento ausente ou que lança), `app/sw.js/route.test.ts` (cabeçalhos; `off` → script que se remove; versão do commit; cache só de `/_next/static`; sem navegação/RSC/`/api`; os dois scripts compilam), `app/manifest.test.ts`, `flags.test.ts`.
+- e2e `e2e/pwa.spec.ts` (`PWA_INSTALL=admin` no `playwright.config.ts`): manifest com ícones reais (status, tipo e tamanho lido do PNG), `theme-color`, `apple-touch-icon`; `/sw.js` sem cache; admin: SW controla a página, navegação vem da rede e chunks do SW, reserva (Server Action) funciona e a página seguinte mostra o horário ocupado; cliente comum sem SW; iPhone: 1ª visita sem dica (recarregar não conta), 2ª visita (nova aba) com cartão de 1 linha (< 70px, botões de 44px), `padding-bottom` = altura do cartão e rodapé acima dele, "Instalar" abre a instrução e o espaço cresce junto, ✕ fecha, zera o espaço e continua fechada; 1ª visita + reserva com sucesso → dica aparece; cliente comum sem dica nem na 2ª visita.
+- `vitest.config.mts`: `PWA_INSTALL` fixa em `off`.
+
+**Lighthouse 13.5 (local, `next start`, Neon dev, celular, deslogado, home nova), rodadas intercaladas `PWA_INSTALL=all` × `off`:** desempenho 85/86/85 × 85/85/84; acessibilidade 100 × 100; CLS 0,011 × 0,011; LCP ~4,3s nas duas (banco em us-east-2, como nas medições anteriores). Sem diferença do PWA; conferir no PageSpeed em produção depois do merge. Depois do ajuste de design (1ª visita, sem dica): desempenho 84–85, acessibilidade 100, CLS 0,011 (o mesmo de antes). Com a dica visível (2ª visita; o Lighthouse sempre simula a 1ª, então medido com Playwright + iPhone 13 + axe-core 4.10): CLS 0,000 e axe sem violações, com a instrução fechada e aberta.
+
+**Validação (local, 2026-10-21):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 263 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 48 ✅ (depois do ajuste de design, um de cada vez). (Integração e e2e rodados ao mesmo tempo no mesmo banco de testes se atrapalham: rodar um de cada vez.)
+
+**Produção:** publicado em produção — previsto após o merge (não antes de sexta 23/10). Sem migração. Variável nova: `PWA_INSTALL` (Preview: `admin`; Production: `admin`, depois `all`). O manifest e o `theme-color` entram para todos já no deploy.
+
+**Pendências:**
+- [x] Teste de aceite do dono no localhost (Chrome do PC) ✅ em 2026-10-21: dica, instalação em janela própria, reservar/cancelar/login no app, "Agora não", desinstalação. Pedido de ajuste de design (cartão de 1 linha, espaço no fim da página, só após reserva ou 2ª visita) feito acima.
+- [x] Vercel Preview: `PWA_INSTALL=admin` (criada pelo dono).
+- [ ] Staging: conferir o cartão de 1 linha no celular; instalar no Android e no iPhone, abrir pelo ícone, reservar e cancelar pelo app instalado, login pelo Google dentro do app instalado.
+- [ ] Vercel Production: `PWA_INSTALL=admin` e depois `all` (dono).
+- [ ] PageSpeed da home em produção depois do merge (desempenho ≥ 90, acessibilidade 100).

@@ -53,6 +53,8 @@ export default defineConfig({
       NOTIFICACOES: "admin",
       // "Adicionar ao calendário" só para o admin, como no rollout (Prompt 20).
       CALENDARIO: "admin",
+      // Service worker e dica de instalação só para o admin, como no rollout (Prompt 20).
+      PWA_INSTALL: "admin",
       SMTP_USER: "",
       SMTP_PASS: "",
       NOTIFY_ALLOWLIST: "",

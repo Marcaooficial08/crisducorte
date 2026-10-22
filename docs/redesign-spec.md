@@ -364,7 +364,7 @@ Toda mudança é testada em localhost, passa nos testes automáticos e, quando m
 | `MENSALISTAS` | Aba Mensalistas (MEL-025) | Só admin; ligar após cadastrar 1 mensalista de teste |
 | `NOTIFICACOES` (era `NOTIFY_EMAIL`) | E-mails de confirmação, lembrete da véspera e avisos + botão do WhatsApp (MEL-022, Prompt 19) | Só admin primeiro (`admin`), depois todos (`all`) |
 | `CALENDARIO` | "Adicionar ao calendário": Google Agenda + `.ics` no cartão de sucesso e em "Meu próximo agendamento" (MEL-023, Prompt 20) | Só admin primeiro (`admin`), depois todos (`all`) |
-| `PWA_INSTALL` | Dica de instalação (MEL-023) | Todos |
+| `PWA_INSTALL` | Service worker (só assets) e dica de instalação (MEL-023, Prompt 20); manifest e theme-color ficam fora de flag | Só admin primeiro (`admin`), depois todos (`all`); `off` faz o `/sw.js` se remover dos aparelhos |
 
 **Cuidados por fase**
 

@@ -2,7 +2,7 @@ import { Session } from "next-auth";
 
 // Feature flags lidas de variáveis de ambiente, só no servidor.
 // Valor: off | admin | all. Ausente ou inválido = off.
-export type FlagName = "AGENDA_V2" | "NEW_HOME" | "ADMIN_PANEL_V2" | "MENSALISTAS" | "NOTIFICACOES" | "CALENDARIO";
+export type FlagName = "AGENDA_V2" | "NEW_HOME" | "ADMIN_PANEL_V2" | "MENSALISTAS" | "NOTIFICACOES" | "CALENDARIO" | "PWA_INSTALL";
 export type FlagMode = "off" | "admin" | "all";
 
 const MODES: readonly FlagMode[] = ["off", "admin", "all"];
@@ -47,3 +47,7 @@ export const isNotificacoesEnabledForUser = (user: { isAdmin: boolean } | null |
 
 // "Adicionar ao calendário" (Prompt 20, MEL-023): cartão de sucesso da reserva e "Meu próximo agendamento".
 export const isCalendarioEnabled = (session: Session | null | undefined) => isEnabled("CALENDARIO", session);
+
+// PWA (Prompt 20, MEL-023): registro do service worker e dica "Adicionar à tela inicial".
+// O manifest fica fora de flag. Com "off", o /sw.js se remove sozinho dos aparelhos que já o têm.
+export const isPwaInstallEnabled = (session: Session | null | undefined) => isEnabled("PWA_INSTALL", session);

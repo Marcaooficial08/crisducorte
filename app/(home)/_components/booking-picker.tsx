@@ -19,6 +19,7 @@ import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
 import { BOOKING_ERROR_MESSAGES, clientBookingErrorCode, shouldReloadSlots } from "@/app/_lib/booking-errors";
 import { DaySlots, TIME_ZONE } from "@/app/_lib/schedule";
 import { track } from "@/app/_lib/track";
+import { BOOKING_SUCCESS_EVENT } from "@/app/_lib/pwa/install-hint";
 import {
   RESUME_CALLBACK_URL,
   RESUME_PARAM,
@@ -176,6 +177,8 @@ const BookingPicker = ({
       }
 
       track("booking_confirmed", { service: service.name, weekday: day.label, hour: time });
+      // Dica de instalação (PWA_INSTALL): reservou = pode oferecer o app, mesmo na 1ª visita.
+      window.dispatchEvent(new Event(BOOKING_SUCCESS_EVENT));
       setSheetIsOpen(false);
       setTime(undefined);
       if (hasSuccessCard) {

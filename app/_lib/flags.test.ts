@@ -8,6 +8,7 @@ import {
   isNewHomeEnabled,
   isNotificacoesEnabled,
   isNotificacoesEnabledForUser,
+  isPwaInstallEnabled,
 } from "./flags";
 
 const sessionOf = (isAdmin: boolean) => ({
@@ -111,5 +112,15 @@ describe("feature flags", () => {
     vi.stubEnv("CALENDARIO", "all");
     expect(isCalendarioEnabled(sessionOf(false))).toBe(true);
     expect(isCalendarioEnabled(null)).toBe(true);
+  });
+
+  it("PWA_INSTALL pela sessão", () => {
+    vi.stubEnv("PWA_INSTALL", undefined);
+    expect(isPwaInstallEnabled(sessionOf(true))).toBe(false);
+    vi.stubEnv("PWA_INSTALL", "admin");
+    expect(isPwaInstallEnabled(sessionOf(true))).toBe(true);
+    expect(isPwaInstallEnabled(sessionOf(false))).toBe(false);
+    vi.stubEnv("PWA_INSTALL", "all");
+    expect(isPwaInstallEnabled(null)).toBe(true);
   });
 });

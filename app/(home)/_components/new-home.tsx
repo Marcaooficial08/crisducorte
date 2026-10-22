@@ -7,12 +7,13 @@ import ShopCard from "@/app/_components/shop-card";
 import NextBookingCard from "@/app/_components/next-booking-card";
 import BookingItem from "@/app/_components/booking-item";
 import EmptyState from "@/app/_components/empty-state";
+import InstallHint from "@/app/_components/install-hint";
 import { db } from "@/app/_lib/prisma";
 import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
 import { AGENDA_CLOSED_MESSAGE, DaySlots, TIME_ZONE, getNextServiceDays, getNow } from "@/app/_lib/schedule";
 import { getDaySlots } from "@/app/_lib/availability";
 import { getNextBooking } from "@/app/_lib/next-booking";
-import { isCalendarioEnabled, isMensalistasEnabled, isNotificacoesEnabled } from "@/app/_lib/flags";
+import { isCalendarioEnabled, isMensalistasEnabled, isNotificacoesEnabled, isPwaInstallEnabled } from "@/app/_lib/flags";
 import { appUrl } from "@/app/_lib/notifications/templates";
 import BookingPicker from "./booking-picker";
 
@@ -123,6 +124,9 @@ const NewHome = async ({ session }: NewHomeProps) => {
               />
             </section>
           )}
+
+          {/* Dica de instalação (flag PWA_INSTALL): só aparece no navegador, depois de saber o aparelho. */}
+          {isPwaInstallEnabled(session) && <InstallHint />}
         </div>
 
         {isAdmin && (
