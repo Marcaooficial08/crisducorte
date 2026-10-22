@@ -738,7 +738,7 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Pendências:**
 - [x] Teste de aceite do dono no localhost ✅ em 2026-10-21.
-- [ ] Staging: `CALENDARIO=admin` no Preview (dono); aceite no iPhone (.ics abre "Adicionar ao Calendário") e no Android (Google Agenda).
+- [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: "Adicionar ao calendário" ok.
 - [ ] Vercel Production: `CALENDARIO=admin` e depois `all` (dono).
 
 ## Prompt 20 · PR B · PWA: manifest, ícones, service worker e dica de instalação (MEL-023)
@@ -766,7 +766,7 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [x] Teste de aceite do dono no localhost (Chrome do PC) ✅ em 2026-10-21: dica, instalação em janela própria, reservar/cancelar/login no app, "Agora não", desinstalação. Pedido de ajuste de design (cartão de 1 linha, espaço no fim da página, só após reserva ou 2ª visita) feito acima.
 - [x] Vercel Preview: `PWA_INSTALL=admin` (criada pelo dono).
 - [x] Staging: `b443ed4` enviado para `staging` em 2026-10-21 (autorizado pelo dono).
-- [ ] Staging: conferir o cartão de 1 linha no celular; instalar no Android e no iPhone, abrir pelo ícone, reservar e cancelar pelo app instalado, login pelo Google dentro do app instalado.
+- [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: instalação do app ok.
 - [ ] Vercel Production: `PWA_INSTALL=admin` e depois `all` (dono).
 - [ ] PageSpeed da home em produção depois do merge (desempenho ≥ 90, acessibilidade 100).
 
@@ -794,6 +794,8 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Validação (local, 2026-10-21, um de cada vez):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 285 ✅ · `npm run test:int` 84 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 53 ✅. Lighthouse não repetido (a home não mudou neste PR; o SW só ganhou os handlers de push).
 
+**Teste de aceite (staging, celular) ✅:** aprovado pelo dono em 2026-10-21 para o Prompt 20 inteiro (staging com `e9cf811`): calendário ok; instalação do app ok; push "Notificações ligadas" e "Sua reserva foi cancelada" chegaram junto com o e-mail. O lembrete da véspera por push não foi testado na staging (fica para a primeira quinta em produção).
+
 **Produção:** publicado em produção — previsto após o merge (não antes de sexta 23/10). **Com migração:** antes do merge, backup + `prisma/sql/web-push-producao.sql` à mão no Supabase + `migrate resolve --applied 20261022000000_web_push` pela 5432 (dono). Variáveis novas: `WEB_PUSH` e `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` (par de Production do `.env.vapid.local`).
 
 **Pendências:**
@@ -801,7 +803,8 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [x] Par VAPID de Production **refeito** em 2026-10-21 (a chave privada anterior apareceu num print e foi descartada; o par de Preview não mudou). Usar só o par novo em Production.
 - [x] Vercel Preview: `WEB_PUSH=admin` + `VAPID_*` do bloco Preview (criadas pelo dono).
 - [x] Staging: enviado para `staging` em 2026-10-21 (autorizado pelo dono).
-- [ ] Teste de aceite no celular (staging): Android (Chrome) e iPhone (app instalado), roteiro no resumo do PR C.
+- [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: push "Notificações ligadas" ao ligar o switch e "Sua reserva foi cancelada" chegaram junto com o e-mail de cancelamento.
+- [ ] Lembrete da véspera por push (Cron) não conferido na staging: conferir na primeira quinta depois do deploy (`NotificationLog` com `PUSH_REMINDER`/`SENT`), junto com o lembrete por e-mail.
 - [ ] Produção (dono, antes do merge e não antes de sexta): backup, SQL, `migrate resolve`, `migrate status`.
 - [ ] Vercel Production: `WEB_PUSH=admin` + `VAPID_*` do bloco Production; depois `all`.
 - [ ] Revisão jurídica da Política de Privacidade (agora com o parágrafo do push).
