@@ -2,7 +2,7 @@ import { Session } from "next-auth";
 
 // Feature flags lidas de variáveis de ambiente, só no servidor.
 // Valor: off | admin | all. Ausente ou inválido = off.
-export type FlagName = "AGENDA_V2" | "NEW_HOME" | "ADMIN_PANEL_V2" | "MENSALISTAS" | "NOTIFICACOES" | "CALENDARIO" | "PWA_INSTALL";
+export type FlagName = "AGENDA_V2" | "NEW_HOME" | "ADMIN_PANEL_V2" | "MENSALISTAS" | "NOTIFICACOES" | "CALENDARIO" | "PWA_INSTALL" | "WEB_PUSH";
 export type FlagMode = "off" | "admin" | "all";
 
 const MODES: readonly FlagMode[] = ["off", "admin", "all"];
@@ -51,3 +51,12 @@ export const isCalendarioEnabled = (session: Session | null | undefined) => isEn
 // PWA (Prompt 20, MEL-023): registro do service worker e dica "Adicionar à tela inicial".
 // O manifest fica fora de flag. Com "off", o /sw.js se remove sozinho dos aparelhos que já o têm.
 export const isPwaInstallEnabled = (session: Session | null | undefined) => isEnabled("PWA_INSTALL", session);
+
+// Web Push (Prompt 20): switch "Notificações no celular" no Perfil, pela sessão.
+export const isWebPushEnabled = (session: Session | null | undefined) => isEnabled("WEB_PUSH", session);
+
+// Envio sem sessão (Cron, "o Cris cancelou"): decide pelo cliente da reserva, como em NOTIFICACOES.
+export const isWebPushEnabledForUser = (user: { isAdmin: boolean } | null | undefined): boolean => {
+  const mode = getFlagMode("WEB_PUSH");
+  return mode === "all" || (mode === "admin" && user?.isAdmin === true);
+};

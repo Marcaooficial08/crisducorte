@@ -9,6 +9,8 @@ import {
   isNotificacoesEnabled,
   isNotificacoesEnabledForUser,
   isPwaInstallEnabled,
+  isWebPushEnabled,
+  isWebPushEnabledForUser,
 } from "./flags";
 
 const sessionOf = (isAdmin: boolean) => ({
@@ -122,5 +124,21 @@ describe("feature flags", () => {
     expect(isPwaInstallEnabled(sessionOf(false))).toBe(false);
     vi.stubEnv("PWA_INSTALL", "all");
     expect(isPwaInstallEnabled(null)).toBe(true);
+  });
+
+  it("WEB_PUSH pela sessão (Perfil) e pelo usuário do banco (Cron e avisos)", () => {
+    vi.stubEnv("WEB_PUSH", undefined);
+    expect(isWebPushEnabled(sessionOf(true))).toBe(false);
+    expect(isWebPushEnabledForUser({ isAdmin: true })).toBe(false);
+
+    vi.stubEnv("WEB_PUSH", "admin");
+    expect(isWebPushEnabled(sessionOf(true))).toBe(true);
+    expect(isWebPushEnabled(sessionOf(false))).toBe(false);
+    expect(isWebPushEnabledForUser({ isAdmin: true })).toBe(true);
+    expect(isWebPushEnabledForUser({ isAdmin: false })).toBe(false);
+    expect(isWebPushEnabledForUser(null)).toBe(false);
+
+    vi.stubEnv("WEB_PUSH", "all");
+    expect(isWebPushEnabledForUser({ isAdmin: false })).toBe(true);
   });
 });

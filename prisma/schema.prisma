@@ -38,16 +38,17 @@ model Session {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
-  image          String?
-  accounts       Account[]
-  sessions       Session[]
-  bookings       Booking[]
-  isAdmin        Boolean   @default(false)
-  emailReminders Boolean   @default(true) // opt-out só do lembrete da véspera (Prompt 19)
+  id                String             @id @default(cuid())
+  name              String?
+  email             String?            @unique
+  emailVerified     DateTime?
+  image             String?
+  accounts          Account[]
+  sessions          Session[]
+  bookings          Booking[]
+  isAdmin           Boolean            @default(false)
+  emailReminders    Boolean            @default(true) // opt-out só do lembrete da véspera (Prompt 19)
+  pushSubscriptions PushSubscription[]
 }
 
 model VerificationToken {
@@ -188,4 +189,20 @@ model NotificationLog {
   sentAt    DateTime?
 
   @@index([status, updatedAt])
+}
+
+// Web Push (Prompt 20): uma linha por aparelho/navegador com "Notificações no celular" ligadas.
+// A inscrição é o opt-in. Apagada ao desligar, ao sair da conta no aparelho, quando o serviço de push
+// responde 404/410 (inscrição vencida) e junto com o usuário (excluir conta).
+model PushSubscription {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  createdAt     DateTime  @default(now())
+  lastSuccessAt DateTime?
+
+  @@index([userId])
 }

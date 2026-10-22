@@ -5,21 +5,21 @@ import { useSession } from "next-auth/react";
 import type { FlagMode } from "@/app/_lib/flags";
 
 interface SwRegisterProps {
-  mode: FlagMode; // PWA_INSTALL, lida no servidor
+  modes: FlagMode[]; // PWA_INSTALL e WEB_PUSH, lidas no servidor: qualquer uma ligada para o usuário registra
 }
 
 // Registra o service worker (Prompt 20) depois do carregamento, quando o navegador está ocioso:
 // nada no caminho crítico da página. Só no build de produção (no `next dev` o SW atrapalharia o HMR).
 // Flag desligada para este usuário: remove o SW que ele tiver (o /sw.js com "off" também se remove sozinho).
-const SwRegister = ({ mode }: SwRegisterProps) => {
+const SwRegister = ({ modes }: SwRegisterProps) => {
   const { data: session, status } = useSession();
   const isAdmin = session?.user?.isAdmin === true;
+  const enabled = modes.some((mode) => mode === "all" || (mode === "admin" && isAdmin));
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator) || status === "loading") {
       return;
     }
-    const enabled = mode === "all" || (mode === "admin" && isAdmin);
 
     const run = () => {
       if (enabled) {
@@ -59,7 +59,7 @@ const SwRegister = ({ mode }: SwRegisterProps) => {
         clearTimeout(timeoutId);
       }
     };
-  }, [mode, isAdmin, status]);
+  }, [enabled, status]);
 
   return null;
 };

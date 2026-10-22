@@ -11,7 +11,10 @@ export type NotificationKind =
   | "CANCELLED_BY_ADMIN"
   | "ADMIN_NEW_BOOKING"
   | "ADMIN_CANCELLED"
-  | "ADMIN_RENEWAL";
+  | "ADMIN_RENEWAL"
+  // Web Push (Prompt 20): canal separado, key própria ("push-reminder:<reserva>"), independente do e-mail.
+  | "PUSH_REMINDER"
+  | "PUSH_CANCELLED_BY_ADMIN";
 
 export const MAX_ATTEMPTS = 3;
 

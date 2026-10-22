@@ -13,7 +13,7 @@ const IMAGE_URL = "https://utfs.io/f/0ddfbd26-a424-43a0-aaf3-c3f1dc6be6d1-1kgxo7
 
 export const resetDatabase = async (db: PrismaClient) => {
   await db.$executeRawUnsafe(
-    'TRUNCATE TABLE "NotificationLog", "BookingCancellation", "SlotBlock", "Booking", "MensalistaCycle", "Mensalista", "Session", "Account", "User", "Service", "Barbershop" CASCADE',
+    'TRUNCATE TABLE "PushSubscription", "NotificationLog", "BookingCancellation", "SlotBlock", "Booking", "MensalistaCycle", "Mensalista", "Session", "Account", "User", "Service", "Barbershop" CASCADE',
   );
 };
 

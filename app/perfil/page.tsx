@@ -7,9 +7,10 @@ import { Card, CardContent } from "../_components/ui/card";
 import { authOptions } from "../_lib/auth";
 import { ADMIN_DELETE_MESSAGE, assertUser, type SessionUser } from "../_lib/auth-guards";
 import { db } from "../_lib/prisma";
-import { isNotificacoesEnabled } from "../_lib/flags";
+import { isNotificacoesEnabled, isWebPushEnabled } from "../_lib/flags";
 import DeleteAccountButton from "./_components/delete-account-button";
 import EmailRemindersSwitch from "./_components/email-reminders-switch";
+import PushSwitch from "./_components/push-switch";
 
 const ProfilePage = async () => {
   let user: SessionUser;
@@ -25,6 +26,8 @@ const ProfilePage = async () => {
   const preferences = showReminders
     ? await db.user.findUnique({ where: { id: user.id }, select: { emailReminders: true } })
     : null;
+  // "Notificações no celular" (Prompt 20): flag WEB_PUSH e chave pública VAPID configurada.
+  const vapidPublicKey = isWebPushEnabled(session) ? process.env.VAPID_PUBLIC_KEY ?? "" : "";
 
   return (
     <>
@@ -46,10 +49,11 @@ const ProfilePage = async () => {
           </CardContent>
         </Card>
 
-        {preferences && (
+        {(preferences || vapidPublicKey) && (
           <section className="flex flex-col gap-3">
             <h2 className="text-label uppercase text-muted-foreground font-bold">Notificações</h2>
-            <EmailRemindersSwitch initialEnabled={preferences.emailReminders} />
+            {preferences && <EmailRemindersSwitch initialEnabled={preferences.emailReminders} />}
+            {vapidPublicKey && <PushSwitch vapidPublicKey={vapidPublicKey} />}
           </section>
         )}
 

@@ -765,6 +765,43 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 **Pendências:**
 - [x] Teste de aceite do dono no localhost (Chrome do PC) ✅ em 2026-10-21: dica, instalação em janela própria, reservar/cancelar/login no app, "Agora não", desinstalação. Pedido de ajuste de design (cartão de 1 linha, espaço no fim da página, só após reserva ou 2ª visita) feito acima.
 - [x] Vercel Preview: `PWA_INSTALL=admin` (criada pelo dono).
+- [x] Staging: `b443ed4` enviado para `staging` em 2026-10-21 (autorizado pelo dono).
 - [ ] Staging: conferir o cartão de 1 linha no celular; instalar no Android e no iPhone, abrir pelo ícone, reservar e cancelar pelo app instalado, login pelo Google dentro do app instalado.
 - [ ] Vercel Production: `PWA_INSTALL=admin` e depois `all` (dono).
 - [ ] PageSpeed da home em produção depois do merge (desempenho ≥ 90, acessibilidade 100).
+
+## Prompt 20 · PR C · Web Push: notificações no celular (MEL-023)
+
+**Decisões (aprovadas pelo dono em 2026-10-21):** migração `PushSubscription` aprovada (produção por SQL manual, como no Prompt 19); a inscrição é o opt-in do lembrete por push (não depende de `emailReminders`); textos do push, do Perfil e o parágrafo da Política aprovados (spec §4.10); push de teste ao ligar; flag `WEB_PUSH` (`admin` primeiro).
+
+**Feito:**
+- Migração `20261022000000_web_push` (só aditiva): tabela `PushSubscription` (`endpoint` único, chaves `p256dh`/`auth`, `lastSuccessAt`; FK para `User` com `ON DELETE CASCADE`: excluir a conta apaga as inscrições). Aplicada no Neon dev; no Neon "Testes" pelo `migrate deploy` do setup. Produção: `prisma/sql/web-push-producao.sql` (ANTES 1.1–1.4 / MIGRAÇÃO bloco 2 / CONFERÊNCIA 3.1–3.6; 11 consultas de leitura testadas no Neon dev; nenhum UPDATE).
+- Chaves VAPID: dois pares (Preview e Production) gerados em `.env.vapid.local` (fora do Git pela regra `.env*.local`), sem imprimir no terminal. O `VAPID_SUBJECT` ficou para o dono preencher (`mailto:` da conta Gmail da barbearia).
+- Flag `WEB_PUSH` (`off | admin | all`); `isWebPushEnabled` (Perfil, Política) e `isWebPushEnabledForUser` (envio, pelo cliente da reserva).
+- Envio (`app/_lib/notifications/push.ts`, lib `web-push` 3.6.7, sem alertas novos no `npm audit`): VAPID, urgência alta, TTL entre 1 min e 24 h (lembrete: até o horário da reserva), timeout de 10 s. **Só endpoints https de serviços de push conhecidos** (FCM, Apple, Mozilla, Windows): o servidor faz POST na URL que veio do navegador, então qualquer outra é recusada (sem SSRF). 404/410 = inscrição vencida → apagada.
+- `notify.ts`: canal push ao lado do e-mail, só em dois eventos. Lembrete da véspera (`sendPushReminders`, na mesma rodada do Cron, mesmas reservas e mesma regra do mensalista com conta; 2ª tentativa na hora) e "o Cris cancelou" (1 tentativa). Key própria (`push-reminder:<reserva>`, `push-cancelled-by-admin:<reserva>`; kinds `PUSH_REMINDER`/`PUSH_CANCELLED_BY_ADMIN`, sem migração: `kind` é texto), mesma idempotência do `NotificationLog`: e-mail e push saem 1x cada e um falhar não segura o outro. Todos os aparelhos da conta recebem; `SENT` se pelo menos 1 recebeu. Sem inscrição: nada (nem registro). `NOTIFY_ALLOWLIST` vale também para o push. O Cron agora só para com `NOTIFICACOES` **e** `WEB_PUSH` desligadas.
+- Service worker: `push` (sempre mostra a notificação, com ícone e `tag` por reserva) e `notificationclick` (foca a janela do app e abre a página do aviso; só URLs do próprio site). O SW fica ligado com `PWA_INSTALL` **ou** `WEB_PUSH`; as duas `off` → o `/sw.js` se remove.
+- Server Actions `app/_actions/push-subscription.ts` (`assertUser`, flag, zod, rate limit): `savePushSubscription` (upsert por endpoint: o mesmo aparelho em outra conta passa para a atual; com `sendTest`, manda "Notificações ligadas" só para este aparelho) e `deletePushSubscription` (só da própria conta).
+- Perfil: switch "Notificações no celular" (`role="switch"`, linha inteira de 44px), com flag e chave pública configurada. Estados: ligado/desligado pela inscrição do navegador; iPhone fora do app instalado → "No iPhone, instale o app primeiro…"; sem suporte; permissão bloqueada → desabilitado com a explicação. Ligar: pede a permissão no toque, registra o SW, inscreve (troca a inscrição se a chave VAPID mudou), grava e manda o teste. Desligar: apaga no servidor e no navegador.
+- "Sair" (menu): antes do `signOut`, apaga a inscrição deste aparelho (no máximo 3 s, nunca segura o logout).
+- Política de Privacidade: parágrafo do push aprovado, só com a flag.
+
+**Testes:**
+- Unit: `push.test.ts` (endpoints aceitos/recusados, inclusive IP interno, porta, usuário na URL e domínio parecido; sem VAPID não envia; payload, VAPID, TTL; 404/410 = GONE; 500/timeout = FAILED), `push-templates.test.ts` (textos aprovados, fuso), `pwa/push-client.test.ts` (estados do switch, chave base64url), `push-subscription.test.ts` (sem sessão, flag, sem VAPID, SSRF, chaves inválidas, upsert na conta da sessão, teste só para o aparelho, inscrição vencida apagada, rate limit), `sw.js/route.test.ts` (push e clique; `WEB_PUSH` mantém o SW), `flags.test.ts`, Cron (`route.test.ts`: só para com as duas flags off).
+- Integração `tests/integration/web-push.int.test.ts` (Postgres real, `web-push` e e-mail mockados, 14 casos): lembrete e-mail + push 1x cada com keys separadas e Cron repetido sem reenviar; dois Crons ao mesmo tempo = 1 push; push com `emailReminders=false`; todos os aparelhos da conta; sem inscrição = sem registro; 410 apaga só a vencida; 404 na única = removida sem nova tentativa; 500 → 2ª tentativa e e-mail sai mesmo com o push fora; erro passageiro não apaga; `WEB_PUSH=admin`; sem VAPID nada sai; allowlist; "o Cris cancelou" e-mail + push; cliente que cancela não gera push; flags independentes; inscrição muda de conta; desligar só a própria; excluir conta apaga as inscrições.
+- e2e `e2e/web-push.spec.ts` (`WEB_PUSH=admin`, só a chave pública no `playwright.config.ts`): switch desligado com 44px; permissão bloqueada → desabilitado com a explicação; iPhone fora do app → pede para instalar; cliente comum sem switch e sem o parágrafo; admin vê o parágrafo; `/sw.js` com push e clique. A inscrição real (FCM/Apple) fica para o teste no celular.
+- `vitest.config.mts`: `WEB_PUSH=off` e `VAPID_*` vazias. `fixtures.ts`: `PushSubscription` no TRUNCATE.
+
+**Validação (local, 2026-10-21, um de cada vez):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 285 ✅ · `npm run test:int` 84 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 53 ✅. Lighthouse não repetido (a home não mudou neste PR; o SW só ganhou os handlers de push).
+
+**Produção:** publicado em produção — previsto após o merge (não antes de sexta 23/10). **Com migração:** antes do merge, backup + `prisma/sql/web-push-producao.sql` à mão no Supabase + `migrate resolve --applied 20261022000000_web_push` pela 5432 (dono). Variáveis novas: `WEB_PUSH` e `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` (par de Production do `.env.vapid.local`).
+
+**Pendências:**
+- [x] `VAPID_SUBJECT` = `mailto:` da conta Gmail da barbearia nos dois blocos do `.env.vapid.local`.
+- [x] Par VAPID de Production **refeito** em 2026-10-21 (a chave privada anterior apareceu num print e foi descartada; o par de Preview não mudou). Usar só o par novo em Production.
+- [x] Vercel Preview: `WEB_PUSH=admin` + `VAPID_*` do bloco Preview (criadas pelo dono).
+- [x] Staging: enviado para `staging` em 2026-10-21 (autorizado pelo dono).
+- [ ] Teste de aceite no celular (staging): Android (Chrome) e iPhone (app instalado), roteiro no resumo do PR C.
+- [ ] Produção (dono, antes do merge e não antes de sexta): backup, SQL, `migrate resolve`, `migrate status`.
+- [ ] Vercel Production: `WEB_PUSH=admin` + `VAPID_*` do bloco Production; depois `all`.
+- [ ] Revisão jurídica da Política de Privacidade (agora com o parágrafo do push).

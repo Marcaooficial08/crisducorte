@@ -265,6 +265,16 @@ Cartão de sucesso da reserva (home nova), com a flag ligada para o usuário: "E
 
 Sem e-mail: reserva manual, reserva feita pelo próprio Cris, Pausar/Excluir mensalista. Opt-out ("Lembretes por e-mail" no Perfil ou link do e-mail) desliga **só o lembrete**; confirmação e "o Cris cancelou" sempre saem. Reserva feita depois do Cron da véspera não tem lembrete (a confirmação cumpre o papel).
 
+### 4.10 Notificações no celular — Web Push (Prompt 20)
+
+2º canal, flag `WEB_PUSH`; o e-mail continua igual. Opt-in pelo switch "Notificações no celular" no Perfil (por aparelho). No iPhone só com o app instalado (iOS 16.4+). Textos aprovados pelo dono em 21/10/2026, sem nome do cliente nem endereço (aparecem na tela bloqueada):
+
+| Evento | Título | Texto | Ao tocar |
+| --- | --- | --- | --- |
+| Véspera (mesmo Cron do e-mail) | "Amanhã às 09:00 com o Cris" | "Sex 23/10 · Corte de Cabelo. Não vai poder ir? Toque para ver ou cancelar." | `/bookings` |
+| Cris cancelou | "Sua reserva foi cancelada" | "O Cris cancelou sex 23/10 às 09:00 (Corte de Cabelo). Toque para escolher outro horário." | `/` |
+| Ligou o switch (só no aparelho) | "Notificações ligadas" | "Você vai receber aqui o lembrete da véspera e os avisos do Cris." | `/perfil` |
+
 ## 5. Banco de dados e regras
 
 As mudanças são só aditivas (novas tabelas e colunas opcionais), então nenhuma reserva atual é alterada. Conferir antes o `@@unique` atual de `Booking` no `schema.prisma`: ele deve garantir **uma reserva por data e hora**.
@@ -364,7 +374,8 @@ Toda mudança é testada em localhost, passa nos testes automáticos e, quando m
 | `MENSALISTAS` | Aba Mensalistas (MEL-025) | Só admin; ligar após cadastrar 1 mensalista de teste |
 | `NOTIFICACOES` (era `NOTIFY_EMAIL`) | E-mails de confirmação, lembrete da véspera e avisos + botão do WhatsApp (MEL-022, Prompt 19) | Só admin primeiro (`admin`), depois todos (`all`) |
 | `CALENDARIO` | "Adicionar ao calendário": Google Agenda + `.ics` no cartão de sucesso e em "Meu próximo agendamento" (MEL-023, Prompt 20) | Só admin primeiro (`admin`), depois todos (`all`) |
-| `PWA_INSTALL` | Service worker (só assets) e dica de instalação (MEL-023, Prompt 20); manifest e theme-color ficam fora de flag | Só admin primeiro (`admin`), depois todos (`all`); `off` faz o `/sw.js` se remover dos aparelhos |
+| `PWA_INSTALL` | Service worker (só assets) e dica de instalação (MEL-023, Prompt 20); manifest e theme-color ficam fora de flag | Só admin primeiro (`admin`), depois todos (`all`); `off` (com `WEB_PUSH` também `off`) faz o `/sw.js` se remover dos aparelhos |
+| `WEB_PUSH` | "Notificações no celular" (Perfil) + lembrete da véspera e "o Cris cancelou" por push (Prompt 20; 2º canal, o e-mail continua igual) | Só admin primeiro (`admin`), depois todos (`all`) |
 
 **Cuidados por fase**
 

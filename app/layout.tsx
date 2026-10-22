@@ -57,7 +57,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Toaster />
           <Footer />
-          <SwRegister mode={getFlagMode("PWA_INSTALL")} />
+          <SwRegister modes={[getFlagMode("PWA_INSTALL"), getFlagMode("WEB_PUSH")]} />
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

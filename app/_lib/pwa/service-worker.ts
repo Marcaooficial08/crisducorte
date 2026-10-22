@@ -15,8 +15,10 @@ export const CACHE_PREFIX = "cdc-";
 export const serviceWorkerVersion = (): string =>
   (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 12) || "local";
 
-// Com a flag desligada, o /sw.js se remove sozinho de quem já o tem (rollback sem deploy de código).
-export const isServiceWorkerEnabled = (): boolean => getFlagMode("PWA_INSTALL") !== "off";
+// Com as duas flags desligadas, o /sw.js se remove sozinho de quem já o tem (rollback sem deploy de código).
+// O push precisa do SW: WEB_PUSH ligada mantém o SW mesmo com PWA_INSTALL=off.
+export const isServiceWorkerEnabled = (): boolean =>
+  getFlagMode("PWA_INSTALL") !== "off" || getFlagMode("WEB_PUSH") !== "off";
 
 export const serviceWorkerScript = (version: string): string => `// Cris du Corte · service worker ${version}
 const CACHE = ${JSON.stringify(`${CACHE_PREFIX}static-${version}`)};
@@ -78,6 +80,56 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(staleWhileRevalidate(event, request));
   }
   // Todo o resto vai direto à rede (sem respondWith).
+});
+
+// Web Push (Prompt 20). Todo push vira notificação visível (o iPhone cancela a inscrição se não virar).
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (error) {
+    data = {};
+  }
+  const title = data.title || "Cris du Corte";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      tag: data.tag || undefined,
+      icon: "/icons/icon-192.png",
+      lang: "pt-BR",
+      data: { url: typeof data.url === "string" ? data.url : "/" },
+    }),
+  );
+});
+
+// Toque na notificação: foca uma aba/janela do app e abre a página do aviso (ou abre uma nova).
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  // Só abre páginas do próprio site ("//outro-site" ou URL absoluta de fora viram a home).
+  let url = new URL("/", self.location.origin).href;
+  try {
+    const target = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin);
+    if (target.origin === self.location.origin) {
+      url = target.href;
+    }
+  } catch (error) {
+    // URL inválida: abre a home.
+  }
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) {
+        if (new URL(client.url).origin === self.location.origin && "focus" in client) {
+          await client.focus();
+          if ("navigate" in client) {
+            await client.navigate(url);
+          }
+          return;
+        }
+      }
+      await self.clients.openWindow(url);
+    })(),
+  );
 });
 `;
 

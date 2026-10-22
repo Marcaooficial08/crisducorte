@@ -30,7 +30,7 @@ describe("/sw.js", () => {
     expect(script).toContain('request.method !== "GET"');
     expect(script).not.toContain("unregister");
     // Sem modo offline: nada de navegação, RSC ou /api no cache.
-    expect(script).not.toMatch(/navigate|_rsc|\/api\//);
+    expect(script).not.toMatch(/mode === "navigate"|_rsc|\/api\//);
 
     vi.stubEnv("PWA_INSTALL", "all");
     vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "");
@@ -43,5 +43,20 @@ describe("/sw.js", () => {
       const script = await GET().text();
       expect(() => new Function(script)).not.toThrow();
     }
+  });
+
+  it("WEB_PUSH ligada mantém o SW mesmo com PWA_INSTALL=off; o SW trata push e toque na notificação", async () => {
+    vi.stubEnv("PWA_INSTALL", "off");
+    vi.stubEnv("WEB_PUSH", "admin");
+    const script = await GET().text();
+    expect(script).not.toContain("unregister");
+    expect(script).toContain('self.addEventListener("push"');
+    expect(script).toContain("self.registration.showNotification(");
+    expect(script).toContain('self.addEventListener("notificationclick"');
+    // Só abre páginas do próprio site.
+    expect(script).toContain("target.origin === self.location.origin");
+
+    vi.stubEnv("WEB_PUSH", "off");
+    expect(await GET().text()).toContain("self.registration.unregister()");
   });
 });

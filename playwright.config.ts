@@ -55,6 +55,12 @@ export default defineConfig({
       CALENDARIO: "admin",
       // Service worker e dica de instalação só para o admin, como no rollout (Prompt 20).
       PWA_INSTALL: "admin",
+      // Web Push: switch do Perfil só para o admin. Só a chave pública (gerada para o e2e; a privada foi
+      // descartada): o switch aparece, mas sem VAPID_PRIVATE_KEY nenhum push sai do e2e.
+      WEB_PUSH: "admin",
+      VAPID_PUBLIC_KEY: "BMM8W9wROJhu82APZiwpllaK79weh5eziyTMcDseT0KZU4hRZeMnrBPzOsp9uomsHq55RBYhR_vuxDU1E8ltYes",
+      VAPID_PRIVATE_KEY: "",
+      VAPID_SUBJECT: "",
       SMTP_USER: "",
       SMTP_PASS: "",
       NOTIFY_ALLOWLIST: "",

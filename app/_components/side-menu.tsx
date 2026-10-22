@@ -8,6 +8,7 @@ import { Button } from "./ui/button";
 import { CalendarIcon, HomeIcon, LogInIcon, LogOutIcon, LucideIcon, ShieldCheckIcon, ShieldIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/app/_lib/utils";
+import { forgetThisDevice } from "@/app/_lib/pwa/forget-device";
 
 type MenuItem = { href: string; label: string; icon: LucideIcon };
 
@@ -18,7 +19,11 @@ const SideMenu = () => {
   const { data } = useSession();
   const pathname = usePathname() ?? "";
 
-  const handleLogoutClick = () => signOut();
+  // Web Push (Prompt 20): antes de sair, tira este aparelho da lista de quem recebe os avisos da conta.
+  const handleLogoutClick = async () => {
+    await forgetThisDevice();
+    signOut();
+  };
 
   const handleLoginClick = () => signIn("google");
 
