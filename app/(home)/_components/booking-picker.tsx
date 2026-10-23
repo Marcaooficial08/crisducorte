@@ -12,12 +12,14 @@ import TimeSlot from "@/app/_components/time-slot";
 import BookingCTA from "@/app/_components/booking-cta";
 import EmptyState from "@/app/_components/empty-state";
 import WhatsAppButton from "@/app/_components/whatsapp-button";
+import AddToCalendar from "@/app/_components/add-to-calendar";
 import { Button } from "@/app/_components/ui/button";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/app/_components/ui/sheet";
 import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
 import { BOOKING_ERROR_MESSAGES, clientBookingErrorCode, shouldReloadSlots } from "@/app/_lib/booking-errors";
 import { DaySlots, TIME_ZONE } from "@/app/_lib/schedule";
 import { track } from "@/app/_lib/track";
+import { BOOKING_SUCCESS_EVENT } from "@/app/_lib/pwa/install-hint";
 import {
   RESUME_CALLBACK_URL,
   RESUME_PARAM,
@@ -42,12 +44,15 @@ interface BookingPickerProps {
   whatsapp?: { phone: string; address: string } | null;
   // Notificações ligadas para este usuário (flag NOTIFICACOES): avisa que a confirmação foi por e-mail.
   emailConfirmation?: boolean;
+  // "Adicionar ao calendário" (flag CALENDARIO): endereço da barbearia e link "Ver ou cancelar".
+  calendar?: { address: string; bookingsUrl: string } | null;
 }
 
 interface BookingSuccess {
   date: string;
   dayLabel: string;
   time: string;
+  serviceId: string;
   serviceName: string;
 }
 
@@ -61,7 +66,15 @@ const firstFreeDay = (days: DaySlots[]) => (days.find((day) => day.freeCount > 0
 const weekdayName = (day: DaySlots) => WEEKDAY_NAMES[day.label.split(" ")[0]] ?? day.label;
 
 // Escolha de dia e horário da home nova + Sheet de serviço e confirmação (spec §4.1).
-const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp, emailConfirmation = false }: BookingPickerProps) => {
+const BookingPicker = ({
+  barbershop,
+  services,
+  days,
+  isAuthenticated,
+  whatsapp,
+  emailConfirmation = false,
+  calendar,
+}: BookingPickerProps) => {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(() => firstFreeDay(days));
   const [time, setTime] = useState<string>();
@@ -72,6 +85,8 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp, 
   const resumeChecked = useRef(false);
 
   const day = days.find((d) => d.date === selectedDate);
+  // Cartão de sucesso só quando há algo nele além do "Reservado!" (sem isso, só o toast, como antes).
+  const hasSuccessCard = !!whatsapp || emailConfirmation || !!calendar;
   const service = services.find((s) => s.id === serviceId);
 
   // Grade recarregada (router.refresh): o dia pode ter saído da lista e o horário pode ter sido tomado.
@@ -162,10 +177,12 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp, 
       }
 
       track("booking_confirmed", { service: service.name, weekday: day.label, hour: time });
+      // Dica de instalação (PWA_INSTALL): reservou = pode oferecer o app, mesmo na 1ª visita.
+      window.dispatchEvent(new Event(BOOKING_SUCCESS_EVENT));
       setSheetIsOpen(false);
       setTime(undefined);
-      if (whatsapp || emailConfirmation) {
-        setSuccess({ date: day.date, dayLabel: day.label, time, serviceName: service.name });
+      if (hasSuccessCard) {
+        setSuccess({ date: day.date, dayLabel: day.label, time, serviceId: service.id, serviceName: service.name });
       }
       toast(`Reservado! ${day.label} às ${time}.`, {
         action: { label: "Visualizar", onClick: () => router.push("/bookings") },
@@ -246,7 +263,7 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp, 
         <BookingCTA dayLabel={time ? day?.label : undefined} time={time} loading={submitting && !sheetIsOpen} onClick={handleCTAClick} />
       </div>
 
-      {success && (whatsapp || emailConfirmation) && (
+      {success && hasSuccessCard && (
         <section
           role="status"
           aria-labelledby="reserva-sucesso"
@@ -260,6 +277,16 @@ const BookingPicker = ({ barbershop, services, days, isAuthenticated, whatsapp, 
             <p className="text-body text-muted-foreground">
               Enviamos a confirmação para o seu e-mail. Se não encontrar, olhe no Spam e marque &apos;Não é spam&apos;.
             </p>
+          )}
+          {calendar && (
+            <AddToCalendar
+              date={success.date}
+              time={success.time}
+              serviceId={success.serviceId}
+              serviceName={success.serviceName}
+              address={calendar.address}
+              bookingsUrl={calendar.bookingsUrl}
+            />
           )}
           {whatsapp && (
             <WhatsAppButton

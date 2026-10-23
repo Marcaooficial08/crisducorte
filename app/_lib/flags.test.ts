@@ -2,11 +2,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getFlagMode,
   isAdminPanelV2Enabled,
+  isCalendarioEnabled,
   isEnabled,
   isMensalistasEnabled,
   isNewHomeEnabled,
   isNotificacoesEnabled,
   isNotificacoesEnabledForUser,
+  isPwaInstallEnabled,
+  isWebPushEnabled,
+  isWebPushEnabledForUser,
 } from "./flags";
 
 const sessionOf = (isAdmin: boolean) => ({
@@ -96,5 +100,45 @@ describe("feature flags", () => {
 
     vi.stubEnv("NOTIFICACOES", "all");
     expect(isNotificacoesEnabledForUser({ isAdmin: false })).toBe(true);
+  });
+
+  it("CALENDARIO pela sessão: admin só para quem é admin, all para todos", () => {
+    vi.stubEnv("CALENDARIO", undefined);
+    expect(isCalendarioEnabled(sessionOf(true))).toBe(false);
+
+    vi.stubEnv("CALENDARIO", "admin");
+    expect(isCalendarioEnabled(sessionOf(true))).toBe(true);
+    expect(isCalendarioEnabled(sessionOf(false))).toBe(false);
+    expect(isCalendarioEnabled(null)).toBe(false);
+
+    vi.stubEnv("CALENDARIO", "all");
+    expect(isCalendarioEnabled(sessionOf(false))).toBe(true);
+    expect(isCalendarioEnabled(null)).toBe(true);
+  });
+
+  it("PWA_INSTALL pela sessão", () => {
+    vi.stubEnv("PWA_INSTALL", undefined);
+    expect(isPwaInstallEnabled(sessionOf(true))).toBe(false);
+    vi.stubEnv("PWA_INSTALL", "admin");
+    expect(isPwaInstallEnabled(sessionOf(true))).toBe(true);
+    expect(isPwaInstallEnabled(sessionOf(false))).toBe(false);
+    vi.stubEnv("PWA_INSTALL", "all");
+    expect(isPwaInstallEnabled(null)).toBe(true);
+  });
+
+  it("WEB_PUSH pela sessão (Perfil) e pelo usuário do banco (Cron e avisos)", () => {
+    vi.stubEnv("WEB_PUSH", undefined);
+    expect(isWebPushEnabled(sessionOf(true))).toBe(false);
+    expect(isWebPushEnabledForUser({ isAdmin: true })).toBe(false);
+
+    vi.stubEnv("WEB_PUSH", "admin");
+    expect(isWebPushEnabled(sessionOf(true))).toBe(true);
+    expect(isWebPushEnabled(sessionOf(false))).toBe(false);
+    expect(isWebPushEnabledForUser({ isAdmin: true })).toBe(true);
+    expect(isWebPushEnabledForUser({ isAdmin: false })).toBe(false);
+    expect(isWebPushEnabledForUser(null)).toBe(false);
+
+    vi.stubEnv("WEB_PUSH", "all");
+    expect(isWebPushEnabledForUser({ isAdmin: false })).toBe(true);
   });
 });

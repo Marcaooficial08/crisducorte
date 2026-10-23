@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import Header from "../_components/header";
 import { authOptions } from "../_lib/auth";
-import { isNotificacoesEnabled } from "../_lib/flags";
+import { isNotificacoesEnabled, isWebPushEnabled } from "../_lib/flags";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
@@ -16,7 +16,7 @@ const CONTROLLER = "Cris du Corte";
 const WHATSAPP_LABEL = "WhatsApp (31) 97357-6347";
 const WHATSAPP_URL = "https://wa.me/5531973576347";
 const LAST_UPDATED = "16/10/2026";
-// Data da versão com o parágrafo dos e-mails (Prompt 19), mostrada junto com ele.
+// Data da versão com os parágrafos dos e-mails (Prompt 19) e das notificações no celular (Prompt 20).
 const LAST_UPDATED_NOTIFICATIONS = "21/10/2026";
 
 const WhatsAppLink = () => (
@@ -34,7 +34,10 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 
 const PrivacyPage = async () => {
   // Parágrafo dos e-mails só aparece com a flag NOTIFICACOES (mesma regra de quem recebe).
-  const showNotifications = isNotificacoesEnabled(await getServerSession(authOptions));
+  const session = await getServerSession(authOptions);
+  const showNotifications = isNotificacoesEnabled(session);
+  // Parágrafo do Web Push só com a flag WEB_PUSH (Prompt 20; texto aprovado pelo dono em 2026-10-21).
+  const showPush = isWebPushEnabled(session);
 
   return (
     <>
@@ -43,7 +46,7 @@ const PrivacyPage = async () => {
       <div className="px-page py-6 flex flex-col gap-6 max-w-2xl">
         <div className="flex flex-col gap-1">
           <h1 className="text-title font-bold">Política de Privacidade</h1>
-          <p className="text-caption text-muted-foreground">Última atualização: {showNotifications ? LAST_UPDATED_NOTIFICATIONS : LAST_UPDATED}</p>
+          <p className="text-caption text-muted-foreground">Última atualização: {showNotifications || showPush ? LAST_UPDATED_NOTIFICATIONS : LAST_UPDATED}</p>
         </div>
 
         <p className="text-body text-gray-300 leading-relaxed">
@@ -84,6 +87,13 @@ const PrivacyPage = async () => {
               barbearia). Os lembretes podem ser desligados a qualquer
               momento no Perfil ou pelo link no próprio e-mail; a confirmação e o aviso de cancelamento sempre são
               enviados, porque fazem parte do agendamento.
+            </p>
+          )}
+          {showPush && (
+            <p>
+              Se você ativar as notificações no celular, guardamos o endereço técnico de entrega que o seu navegador
+              gera para este aparelho, sem outros dados pessoais. Ele é apagado quando você desliga as notificações,
+              sai da conta neste aparelho ou exclui a conta.
             </p>
           )}
           <p>Não vendemos seus dados nem os usamos para propaganda.</p>

@@ -22,6 +22,7 @@
 | 17 · Painel do admin (bloqueios, reserva manual, métricas) | ✅ Publicado em produção | 2026-10-19 | `fase3/painel-admin` (PR #17) |
 | Incidente · Conexão de produção (transaction pooler) | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `docs/pool-producao` |
 | 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
+| 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção — previsto após o merge | 2026-10-22 | `prompt20/push` (PR único com A, B e C) |
 
 ## Ambientes
 
@@ -712,3 +713,103 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [ ] Primeira quinta depois do deploy: conferir que os lembretes saíram (`NotificationLog` com `REMINDER`/`SENT`).
 - [ ] Revisão jurídica da Política de Privacidade (continua pendente, agora com o parágrafo dos e-mails).
 - [ ] Ao atualizar o `next-auth`, conferir se o `overrides` do `nodemailer` ainda é necessário.
+
+## Prompt 20 · PR A · Adicionar ao calendário (MEL-023)
+
+**Decisões (aprovadas pelo dono em 2026-10-21):** plano do Prompt 20 em 3 PRs (A calendário → B PWA → C Web Push); calendário atrás da flag `CALENDARIO` (regra "todo visível atrás de flag"); evento com **60 minutos fixos** (mesmo no 09:00, cuja grade vai até 10:30); **nenhum merge em produção antes de sexta 23/10**, depois que o dono confirmar os primeiros lembretes reais (qui 22/10, 20h).
+
+**Feito:**
+- Flag `CALENDARIO` (`off | admin | all`, padrão `off`), `isCalendarioEnabled` em `app/_lib/flags.ts`.
+- `app/_lib/calendar.ts` (funções puras): link do Google Agenda (`dates` em UTC + `ctz=America/Sao_Paulo`) e `.ics` (RFC 5545: CRLF, linhas dobradas em 75 octetos sem cortar acento, escape de `\ ; ,` e quebra de linha, `UID` estável por dia e hora — adicionar de novo atualiza em vez de duplicar —, `VALARM` 1 hora antes). Horário de SP → UTC por `fromZonedTime`. Título "{Serviço} · Cris du Corte"; descrição "Ver ou cancelar a reserva: {NEXTAUTH_URL}/bookings" (na staging, o link é dela).
+- `GET /api/calendario?data=yyyy-MM-dd&hora=HH:mm&servico=<id>`: sem id de reserva e sem dado pessoal; valida a data real e o horário da grade (400), lê serviço e endereço da barbearia do banco (404 sem serviço), 404 com a flag desligada para quem pede. `text/calendar`, `inline` (no iPhone o Safari abre direto "Adicionar ao Calendário"), `private, no-store`.
+- `AddToCalendar` (cliente): botão "Adicionar ao calendário" (`aria-expanded`, 44px) que abre "Google Agenda" (nova aba) e "Apple / Outlook" (.ics). No cartão de sucesso da reserva (home nova), antes do WhatsApp; o cartão passa a aparecer também só com a flag do calendário. Em "Meu próximo agendamento", abaixo do cartão (fora do link para `/bookings`), inclusive para a reserva de mensalista. `getNextBooking` passa a trazer o endereço da barbearia.
+
+**Testes:**
+- Unit: `calendar.test.ts` (09:00 e 19:30 de SP em UTC com 1 hora, data/horário inválidos, link do Google, `.ics` com CRLF/UID/DTSTAMP/alarme/endereço escapado, dobra de linha com acento), `api/calendario/route.test.ts` (flag off/admin/all, 400 sem ler o banco, 404, cabeçalhos e corpo com o link da staging), `flags.test.ts`.
+- e2e `e2e/calendario.spec.ts` (`CALENDARIO=admin` no `playwright.config.ts`): admin reserva → botão no cartão (fechado, 44px) → link do Google com `dates` certas → `.ics` da rota com `DTSTART`/`DTEND` certos → mesmo botão em "Meu próximo agendamento"; cliente comum não vê o botão e a rota responde 404.
+- `vitest.config.mts`: `CALENDARIO` fixa em `off`.
+
+**Validação (local, 2026-10-21):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 251 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 41 ✅.
+
+**Teste de aceite (localhost) ✅:** aprovado pelo dono em 2026-10-21: Google Agenda com título, horário (11:30–12:30, fuso certo) e endereço; `.ics` ok; botão em "Meu próximo agendamento" ok.
+
+**Staging:** `d2bc8f6` enviado para `staging` em 2026-10-21 (autorizado pelo dono).
+
+**Produção:** publicado em produção — previsto após o merge (PR único do Prompt 20, liberado pelo dono em 2026-10-22 depois de conferir os lembretes de quinta). Sem migração. Variável nova: `CALENDARIO` (Preview: `admin`; Production: `admin` no deploy, `all` depois do aceite no iPhone).
+
+**Pendências:**
+- [x] Teste de aceite do dono no localhost ✅ em 2026-10-21.
+- [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: "Adicionar ao calendário" ok.
+- [x] Vercel Production: `CALENDARIO=admin` (criada pelo dono em 2026-10-22).
+- [ ] Vercel Production: `CALENDARIO=all` depois do aceite no iPhone (dono).
+
+## Prompt 20 · PR B · PWA: manifest, ícones, service worker e dica de instalação (MEL-023)
+
+**Decisões (aprovadas pelo dono em 2026-10-21):** SW escrito à mão (sem next-pwa/serwist); cache só de assets imutáveis, sem modo offline; manifest e `theme-color` **sempre publicados** (fora de flag); SW e dica atrás de `PWA_INSTALL`.
+
+**Feito:**
+- `app/manifest.ts` (`/manifest.webmanifest`): "Cris du Corte", `standalone`, `start_url`/`scope`/`id` `/`, `pt-BR`, fundo e tema `#15161A` (`BRAND_BACKGROUND` em `site.ts`), ícones `any` e `maskable` em 192 e 512 (`public/icons`, gerados uma vez a partir de `app/icon.png` com sharp fora do projeto; maskable com o logo em 72% do quadro, dentro da zona segura). `apple-icon.png` (180, opaco) mantido. `viewport.themeColor` e `appleWebApp` (abre sem a barra do Safari quando instalado) no `layout.tsx`.
+- Service worker (`app/_lib/pwa/service-worker.ts`, servido por `app/sw.js/route.ts` com `no-cache, no-store`): `/_next/static/*` cache-first; `/icons/*` e `/brand/*` stale-while-revalidate; **todo o resto não é interceptado** (páginas, RSC, Server Actions, `/api`, login do NextAuth, POST, `Range`). Versão = `VERCEL_GIT_COMMIT_SHA`: cada deploy instala o SW novo, que assume na hora (`skipWaiting` + `clients.claim`) e apaga os caches das versões anteriores. Com `PWA_INSTALL=off`, o `/sw.js` vira um script que apaga os caches e se desinstala (rollback sem deploy de código).
+- `SwRegister` (no layout): registra depois do `load`, em `requestIdleCallback` (Safari: `setTimeout`), só no build de produção; `updateViaCache: "none"`. Flag desligada para o usuário (ex.: `admin` e cliente comum) → remove o SW que houver.
+- `InstallHint` (home nova, com a flag; **ajuste de design do dono em 2026-10-21**): cartão compacto de 1 linha fixo no rodapé da tela (ícone + "Instale o app do Cris" + "Instalar" + ✕ com `aria-label="Agora não"`, alvos de 44px). Android/computador: "Instalar" abre o prompt nativo (`beforeinstallprompt`). iPhone/iPad (inclusive iPadOS como Mac): "Instalar" abre a linha "No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início" (`aria-expanded`). Navegador do Instagram/Facebook: nada. **Só aparece depois de uma reserva com sucesso (evento `cdc:booking-success` do BookingPicker, guardado em `cdc-booked`) ou a partir da 2ª visita** (`cdc-visits` no `localStorage`, contado 1x por sessão do navegador via `sessionStorage`; tudo com try/catch); nunca na primeira tela da primeira visita. Enquanto visível, o `body` ganha `padding-bottom` igual à altura do cartão (ResizeObserver acompanha a linha extra do iPhone), então nada fica escondido atrás dele; ao fechar, volta a zero. Some se já estiver instalado (`display-mode: standalone`/`navigator.standalone`), no `appinstalled` ou no ✕. Fixo, fora do fluxo: aparecer não desloca nada (a 1ª versão, no meio da página, empurrava o rodapé: CLS 0,011 → 0,038).
+
+**Testes:**
+- Unit: `app/_lib/pwa/install-hint.test.ts` (iPhone, iPad como Mac, Mac, Android, Instagram; standalone; 2ª visita ou reserva; 1 visita por sessão; armazenamento ausente ou que lança), `app/sw.js/route.test.ts` (cabeçalhos; `off` → script que se remove; versão do commit; cache só de `/_next/static`; sem navegação/RSC/`/api`; os dois scripts compilam), `app/manifest.test.ts`, `flags.test.ts`.
+- e2e `e2e/pwa.spec.ts` (`PWA_INSTALL=admin` no `playwright.config.ts`): manifest com ícones reais (status, tipo e tamanho lido do PNG), `theme-color`, `apple-touch-icon`; `/sw.js` sem cache; admin: SW controla a página, navegação vem da rede e chunks do SW, reserva (Server Action) funciona e a página seguinte mostra o horário ocupado; cliente comum sem SW; iPhone: 1ª visita sem dica (recarregar não conta), 2ª visita (nova aba) com cartão de 1 linha (< 70px, botões de 44px), `padding-bottom` = altura do cartão e rodapé acima dele, "Instalar" abre a instrução e o espaço cresce junto, ✕ fecha, zera o espaço e continua fechada; 1ª visita + reserva com sucesso → dica aparece; cliente comum sem dica nem na 2ª visita.
+- `vitest.config.mts`: `PWA_INSTALL` fixa em `off`.
+
+**Lighthouse 13.5 (local, `next start`, Neon dev, celular, deslogado, home nova), rodadas intercaladas `PWA_INSTALL=all` × `off`:** desempenho 85/86/85 × 85/85/84; acessibilidade 100 × 100; CLS 0,011 × 0,011; LCP ~4,3s nas duas (banco em us-east-2, como nas medições anteriores). Sem diferença do PWA; conferir no PageSpeed em produção depois do merge. Depois do ajuste de design (1ª visita, sem dica): desempenho 84–85, acessibilidade 100, CLS 0,011 (o mesmo de antes). Com a dica visível (2ª visita; o Lighthouse sempre simula a 1ª, então medido com Playwright + iPhone 13 + axe-core 4.10): CLS 0,000 e axe sem violações, com a instrução fechada e aberta.
+
+**Validação (local, 2026-10-21):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 263 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 48 ✅ (depois do ajuste de design, um de cada vez). (Integração e e2e rodados ao mesmo tempo no mesmo banco de testes se atrapalham: rodar um de cada vez.)
+
+**Produção:** publicado em produção — previsto após o merge (PR único do Prompt 20, liberado pelo dono em 2026-10-22). Sem migração. Variável nova: `PWA_INSTALL` (Preview: `admin`; Production: `admin`, depois `all`). O manifest e o `theme-color` entram para todos já no deploy.
+
+**Pendências:**
+- [x] Teste de aceite do dono no localhost (Chrome do PC) ✅ em 2026-10-21: dica, instalação em janela própria, reservar/cancelar/login no app, "Agora não", desinstalação. Pedido de ajuste de design (cartão de 1 linha, espaço no fim da página, só após reserva ou 2ª visita) feito acima.
+- [x] Vercel Preview: `PWA_INSTALL=admin` (criada pelo dono).
+- [x] Staging: `b443ed4` enviado para `staging` em 2026-10-21 (autorizado pelo dono).
+- [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: instalação do app ok.
+- [x] Vercel Production: `PWA_INSTALL=admin` (criada pelo dono em 2026-10-22).
+- [ ] Vercel Production: `PWA_INSTALL=all` depois do aceite (dono).
+- [ ] PageSpeed da home em produção depois do merge (desempenho ≥ 90, acessibilidade 100).
+
+## Prompt 20 · PR C · Web Push: notificações no celular (MEL-023)
+
+**Decisões (aprovadas pelo dono em 2026-10-21):** migração `PushSubscription` aprovada (produção por SQL manual, como no Prompt 19); a inscrição é o opt-in do lembrete por push (não depende de `emailReminders`); textos do push, do Perfil e o parágrafo da Política aprovados (spec §4.10); push de teste ao ligar; flag `WEB_PUSH` (`admin` primeiro).
+
+**Feito:**
+- Migração `20261022000000_web_push` (só aditiva): tabela `PushSubscription` (`endpoint` único, chaves `p256dh`/`auth`, `lastSuccessAt`; FK para `User` com `ON DELETE CASCADE`: excluir a conta apaga as inscrições). Aplicada no Neon dev; no Neon "Testes" pelo `migrate deploy` do setup. Produção: `prisma/sql/web-push-producao.sql` (ANTES 1.1–1.4 / MIGRAÇÃO bloco 2 / CONFERÊNCIA 3.1–3.6; 11 consultas de leitura testadas no Neon dev; nenhum UPDATE).
+- Chaves VAPID: dois pares (Preview e Production) gerados em `.env.vapid.local` (fora do Git pela regra `.env*.local`), sem imprimir no terminal. O `VAPID_SUBJECT` ficou para o dono preencher (`mailto:` da conta Gmail da barbearia).
+- Flag `WEB_PUSH` (`off | admin | all`); `isWebPushEnabled` (Perfil, Política) e `isWebPushEnabledForUser` (envio, pelo cliente da reserva).
+- Envio (`app/_lib/notifications/push.ts`, lib `web-push` 3.6.7, sem alertas novos no `npm audit`): VAPID, urgência alta, TTL entre 1 min e 24 h (lembrete: até o horário da reserva), timeout de 10 s. **Só endpoints https de serviços de push conhecidos** (FCM, Apple, Mozilla, Windows): o servidor faz POST na URL que veio do navegador, então qualquer outra é recusada (sem SSRF). 404/410 = inscrição vencida → apagada.
+- `notify.ts`: canal push ao lado do e-mail, só em dois eventos. Lembrete da véspera (`sendPushReminders`, na mesma rodada do Cron, mesmas reservas e mesma regra do mensalista com conta; 2ª tentativa na hora) e "o Cris cancelou" (1 tentativa). Key própria (`push-reminder:<reserva>`, `push-cancelled-by-admin:<reserva>`; kinds `PUSH_REMINDER`/`PUSH_CANCELLED_BY_ADMIN`, sem migração: `kind` é texto), mesma idempotência do `NotificationLog`: e-mail e push saem 1x cada e um falhar não segura o outro. Todos os aparelhos da conta recebem; `SENT` se pelo menos 1 recebeu. Sem inscrição: nada (nem registro). `NOTIFY_ALLOWLIST` vale também para o push. O Cron agora só para com `NOTIFICACOES` **e** `WEB_PUSH` desligadas.
+- Service worker: `push` (sempre mostra a notificação, com ícone e `tag` por reserva) e `notificationclick` (foca a janela do app e abre a página do aviso; só URLs do próprio site). O SW fica ligado com `PWA_INSTALL` **ou** `WEB_PUSH`; as duas `off` → o `/sw.js` se remove.
+- Server Actions `app/_actions/push-subscription.ts` (`assertUser`, flag, zod, rate limit): `savePushSubscription` (upsert por endpoint: o mesmo aparelho em outra conta passa para a atual; com `sendTest`, manda "Notificações ligadas" só para este aparelho) e `deletePushSubscription` (só da própria conta).
+- Perfil: switch "Notificações no celular" (`role="switch"`, linha inteira de 44px), com flag e chave pública configurada. Estados: ligado/desligado pela inscrição do navegador; iPhone fora do app instalado → "No iPhone, instale o app primeiro…"; sem suporte; permissão bloqueada → desabilitado com a explicação. Ligar: pede a permissão no toque, registra o SW, inscreve (troca a inscrição se a chave VAPID mudou), grava e manda o teste. Desligar: apaga no servidor e no navegador.
+- "Sair" (menu): antes do `signOut`, apaga a inscrição deste aparelho (no máximo 3 s, nunca segura o logout).
+- Política de Privacidade: parágrafo do push aprovado, só com a flag.
+
+**Testes:**
+- Unit: `push.test.ts` (endpoints aceitos/recusados, inclusive IP interno, porta, usuário na URL e domínio parecido; sem VAPID não envia; payload, VAPID, TTL; 404/410 = GONE; 500/timeout = FAILED), `push-templates.test.ts` (textos aprovados, fuso), `pwa/push-client.test.ts` (estados do switch, chave base64url), `push-subscription.test.ts` (sem sessão, flag, sem VAPID, SSRF, chaves inválidas, upsert na conta da sessão, teste só para o aparelho, inscrição vencida apagada, rate limit), `sw.js/route.test.ts` (push e clique; `WEB_PUSH` mantém o SW), `flags.test.ts`, Cron (`route.test.ts`: só para com as duas flags off).
+- Integração `tests/integration/web-push.int.test.ts` (Postgres real, `web-push` e e-mail mockados, 14 casos): lembrete e-mail + push 1x cada com keys separadas e Cron repetido sem reenviar; dois Crons ao mesmo tempo = 1 push; push com `emailReminders=false`; todos os aparelhos da conta; sem inscrição = sem registro; 410 apaga só a vencida; 404 na única = removida sem nova tentativa; 500 → 2ª tentativa e e-mail sai mesmo com o push fora; erro passageiro não apaga; `WEB_PUSH=admin`; sem VAPID nada sai; allowlist; "o Cris cancelou" e-mail + push; cliente que cancela não gera push; flags independentes; inscrição muda de conta; desligar só a própria; excluir conta apaga as inscrições.
+- e2e `e2e/web-push.spec.ts` (`WEB_PUSH=admin`, só a chave pública no `playwright.config.ts`): switch desligado com 44px; permissão bloqueada → desabilitado com a explicação; iPhone fora do app → pede para instalar; cliente comum sem switch e sem o parágrafo; admin vê o parágrafo; `/sw.js` com push e clique. A inscrição real (FCM/Apple) fica para o teste no celular.
+- `vitest.config.mts`: `WEB_PUSH=off` e `VAPID_*` vazias. `fixtures.ts`: `PushSubscription` no TRUNCATE.
+
+**Validação (local, 2026-10-21, um de cada vez):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 285 ✅ · `npm run test:int` 84 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 53 ✅. Lighthouse não repetido (a home não mudou neste PR; o SW só ganhou os handlers de push).
+
+**Teste de aceite (staging, celular) ✅:** aprovado pelo dono em 2026-10-21 para o Prompt 20 inteiro (staging com `e9cf811`): calendário ok; instalação do app ok; push "Notificações ligadas" e "Sua reserva foi cancelada" chegaram junto com o e-mail. O lembrete da véspera por push não foi testado na staging (fica para a primeira quinta em produção).
+
+**Produção:** publicado em produção — previsto após o merge (PR único do Prompt 20 com A, B e C, da `prompt20/push` para a `main`). Liberado pelo dono em 2026-10-22, depois de conferir os primeiros lembretes reais de quinta em produção (`NotificationLog`: 2 `REMINDER` `SENT`, nenhum `FAILED`) e com o Cron do dia já rodado. **Com migração**, feita antes do merge em 2026-10-22: backup `prod-2026-10-22-push.dump` (dono, fora do Git); `prisma/sql/web-push-producao.sql` aplicado à mão pelo dono no Supabase e conferido (usuários, hash, reservas e `NotificationLog` iguais; FK com `CASCADE`); `npx prisma migrate resolve --applied 20261022000000_web_push` pela 5432 (autorizado pelo dono) e `migrate status` = "6 migrations found" e "Database schema is up to date!". Variáveis de Production criadas pelo dono: `CALENDARIO=admin`, `PWA_INSTALL=admin`, `WEB_PUSH=admin` e `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` (par novo de Production do `.env.vapid.local`).
+
+**Pendências:**
+- [x] `VAPID_SUBJECT` = `mailto:` da conta Gmail da barbearia nos dois blocos do `.env.vapid.local`.
+- [x] Par VAPID de Production **refeito** em 2026-10-21 (a chave privada anterior apareceu num print e foi descartada; o par de Preview não mudou). Usar só o par novo em Production.
+- [x] Vercel Preview: `WEB_PUSH=admin` + `VAPID_*` do bloco Preview (criadas pelo dono).
+- [x] Staging: enviado para `staging` em 2026-10-21 (autorizado pelo dono).
+- [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: push "Notificações ligadas" ao ligar o switch e "Sua reserva foi cancelada" chegaram junto com o e-mail de cancelamento.
+- [ ] Lembrete da véspera por push (Cron) não conferido na staging: conferir na primeira quinta depois do deploy (`NotificationLog` com `PUSH_REMINDER`/`SENT`), junto com o lembrete por e-mail.
+- [x] Lembretes de quinta (22/10) conferidos pelo dono em produção antes do merge: 2 `REMINDER` `SENT`, nenhum `FAILED`.
+- [x] Produção (dono, antes do merge) em 2026-10-22: backup `prod-2026-10-22-push.dump`, SQL aplicado e conferido, `migrate resolve` e `migrate status` ok.
+- [x] Vercel Production: `WEB_PUSH=admin` + `VAPID_*` do bloco Production (criadas pelo dono em 2026-10-22).
+- [ ] Vercel Production: `WEB_PUSH=all` depois do aceite (dono).
+- [ ] Revisão jurídica da Política de Privacidade (agora com o parágrafo do push).

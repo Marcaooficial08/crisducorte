@@ -1,5 +1,5 @@
 import { db } from "@/app/_lib/prisma";
-import { isNotificacoesEnabledForUser } from "@/app/_lib/flags";
+import { isNotificacoesEnabledForUser, isWebPushEnabledForUser } from "@/app/_lib/flags";
 import { getCustomerName } from "@/app/_lib/customer-name";
 import { dayRange } from "@/app/_lib/availability";
 import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
@@ -7,6 +7,8 @@ import { addDays, dateOf } from "@/app/_lib/mensalista-cycle";
 import { getMensalistas } from "@/app/_lib/mensalistas";
 import { NotificationKind, acquire, expireStuck, markFailed, markSent, recordSkipped, retryableKeys } from "./log";
 import { sendEmail } from "./transport";
+import { DEFAULT_TTL_SECONDS, isPushConfigured, sendPush } from "./push";
+import { PushPayload, cancelledByCrisPush, reminderPush } from "./push-templates";
 import {
   EmailContent,
   Shop,
@@ -19,8 +21,9 @@ import {
 } from "./templates";
 import { unsubscribeOneClickUrl, unsubscribePageUrl } from "./unsubscribe-token";
 
-// Notificações por e-mail (Prompt 19). Quem chama nunca depende do resultado: tudo aqui acontece
-// depois do commit da reserva/cancelamento e os erros só ficam no NotificationLog e no log.
+// Notificações por e-mail (Prompt 19) e Web Push (Prompt 20, 2º canal: só lembrete e "o Cris cancelou").
+// Quem chama nunca depende do resultado: tudo aqui acontece depois do commit da reserva/cancelamento e
+// os erros só ficam no NotificationLog e no log. Cada canal tem a sua key: um falhar não segura o outro.
 
 export type DeliveryResult = "SENT" | "FAILED" | "SKIPPED" | "DUPLICATE";
 
@@ -98,6 +101,62 @@ const deliver = async ({ key, kind, to, content, headers, replyTo, retryable }: 
   return "SENT";
 };
 
+interface PushDelivery {
+  key: string;
+  kind: NotificationKind;
+  user: Recipient;
+  payload: PushPayload;
+  ttlSeconds: number;
+  retryable: boolean;
+}
+
+// Push para todos os aparelhos inscritos do usuário. A inscrição é o opt-in (não depende de
+// emailReminders). SENT se ao menos 1 aparelho recebeu; 404/410 apagam a inscrição vencida.
+const deliverPush = async ({ key, kind, user, payload, ttlSeconds, retryable }: PushDelivery): Promise<DeliveryResult> => {
+  if (!isPushConfigured() || !isWebPushEnabledForUser(user)) {
+    return "SKIPPED";
+  }
+  const subscriptions = await db.pushSubscription.findMany({ where: { userId: user.id }, orderBy: { createdAt: "asc" } });
+  if (subscriptions.length === 0) {
+    return "SKIPPED";
+  }
+  // Staging: com a NOTIFY_ALLOWLIST definida, só contas dela recebem (pelo e-mail da conta).
+  if (!isAllowed(user.email ?? "")) {
+    await recordSkipped(key, kind, "Fora da NOTIFY_ALLOWLIST.");
+    return "SKIPPED";
+  }
+  if (!(await acquire(key, kind))) {
+    return "DUPLICATE";
+  }
+
+  let delivered = 0;
+  let lastError: unknown = null;
+  for (const subscription of subscriptions) {
+    const result = await sendPush(subscription, payload, ttlSeconds);
+    if (result.status === "SENT") {
+      delivered += 1;
+      await db.pushSubscription.updateMany({ where: { id: subscription.id }, data: { lastSuccessAt: new Date() } });
+    } else if (result.status === "GONE") {
+      await db.pushSubscription.deleteMany({ where: { id: subscription.id } });
+    } else {
+      console.error(`Falha ao enviar ${kind}:`, result.error);
+      lastError = result.error;
+    }
+  }
+
+  if (delivered > 0) {
+    await markSent(key);
+    return "SENT";
+  }
+  if (lastError === null) {
+    // Todas as inscrições estavam vencidas (já apagadas): não há para quem tentar de novo.
+    await markFailed(key, new Error("Inscrições vencidas (404/410), removidas."), false);
+    return "SKIPPED";
+  }
+  await markFailed(key, lastError, retryable);
+  return "FAILED";
+};
+
 // Avisos ao Cris: todos os User.isAdmin com e-mail (nada de e-mail no código).
 const getAdmins = () =>
   db.user.findMany({ where: { isAdmin: true, email: { not: null } }, select: RECIPIENT_SELECT, orderBy: { id: "asc" } });
@@ -146,24 +205,43 @@ export const notifyBookingCreated = async (bookingId: string): Promise<DeliveryR
 // Senão foi o próprio cliente → aviso ao Cris. Reserva sem conta (manual, mensalista) não avisa ninguém.
 export const notifyBookingCancelled = async (booking: BookingSnapshot, byAdmin: boolean): Promise<DeliveryResult[]> => {
   const user = booking.user;
-  if (!user || !isNotificacoesEnabledForUser(user)) {
+  if (!user) {
     return [];
   }
   const shop = booking.barbershop;
   const slot = slotOf(booking);
-  const admins = await getAdmins();
   if (byAdmin) {
-    return [
-      await deliver({
-        key: `cancelled-by-admin:${booking.id}`,
-        kind: "CANCELLED_BY_ADMIN",
-        to: user.email,
-        content: () => cancelledByCrisEmail({ name: user.name, slot, shop }),
-        replyTo: replyToOf(admins),
+    const results: DeliveryResult[] = [];
+    if (isNotificacoesEnabledForUser(user)) {
+      const admins = await getAdmins();
+      results.push(
+        await deliver({
+          key: `cancelled-by-admin:${booking.id}`,
+          kind: "CANCELLED_BY_ADMIN",
+          to: user.email,
+          content: () => cancelledByCrisEmail({ name: user.name, slot, shop }),
+          replyTo: replyToOf(admins),
+          retryable: false,
+        }),
+      );
+    }
+    // Push (flag WEB_PUSH): 1 tentativa, como o e-mail (a reserva cancelada já foi apagada).
+    results.push(
+      await deliverPush({
+        key: `push-cancelled-by-admin:${booking.id}`,
+        kind: "PUSH_CANCELLED_BY_ADMIN",
+        user,
+        payload: cancelledByCrisPush({ bookingId: booking.id, slot }),
+        ttlSeconds: DEFAULT_TTL_SECONDS,
         retryable: false,
       }),
-    ];
+    );
+    return results;
   }
+  if (!isNotificacoesEnabledForUser(user)) {
+    return [];
+  }
+  const admins = await getAdmins();
   const customerName = getCustomerName(booking);
   const results: DeliveryResult[] = [];
   for (const admin of admins) {
@@ -255,6 +333,54 @@ export const sendReminders = async (date: string, now: Date): Promise<ReminderSu
   return summary;
 };
 
+export interface PushReminderSummary {
+  sent: number;
+  failed: number;
+  skipped: number;
+}
+
+// Lembrete da véspera por push (Prompt 20), na mesma rodada do Cron e para as mesmas reservas do e-mail.
+// Independente do e-mail: vale a inscrição do aparelho, não o emailReminders. 2ª tentativa na hora.
+export const sendPushReminders = async (date: string, now: Date): Promise<PushReminderSummary> => {
+  const summary: PushReminderSummary = { sent: 0, failed: 0, skipped: 0 };
+  if (!isPushConfigured()) {
+    return summary;
+  }
+  const bookings = await db.booking.findMany({
+    where: { date: { ...dayRange(date), gt: now } },
+    include: BOOKING_INCLUDE,
+    orderBy: { date: "asc" },
+  });
+  for (const booking of bookings) {
+    const user = await reminderRecipient(booking);
+    if (!user) {
+      summary.skipped += 1;
+      continue;
+    }
+    const delivery: PushDelivery = {
+      key: `push-reminder:${booking.id}`,
+      kind: "PUSH_REMINDER",
+      user,
+      payload: reminderPush({ bookingId: booking.id, slot: slotOf(booking) }),
+      // Depois do horário o lembrete não serve mais.
+      ttlSeconds: (booking.date.getTime() - now.getTime()) / 1000,
+      retryable: true,
+    };
+    let result = await deliverPush(delivery);
+    if (result === "FAILED") {
+      result = await deliverPush(delivery);
+    }
+    if (result === "SENT") {
+      summary.sent += 1;
+    } else if (result === "FAILED") {
+      summary.failed += 1;
+    } else {
+      summary.skipped += 1;
+    }
+  }
+  return summary;
+};
+
 // Confirmações e "Nova reserva" que falharam na hora: nova tentativa no Cron, se a reserva ainda vale.
 export const retryFailedConfirmations = async (now: Date): Promise<number> => {
   const keys = [...(await retryableKeys("CONFIRMATION")), ...(await retryableKeys("ADMIN_NEW_BOOKING"))];
@@ -324,6 +450,7 @@ export interface CronSummary {
   expired: number;
   retried: number;
   reminders: ReminderSummary;
+  pushReminders: PushReminderSummary;
   renewals: number;
 }
 
@@ -332,7 +459,9 @@ export interface CronSummary {
 export const runNotificationsCron = async (now: Date, date?: string): Promise<CronSummary> => {
   const expired = await expireStuck(now);
   const retried = await retryFailedConfirmations(now);
-  const reminders = await sendReminders(date ?? addDays(dateOf(now), 1), now);
+  const day = date ?? addDays(dateOf(now), 1);
+  const reminders = await sendReminders(day, now);
+  const pushReminders = await sendPushReminders(day, now);
   const renewals = await sendRenewalAlerts(now);
-  return { expired, retried, reminders, renewals };
+  return { expired, retried, reminders, pushReminders, renewals };
 };

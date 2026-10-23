@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Permanent_Marker } from "next/font/google";
 import "./globals.css";
 import Footer from "./_components/footer";
@@ -6,7 +6,9 @@ import AuthProvider from "./_providers/auth";
 import { Toaster } from "./_components/ui/sonner";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { SHARE_TITLE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./_lib/site";
+import { BRAND_BACKGROUND, SHARE_TITLE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./_lib/site";
+import { getFlagMode } from "./_lib/flags";
+import SwRegister from "./_components/sw-register";
 
 const sans = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk", display: "swap" });
 const brand = Permanent_Marker({ subsets: ["latin"], weight: "400", variable: "--font-permanent-marker", display: "swap" });
@@ -31,6 +33,16 @@ export const metadata: Metadata = {
     title: SHARE_TITLE,
     description: SITE_DESCRIPTION,
   },
+  // PWA (Prompt 20): manifest em app/manifest.ts; no iPhone instalado, abre sem a barra do Safari.
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: "black",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: BRAND_BACKGROUND,
 };
 
 export default function RootLayout({
@@ -45,6 +57,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Toaster />
           <Footer />
+          <SwRegister modes={[getFlagMode("PWA_INSTALL"), getFlagMode("WEB_PUSH")]} />
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

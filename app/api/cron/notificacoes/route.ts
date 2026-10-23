@@ -26,8 +26,9 @@ export const GET = async (request: Request) => {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
-  if (getFlagMode("NOTIFICACOES") === "off") {
-    return NextResponse.json({ skipped: "NOTIFICACOES=off" });
+  // E-mail e push têm flags próprias (cada envio confere a sua); só não roda com as duas desligadas.
+  if (getFlagMode("NOTIFICACOES") === "off" && getFlagMode("WEB_PUSH") === "off") {
+    return NextResponse.json({ skipped: "NOTIFICACOES=off e WEB_PUSH=off" });
   }
 
   // ?dia=yyyy-MM-dd: lembretes de outro dia, para testar na staging. Nunca em produção.

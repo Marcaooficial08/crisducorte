@@ -32,11 +32,19 @@ describe("Cron de notificações", () => {
     expect(mocks.runNotificationsCron).not.toHaveBeenCalled();
   });
 
-  it("flag off: responde sem enviar", async () => {
+  it("NOTIFICACOES e WEB_PUSH off: responde sem enviar", async () => {
     vi.stubEnv("NOTIFICACOES", "off");
+    vi.stubEnv("WEB_PUSH", "off");
     const response = await GET(request("", "Bearer segredo-cron"));
-    expect(await response.json()).toEqual({ skipped: "NOTIFICACOES=off" });
+    expect(await response.json()).toEqual({ skipped: "NOTIFICACOES=off e WEB_PUSH=off" });
     expect(mocks.runNotificationsCron).not.toHaveBeenCalled();
+  });
+
+  it("só WEB_PUSH ligada: roda (o push do lembrete confere a sua flag)", async () => {
+    vi.stubEnv("NOTIFICACOES", "off");
+    vi.stubEnv("WEB_PUSH", "admin");
+    expect((await GET(request("", "Bearer segredo-cron"))).status).toBe(200);
+    expect(mocks.runNotificationsCron).toHaveBeenCalledTimes(1);
   });
 
   it("autorizado: roda para amanhã (sem dia)", async () => {
