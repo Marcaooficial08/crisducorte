@@ -1,4 +1,5 @@
 import { BookingMetrics, CANCELLATIONS_SINCE_LABEL } from "@/app/_lib/metrics";
+import AnimatedNumber from "./animated-number";
 
 interface BookingMetricsCardProps {
   metrics: BookingMetrics;
@@ -17,11 +18,15 @@ const BookingMetricsCard = ({ metrics, semanas }: BookingMetricsCardProps) => {
       <dl className="grid grid-cols-2 gap-3">
         <div>
           <dt className="text-caption text-muted-foreground">Confirmadas</dt>
-          <dd className="text-title font-bold">{metrics.confirmadas}</dd>
+          <dd className="text-title font-bold">
+            <AnimatedNumber value={metrics.confirmadas} />
+          </dd>
         </div>
         <div>
           <dt className="text-caption text-muted-foreground">Canceladas</dt>
-          <dd className="text-title font-bold">{metrics.canceladas}</dd>
+          <dd className="text-title font-bold">
+            <AnimatedNumber value={metrics.canceladas} />
+          </dd>
         </div>
       </dl>
 

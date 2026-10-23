@@ -46,6 +46,8 @@
     --dur-fast: 150ms;
     --dur-base: 200ms;
     --dur-slow: 300ms;
+    /* Microinterações (flag MOTION, Prompt 21) */
+    --ease-motion: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 }
 
@@ -62,6 +64,28 @@
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Microinterações (flag MOTION, Prompt 21): só com html[data-motion="on"] e sem "reduzir movimento".
+   O resto fica nas classes `fx:` (tailwind.config.ts). */
+@media (prefers-reduced-motion: no-preference) {
+  /* Toque em qualquer botão: leve afundar. A lista inclui as propriedades do transition-colors e do
+     transition-opacity, para não tirar as transições que os botões já têm. */
+  html[data-motion="on"] button {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+  }
+  html[data-motion="on"] button:not(:disabled):active {
+    transform: scale(0.97);
+  }
+
+  /* Toast (sonner): sobe de baixo com fade em 240ms e sai descendo em 200ms. As regras do sonner usam
+     :where (especificidade zero); o arrasto continua sem transição. */
+  html[data-motion="on"] [data-sonner-toast]:not([data-swiping="true"]) {
+    transition: transform 240ms var(--ease-motion), opacity 240ms var(--ease-motion), height 240ms var(--ease-motion), box-shadow 200ms;
+  }
+  html[data-motion="on"] [data-sonner-toast][data-removed="true"]:not([data-swiping="true"]) {
+    transition: transform 200ms var(--ease-motion), opacity 200ms var(--ease-motion), height 200ms var(--ease-motion);
   }
 }
 

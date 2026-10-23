@@ -13,6 +13,8 @@ import BookingCTA from "@/app/_components/booking-cta";
 import EmptyState from "@/app/_components/empty-state";
 import WhatsAppButton from "@/app/_components/whatsapp-button";
 import AddToCalendar from "@/app/_components/add-to-calendar";
+import SuccessCheck from "@/app/_components/success-check";
+import { useMotion } from "@/app/_providers/motion";
 import { Button } from "@/app/_components/ui/button";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/app/_components/ui/sheet";
 import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
@@ -82,7 +84,10 @@ const BookingPicker = ({
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<BookingSuccess>();
+  // MOTION: a grade só anima depois de trocar de dia (nunca no primeiro carregamento, para não mexer no LCP).
+  const [daySwitched, setDaySwitched] = useState(false);
   const resumeChecked = useRef(false);
+  const motion = useMotion();
 
   const day = days.find((d) => d.date === selectedDate);
   // Cartão de sucesso só quando há algo nele além do "Reservado!" (sem isso, só o toast, como antes).
@@ -139,6 +144,9 @@ const BookingPicker = ({
   }, [days, services, isAuthenticated, router]);
 
   const selectDay = (date: string) => {
+    if (date !== selectedDate) {
+      setDaySwitched(true);
+    }
     setSelectedDate(date);
     setTime(undefined);
     setSuccess(undefined);
@@ -236,26 +244,29 @@ const BookingPicker = ({
           <h2 id="horarios-livres" className="mb-3 text-label font-bold uppercase text-muted-foreground">
             Horários livres
           </h2>
-          {day.freeCount === 0 ? (
-            <EmptyState
-              icon={CalendarXIcon}
-              title={`Todos os horários de ${weekdayName(day)} já foram reservados.`}
-              description={otherDay ? `Que tal ${weekdayName(otherDay)}?` : undefined}
-              action={
-                otherDay && (
-                  <Button variant="secondary" onClick={() => selectDay(otherDay.date)}>
-                    Ver {weekdayName(otherDay)}
-                  </Button>
-                )
-              }
-            />
-          ) : (
-            <div role="group" aria-label={`Horários de ${day.label}`} className="grid grid-cols-4 gap-2">
-              {day.slots.map((slot) => (
-                <TimeSlot key={slot.time} time={slot.time} booked={slot.booked} selected={slot.time === time} onSelect={() => selectTime(slot.time)} />
-              ))}
-            </div>
-          )}
+          {/* key pelo dia: a troca de dia remonta a grade e a animação de entrada roda de novo. */}
+          <div key={day.date} data-testid="slots-panel" className={cn(daySwitched && "fx:motion-safe:animate-slots-in")}>
+            {day.freeCount === 0 ? (
+              <EmptyState
+                icon={CalendarXIcon}
+                title={`Todos os horários de ${weekdayName(day)} já foram reservados.`}
+                description={otherDay ? `Que tal ${weekdayName(otherDay)}?` : undefined}
+                action={
+                  otherDay && (
+                    <Button variant="secondary" onClick={() => selectDay(otherDay.date)}>
+                      Ver {weekdayName(otherDay)}
+                    </Button>
+                  )
+                }
+              />
+            ) : (
+              <div role="group" aria-label={`Horários de ${day.label}`} className="grid grid-cols-4 gap-2">
+                {day.slots.map((slot) => (
+                  <TimeSlot key={slot.time} time={slot.time} booked={slot.booked} selected={slot.time === time} onSelect={() => selectTime(slot.time)} />
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       )}
 
@@ -263,45 +274,48 @@ const BookingPicker = ({
         <BookingCTA dayLabel={time ? day?.label : undefined} time={time} loading={submitting && !sheetIsOpen} onClick={handleCTAClick} />
       </div>
 
-      {success && hasSuccessCard && (
-        <section
-          role="status"
-          aria-labelledby="reserva-sucesso"
-          className="mt-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent/60 bg-accent/[0.08] p-4"
-        >
-          <p id="reserva-sucesso" className="flex items-center gap-2 font-bold">
-            <CalendarCheckIcon className="h-5 w-5 text-accent" aria-hidden="true" />
-            Reservado! {success.dayLabel} às {success.time}.
-          </p>
-          {emailConfirmation && (
-            <p className="text-body text-muted-foreground">
-              Enviamos a confirmação para o seu e-mail. Se não encontrar, olhe no Spam e marque &apos;Não é spam&apos;.
+      {/* Área de aviso sempre montada: leitores de tela anunciam o cartão que entra nela
+          (uma área que já nasce preenchida costuma não ser anunciada). */}
+      <div aria-live="polite" data-testid="booking-success-live">
+        {success && hasSuccessCard && (
+          <section
+            aria-labelledby="reserva-sucesso"
+            className="mt-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent/60 bg-accent/[0.08] p-4 fx:motion-safe:animate-card-in"
+          >
+            <p id="reserva-sucesso" className="flex items-center gap-2 font-bold">
+              {motion ? <SuccessCheck /> : <CalendarCheckIcon className="h-5 w-5 text-accent" aria-hidden="true" />}
+              Reservado! {success.dayLabel} às {success.time}.
             </p>
-          )}
-          {calendar && (
-            <AddToCalendar
-              date={success.date}
-              time={success.time}
-              serviceId={success.serviceId}
-              serviceName={success.serviceName}
-              address={calendar.address}
-              bookingsUrl={calendar.bookingsUrl}
-            />
-          )}
-          {whatsapp && (
-            <WhatsAppButton
-              phone={whatsapp.phone}
-              address={whatsapp.address}
-              serviceName={success.serviceName}
-              date={success.date}
-              time={success.time}
-            />
-          )}
-          <Link href="/bookings" className="inline-flex min-h-11 items-center justify-center text-body font-bold text-accent-soft underline underline-offset-4">
-            Ver meus agendamentos
-          </Link>
-        </section>
-      )}
+            {emailConfirmation && (
+              <p className="text-body text-muted-foreground">
+                Enviamos a confirmação para o seu e-mail. Se não encontrar, olhe no Spam e marque &apos;Não é spam&apos;.
+              </p>
+            )}
+            {calendar && (
+              <AddToCalendar
+                date={success.date}
+                time={success.time}
+                serviceId={success.serviceId}
+                serviceName={success.serviceName}
+                address={calendar.address}
+                bookingsUrl={calendar.bookingsUrl}
+              />
+            )}
+            {whatsapp && (
+              <WhatsAppButton
+                phone={whatsapp.phone}
+                address={whatsapp.address}
+                serviceName={success.serviceName}
+                date={success.date}
+                time={success.time}
+              />
+            )}
+            <Link href="/bookings" className="inline-flex min-h-11 items-center justify-center text-body font-bold text-accent-soft underline underline-offset-4">
+              Ver meus agendamentos
+            </Link>
+          </section>
+        )}
+      </div>
 
       <Sheet open={sheetIsOpen} onOpenChange={setSheetIsOpen}>
         <SheetContent className="w-full overflow-auto p-0" aria-describedby={undefined}>
@@ -359,9 +373,9 @@ const BookingPicker = ({
           )}
 
           <SheetFooter className="px-page pb-6">
-            <Button className="w-full" onClick={submit} disabled={!time || !service || submitting}>
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
-              Confirmar reserva
+            <Button className="w-full" onClick={submit} disabled={!time || !service || submitting} aria-busy={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
+              {submitting && motion ? "Reservando…" : "Confirmar reserva"}
             </Button>
           </SheetFooter>
         </SheetContent>

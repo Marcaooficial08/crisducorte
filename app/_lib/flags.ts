@@ -2,7 +2,7 @@ import { Session } from "next-auth";
 
 // Feature flags lidas de variáveis de ambiente, só no servidor.
 // Valor: off | admin | all. Ausente ou inválido = off.
-export type FlagName = "AGENDA_V2" | "NEW_HOME" | "ADMIN_PANEL_V2" | "MENSALISTAS" | "NOTIFICACOES" | "CALENDARIO" | "PWA_INSTALL" | "WEB_PUSH";
+export type FlagName = "AGENDA_V2" | "NEW_HOME" | "ADMIN_PANEL_V2" | "MENSALISTAS" | "NOTIFICACOES" | "CALENDARIO" | "PWA_INSTALL" | "WEB_PUSH" | "MOTION";
 export type FlagMode = "off" | "admin" | "all";
 
 const MODES: readonly FlagMode[] = ["off", "admin", "all"];
@@ -60,3 +60,7 @@ export const isWebPushEnabledForUser = (user: { isAdmin: boolean } | null | unde
   const mode = getFlagMode("WEB_PUSH");
   return mode === "all" || (mode === "admin" && user?.isAdmin === true);
 };
+
+// Microinterações (Prompt 21): o layout lê o modo e o MotionProvider decide no navegador (pela sessão
+// do SessionProvider, sem deixar as páginas dinâmicas). Pela sessão do servidor, quando houver.
+export const isMotionEnabled = (session: Session | null | undefined) => isEnabled("MOTION", session);

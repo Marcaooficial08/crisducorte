@@ -89,7 +89,10 @@ test("admin reserva pela home nova em 3 toques; ocupado fica riscado e desabilit
 
   // Toast + cartão de sucesso (NOTIFICACOES=admin no e2e: o admin vê o aviso do e-mail).
   await expect(page.getByText(`Reservado! ${fridayLabel} às 13:30.`).first()).toBeVisible();
-  await expect(page.getByRole("status", { name: `Reservado! ${fridayLabel} às 13:30.` })).toBeVisible();
+  // Cartão dentro da área de aviso (aria-live) que fica sempre montada.
+  await expect(
+    page.getByTestId("booking-success-live").getByRole("region", { name: `Reservado! ${fridayLabel} às 13:30.` }),
+  ).toBeVisible();
   // A grade recarrega: o horário reservado vira ocupado.
   await expect(page.getByRole("button", { name: "13:30, ocupado" })).toBeDisabled();
 

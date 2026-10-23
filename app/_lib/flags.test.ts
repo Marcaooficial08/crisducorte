@@ -5,6 +5,7 @@ import {
   isCalendarioEnabled,
   isEnabled,
   isMensalistasEnabled,
+  isMotionEnabled,
   isNewHomeEnabled,
   isNotificacoesEnabled,
   isNotificacoesEnabledForUser,
@@ -140,5 +141,17 @@ describe("feature flags", () => {
 
     vi.stubEnv("WEB_PUSH", "all");
     expect(isWebPushEnabledForUser({ isAdmin: false })).toBe(true);
+  });
+
+  it("MOTION pela sessão: padrão off; admin só para o admin; all para todos", () => {
+    vi.stubEnv("MOTION", undefined);
+    expect(getFlagMode("MOTION")).toBe("off");
+    expect(isMotionEnabled(sessionOf(true))).toBe(false);
+    vi.stubEnv("MOTION", "admin");
+    expect(isMotionEnabled(sessionOf(true))).toBe(true);
+    expect(isMotionEnabled(sessionOf(false))).toBe(false);
+    expect(isMotionEnabled(null)).toBe(false);
+    vi.stubEnv("MOTION", "all");
+    expect(isMotionEnabled(null)).toBe(true);
   });
 });

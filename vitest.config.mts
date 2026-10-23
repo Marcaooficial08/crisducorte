@@ -11,7 +11,7 @@ if (!testDatabaseUrl) {
 }
 
 // Flags fixas em off: os testes não dependem do .env local (cada teste liga a sua com vi.stubEnv).
-const FLAGS_OFF = { AGENDA_V2: "off", NEW_HOME: "off", ADMIN_PANEL_V2: "off", MENSALISTAS: "off", NOTIFICACOES: "off", CALENDARIO: "off", PWA_INSTALL: "off", WEB_PUSH: "off" };
+const FLAGS_OFF = { AGENDA_V2: "off", NEW_HOME: "off", ADMIN_PANEL_V2: "off", MENSALISTAS: "off", NOTIFICACOES: "off", CALENDARIO: "off", PWA_INSTALL: "off", WEB_PUSH: "off", MOTION: "off" };
 // E-mail nunca sai dos testes: sem credenciais do Gmail e sem allowlist herdadas do .env local.
 const NO_SMTP = { SMTP_USER: "", SMTP_PASS: "", NOTIFY_ALLOWLIST: "", CRON_SECRET: "" };
 // Push nunca sai dos testes: sem chaves VAPID (o envio é mockado onde é testado).
