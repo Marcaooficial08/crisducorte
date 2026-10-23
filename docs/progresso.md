@@ -22,6 +22,7 @@
 | 17 · Painel do admin (bloqueios, reserva manual, métricas) | ✅ Publicado em produção | 2026-10-19 | `fase3/painel-admin` (PR #17) |
 | Incidente · Conexão de produção (transaction pooler) | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `docs/pool-producao` |
 | 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
+| 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção — previsto após o merge | 2026-10-22 | `prompt20/push` (PR único com A, B e C) |
 
 ## Ambientes
 
@@ -734,12 +735,13 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Staging:** `d2bc8f6` enviado para `staging` em 2026-10-21 (autorizado pelo dono).
 
-**Produção:** publicado em produção — previsto após o merge (não antes de sexta 23/10, depois da confirmação dos lembretes). Sem migração. Variável nova: `CALENDARIO` (Preview: `admin`; Production: `admin` no deploy, `all` depois do aceite no iPhone).
+**Produção:** publicado em produção — previsto após o merge (PR único do Prompt 20, liberado pelo dono em 2026-10-22 depois de conferir os lembretes de quinta). Sem migração. Variável nova: `CALENDARIO` (Preview: `admin`; Production: `admin` no deploy, `all` depois do aceite no iPhone).
 
 **Pendências:**
 - [x] Teste de aceite do dono no localhost ✅ em 2026-10-21.
 - [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: "Adicionar ao calendário" ok.
-- [ ] Vercel Production: `CALENDARIO=admin` e depois `all` (dono).
+- [x] Vercel Production: `CALENDARIO=admin` (criada pelo dono em 2026-10-22).
+- [ ] Vercel Production: `CALENDARIO=all` depois do aceite no iPhone (dono).
 
 ## Prompt 20 · PR B · PWA: manifest, ícones, service worker e dica de instalação (MEL-023)
 
@@ -760,14 +762,15 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Validação (local, 2026-10-21):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 263 ✅ · `npm run test:int` 70 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 48 ✅ (depois do ajuste de design, um de cada vez). (Integração e e2e rodados ao mesmo tempo no mesmo banco de testes se atrapalham: rodar um de cada vez.)
 
-**Produção:** publicado em produção — previsto após o merge (não antes de sexta 23/10). Sem migração. Variável nova: `PWA_INSTALL` (Preview: `admin`; Production: `admin`, depois `all`). O manifest e o `theme-color` entram para todos já no deploy.
+**Produção:** publicado em produção — previsto após o merge (PR único do Prompt 20, liberado pelo dono em 2026-10-22). Sem migração. Variável nova: `PWA_INSTALL` (Preview: `admin`; Production: `admin`, depois `all`). O manifest e o `theme-color` entram para todos já no deploy.
 
 **Pendências:**
 - [x] Teste de aceite do dono no localhost (Chrome do PC) ✅ em 2026-10-21: dica, instalação em janela própria, reservar/cancelar/login no app, "Agora não", desinstalação. Pedido de ajuste de design (cartão de 1 linha, espaço no fim da página, só após reserva ou 2ª visita) feito acima.
 - [x] Vercel Preview: `PWA_INSTALL=admin` (criada pelo dono).
 - [x] Staging: `b443ed4` enviado para `staging` em 2026-10-21 (autorizado pelo dono).
 - [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: instalação do app ok.
-- [ ] Vercel Production: `PWA_INSTALL=admin` e depois `all` (dono).
+- [x] Vercel Production: `PWA_INSTALL=admin` (criada pelo dono em 2026-10-22).
+- [ ] Vercel Production: `PWA_INSTALL=all` depois do aceite (dono).
 - [ ] PageSpeed da home em produção depois do merge (desempenho ≥ 90, acessibilidade 100).
 
 ## Prompt 20 · PR C · Web Push: notificações no celular (MEL-023)
@@ -796,7 +799,7 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 
 **Teste de aceite (staging, celular) ✅:** aprovado pelo dono em 2026-10-21 para o Prompt 20 inteiro (staging com `e9cf811`): calendário ok; instalação do app ok; push "Notificações ligadas" e "Sua reserva foi cancelada" chegaram junto com o e-mail. O lembrete da véspera por push não foi testado na staging (fica para a primeira quinta em produção).
 
-**Produção:** publicado em produção — previsto após o merge (não antes de sexta 23/10). **Com migração:** antes do merge, backup + `prisma/sql/web-push-producao.sql` à mão no Supabase + `migrate resolve --applied 20261022000000_web_push` pela 5432 (dono). Variáveis novas: `WEB_PUSH` e `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` (par de Production do `.env.vapid.local`).
+**Produção:** publicado em produção — previsto após o merge (PR único do Prompt 20 com A, B e C, da `prompt20/push` para a `main`). Liberado pelo dono em 2026-10-22, depois de conferir os primeiros lembretes reais de quinta em produção (`NotificationLog`: 2 `REMINDER` `SENT`, nenhum `FAILED`) e com o Cron do dia já rodado. **Com migração**, feita antes do merge em 2026-10-22: backup `prod-2026-10-22-push.dump` (dono, fora do Git); `prisma/sql/web-push-producao.sql` aplicado à mão pelo dono no Supabase e conferido (usuários, hash, reservas e `NotificationLog` iguais; FK com `CASCADE`); `npx prisma migrate resolve --applied 20261022000000_web_push` pela 5432 (autorizado pelo dono) e `migrate status` = "6 migrations found" e "Database schema is up to date!". Variáveis de Production criadas pelo dono: `CALENDARIO=admin`, `PWA_INSTALL=admin`, `WEB_PUSH=admin` e `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` (par novo de Production do `.env.vapid.local`).
 
 **Pendências:**
 - [x] `VAPID_SUBJECT` = `mailto:` da conta Gmail da barbearia nos dois blocos do `.env.vapid.local`.
@@ -805,6 +808,8 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [x] Staging: enviado para `staging` em 2026-10-21 (autorizado pelo dono).
 - [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: push "Notificações ligadas" ao ligar o switch e "Sua reserva foi cancelada" chegaram junto com o e-mail de cancelamento.
 - [ ] Lembrete da véspera por push (Cron) não conferido na staging: conferir na primeira quinta depois do deploy (`NotificationLog` com `PUSH_REMINDER`/`SENT`), junto com o lembrete por e-mail.
-- [ ] Produção (dono, antes do merge e não antes de sexta): backup, SQL, `migrate resolve`, `migrate status`.
-- [ ] Vercel Production: `WEB_PUSH=admin` + `VAPID_*` do bloco Production; depois `all`.
+- [x] Lembretes de quinta (22/10) conferidos pelo dono em produção antes do merge: 2 `REMINDER` `SENT`, nenhum `FAILED`.
+- [x] Produção (dono, antes do merge) em 2026-10-22: backup `prod-2026-10-22-push.dump`, SQL aplicado e conferido, `migrate resolve` e `migrate status` ok.
+- [x] Vercel Production: `WEB_PUSH=admin` + `VAPID_*` do bloco Production (criadas pelo dono em 2026-10-22).
+- [ ] Vercel Production: `WEB_PUSH=all` depois do aceite (dono).
 - [ ] Revisão jurídica da Política de Privacidade (agora com o parágrafo do push).
