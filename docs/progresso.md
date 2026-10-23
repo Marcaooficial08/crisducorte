@@ -22,7 +22,7 @@
 | 17 · Painel do admin (bloqueios, reserva manual, métricas) | ✅ Publicado em produção | 2026-10-19 | `fase3/painel-admin` (PR #17) |
 | Incidente · Conexão de produção (transaction pooler) | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `docs/pool-producao` |
 | 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
-| 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção — previsto após o merge | 2026-10-22 | `prompt20/push` (PR único com A, B e C) |
+| 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção e liberado para todos | 2026-10-22 | `prompt20/push` (PR #21, com A, B e C) |
 
 ## Ambientes
 
@@ -741,7 +741,8 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [x] Teste de aceite do dono no localhost ✅ em 2026-10-21.
 - [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: "Adicionar ao calendário" ok.
 - [x] Vercel Production: `CALENDARIO=admin` (criada pelo dono em 2026-10-22).
-- [ ] Vercel Production: `CALENDARIO=all` depois do aceite no iPhone (dono).
+- [x] Teste de aceite em produção (conta admin do Cris) ✅ em 2026-10-22: "Adicionar ao calendário" no próximo agendamento, Google Agenda abriu certo.
+- [x] Vercel Production: `CALENDARIO=all` com redeploy (dono, 2026-10-22).
 
 ## Prompt 20 · PR B · PWA: manifest, ícones, service worker e dica de instalação (MEL-023)
 
@@ -770,8 +771,9 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [x] Staging: `b443ed4` enviado para `staging` em 2026-10-21 (autorizado pelo dono).
 - [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: instalação do app ok.
 - [x] Vercel Production: `PWA_INSTALL=admin` (criada pelo dono em 2026-10-22).
-- [ ] Vercel Production: `PWA_INSTALL=all` depois do aceite (dono).
-- [ ] PageSpeed da home em produção depois do merge (desempenho ≥ 90, acessibilidade 100).
+- [x] Teste de aceite em produção (conta admin do Cris) ✅ em 2026-10-22: app instalado no celular.
+- [x] Vercel Production: `PWA_INSTALL=all` com redeploy (dono, 2026-10-22).
+- [x] PageSpeed da home em produção (celular) ✅ em 2026-10-22: Desempenho 98, Acessibilidade 100, Práticas recomendadas 100, SEO 100.
 
 ## Prompt 20 · PR C · Web Push: notificações no celular (MEL-023)
 
@@ -807,9 +809,12 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [x] Vercel Preview: `WEB_PUSH=admin` + `VAPID_*` do bloco Preview (criadas pelo dono).
 - [x] Staging: enviado para `staging` em 2026-10-21 (autorizado pelo dono).
 - [x] Teste de aceite do dono na staging (celular) ✅ em 2026-10-21: push "Notificações ligadas" ao ligar o switch e "Sua reserva foi cancelada" chegaram junto com o e-mail de cancelamento.
-- [ ] Lembrete da véspera por push (Cron) não conferido na staging: conferir na primeira quinta depois do deploy (`NotificationLog` com `PUSH_REMINDER`/`SENT`), junto com o lembrete por e-mail.
 - [x] Lembretes de quinta (22/10) conferidos pelo dono em produção antes do merge: 2 `REMINDER` `SENT`, nenhum `FAILED`.
 - [x] Produção (dono, antes do merge) em 2026-10-22: backup `prod-2026-10-22-push.dump`, SQL aplicado e conferido, `migrate resolve` e `migrate status` ok.
 - [x] Vercel Production: `WEB_PUSH=admin` + `VAPID_*` do bloco Production (criadas pelo dono em 2026-10-22).
-- [ ] Vercel Production: `WEB_PUSH=all` depois do aceite (dono).
-- [ ] Revisão jurídica da Política de Privacidade (agora com o parágrafo do push).
+- [x] Teste de aceite em produção (conta admin do Cris) ✅ em 2026-10-22: push "Notificações ligadas" recebido no celular.
+- [x] Vercel Production: `WEB_PUSH=all` com redeploy (dono, 2026-10-22).
+- [ ] Quinta 29/10, depois das 21h: conferir no `NotificationLog` o lembrete da véspera por push (`PUSH_REMINDER` com status `SENT`); não foi testado na staging.
+- [ ] Revisão jurídica da Política de Privacidade (inclui o parágrafo do push).
+
+**Publicado em produção (2026-10-22):** PR #21 (squash `14e296c`), deploy de Production ok e `staging` alinhada à `main`. Aceite do dono em produção com a conta admin do Cris: calendário, instalação do app e push "Notificações ligadas" ok. PageSpeed da home (celular): Desempenho 98, Acessibilidade 100, Práticas recomendadas 100, SEO 100. **Liberado para todos:** `CALENDARIO`, `PWA_INSTALL` e `WEB_PUSH` trocados para `all` em Production pelo dono, com redeploy.
