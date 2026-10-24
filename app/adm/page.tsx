@@ -16,6 +16,7 @@ import { visibleBarbershopWhere } from "../_lib/barbershops";
 import { getNow } from "../_lib/schedule";
 import AdminAgenda from "./_components/admin-agenda";
 import BookingMetricsCard from "./_components/booking-metrics";
+import { adminBookingItemSelect } from "../_lib/booking-item-data";
 
 const BookingsPageAdm = async () => {
     const session = await getServerSession(authOptions);
@@ -51,11 +52,7 @@ const BookingsPageAdm = async () => {
         where: {
             date: { gte: now },
         },
-        include: {
-            service: true,
-            barbershop: true,
-            user: true,
-        },
+        select: adminBookingItemSelect,
         orderBy: { date: "asc" },
     });
 
@@ -63,11 +60,7 @@ const BookingsPageAdm = async () => {
         where: {
             date: { lt: now },
         },
-        include: {
-            service: true,
-            barbershop: true,
-            user: true,
-        },
+        select: adminBookingItemSelect,
         orderBy: { date: "desc" },
     });
 

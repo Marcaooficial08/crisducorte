@@ -79,3 +79,16 @@ test("sitemap.xml lista home, privacidade e a barbearia", async ({ request }) =>
   expect(body).toContain(`<loc>${SITE_URL}/barbershop/${FIXTURES.barbershop.id}</loc>`);
   expect(body).not.toContain("/adm");
 });
+
+// Prompt 22: headers de segurança nas páginas, nas rotas de API e no service worker.
+test("respostas trazem os headers de segurança", async ({ request }) => {
+  for (const path of ["/", "/privacidade", "/sw.js", "/manifest.webmanifest"]) {
+    const response = await request.get(path);
+    const headers = response.headers();
+    expect(headers["x-content-type-options"], path).toBe("nosniff");
+    expect(headers["x-frame-options"], path).toBe("DENY");
+    expect(headers["referrer-policy"], path).toBe("strict-origin-when-cross-origin");
+    expect(headers["content-security-policy"], path).toContain("frame-ancestors 'none'");
+    expect(headers["permissions-policy"], path).toContain("camera=()");
+  }
+});

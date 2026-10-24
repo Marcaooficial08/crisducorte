@@ -83,9 +83,10 @@ describe("reservas no banco real", () => {
     await as(clienteA, () => saveBooking(params));
     const booking = await db.booking.findFirstOrThrow();
 
-    await expect(as(clienteB, () => cancelBooking(booking.id))).rejects.toThrow(
-      "Sem permissão para cancelar esta reserva.",
-    );
+    await expect(as(clienteB, () => cancelBooking(booking.id))).resolves.toEqual({
+      success: false,
+      error: "Sem permissão para cancelar esta reserva.",
+    });
     expect(await db.booking.count()).toBe(1);
   });
 

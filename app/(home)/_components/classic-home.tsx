@@ -7,6 +7,7 @@ import Final from "./search";
 import BookingItem from "@/app/_components/booking-item";
 import { db } from "@/app/_lib/prisma";
 import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
+import { bookingItemSelect } from "@/app/_lib/booking-item-data";
 import BarbershopItem from "./barbershop-item";
 import EmptyState from "@/app/_components/empty-state";
 import { StoreIcon } from "lucide-react";
@@ -35,11 +36,7 @@ export default async function ClassicHome({ session }: ClassicHomeProps) {
           gte: weekStart,
         }
       },
-      include: {
-        service: true,
-        barbershop: true,
-        user: true,
-      },
+      select: bookingItemSelect,
       orderBy: {
         date: 'asc',
       },

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
   create: vi.fn(),
   findBlock: vi.fn(),
+  findService: vi.fn(),
   lock: vi.fn(),
   txOptions: vi.fn(),
   notifyBookingCreated: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
 vi.mock("@/app/_lib/notifications/notify", () => ({ notifyBookingCreated: mocks.notifyBookingCreated }));
 vi.mock("@/app/_lib/prisma", () => ({
   db: {
+    service: { findFirst: mocks.findService },
     $transaction: async (fn: (tx: unknown) => Promise<unknown>, options?: unknown) => {
       mocks.txOptions(options);
       return fn({
@@ -53,6 +55,37 @@ describe("saveBooking", () => {
     mocks.notifyBookingCreated.mockResolvedValue([]);
     mocks.findBlock.mockResolvedValue(null);
     mocks.lock.mockResolvedValue(1);
+    mocks.findService.mockResolvedValue({ id: "service-1" });
+  });
+
+  describe("entrada do navegador (Prompt 22)", () => {
+    beforeEach(() => {
+      mocks.getServerSession.mockResolvedValue(sessionOf("user-sessao"));
+    });
+
+    it.each([
+      ["data que não é ISO", { ...params, date: "sexta 09:00" }],
+      ["data sem fuso", { ...params, date: "2026-10-16T12:00:00" }],
+      ["serviceId vazio", { ...params, serviceId: "" }],
+      ["barbershopId enorme", { ...params, barbershopId: "x".repeat(65) }],
+      ["campo com tipo errado", { ...params, serviceId: 123 as unknown as string }],
+    ])("recusa %s sem tocar no banco", async (_label, input) => {
+      expect(await saveBooking(input)).toEqual({ success: false, code: "INVALID", error: BOOKING_ERROR_MESSAGES.INVALID });
+      expect(mocks.findService).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+    });
+
+    it("serviço de outra barbearia ou barbearia escondida: recusa sem gravar", async () => {
+      mocks.findService.mockResolvedValue(null);
+
+      expect(await saveBooking(params)).toEqual({ success: false, code: "INVALID", error: BOOKING_ERROR_MESSAGES.INVALID });
+      expect(mocks.findService).toHaveBeenCalledWith({
+        where: { id: "service-1", barbershopId: "shop-1", barbershop: expect.objectContaining({ NOT: expect.any(Array) }) },
+        select: { id: true },
+      });
+      expect(mocks.lock).not.toHaveBeenCalled();
+      expect(mocks.create).not.toHaveBeenCalled();
+    });
   });
 
   it("recusa sem sessão e não grava nada", async () => {

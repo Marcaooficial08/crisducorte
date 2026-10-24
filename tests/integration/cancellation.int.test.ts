@@ -73,20 +73,24 @@ describe("registro de cancelamento (banco real)", () => {
   it("cancelamento recusado não grava nada", async () => {
     const booking = await createBooking();
 
-    await expect(as(clienteB, () => cancelBooking(booking.id))).rejects.toThrow("Sem permissão para cancelar esta reserva.");
+    await expect(as(clienteB, () => cancelBooking(booking.id))).resolves.toEqual({
+      success: false,
+      error: "Sem permissão para cancelar esta reserva.",
+    });
 
     expect(await db.booking.count()).toBe(1);
     expect(await db.bookingCancellation.count()).toBe(0);
   });
 
-  // O segundo falha antes (reserva não encontrada) ou no delete da transação; nos dois casos não grava linha.
+  // O segundo falha antes (reserva não encontrada → { success: false }) ou no delete da transação (lança);
+  // nos dois casos não grava linha.
   it("dois cancelamentos simultâneos da mesma reserva: só 1 linha", async () => {
     const booking = await createBooking();
     mocks.getServerSession.mockResolvedValueOnce(sessionOf(clienteA)).mockResolvedValueOnce(sessionOf(admin, true));
 
     const results = await Promise.allSettled([cancelBooking(booking.id), cancelBooking(booking.id)]);
 
-    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((r) => r.status === "fulfilled" && r.value.success)).toHaveLength(1);
     expect(await db.booking.count()).toBe(0);
     expect(await db.bookingCancellation.count()).toBe(1);
   });

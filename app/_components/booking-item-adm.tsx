@@ -1,11 +1,9 @@
 "use client";
 
-import { Prisma } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Card, CardContent } from "./ui/card";
-import { format, isFuture } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { isFuture } from "date-fns";
 import {
   Sheet,
   SheetClose,
@@ -33,15 +31,10 @@ import {
 } from "./ui/alert-dialog";
 import { track } from "../_lib/track";
 import { getCustomerName } from "../_lib/customer-name";
+import { AdminBookingItemData, formatBookingDate } from "../_lib/booking-item-data";
 
 interface BookingItemAdmProps {
-  booking: Prisma.BookingGetPayload<{
-    include: {
-      service: true;
-      barbershop: true;
-      user: true;
-    };
-  }>;
+  booking: AdminBookingItemData;
 }
 
 const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
@@ -104,10 +97,10 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
 
             <div className="flex flex-col items-center justify-center flex-1 border-l border-solid border-secondary px-3">
               <p className="text-body capitalize">
-                {format(booking.date, "MMMM", { locale: ptBR })}
+                {formatBookingDate(booking.date, "MMMM")}
               </p>
-              <p className="text-display font-bold">{format(booking.date, "dd")}</p>
-              <p className="text-body text-muted-foreground">{format(booking.date, "HH:mm")}</p>
+              <p className="text-display font-bold">{formatBookingDate(booking.date, "dd")}</p>
+              <p className="text-body text-muted-foreground">{formatBookingDate(booking.date, "HH:mm")}</p>
             </div>
           </CardContent>
         </Card>
@@ -148,13 +141,13 @@ const BookingItemAdm = ({ booking }: BookingItemAdmProps) => {
               <div className="flex justify-between">
                 <span className="text-muted-foreground text-body">Data</span>
                 <span className="text-body">
-                  {format(booking.date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  {formatBookingDate(booking.date, "dd 'de' MMMM 'de' yyyy")}
                 </span>
               </div>
 
               <div className="flex justify-between">
                 <span className="text-muted-foreground text-body">Horário</span>
-                <span className="text-body font-medium">{format(booking.date, "HH:mm")}</span>
+                <span className="text-body font-medium">{formatBookingDate(booking.date, "HH:mm")}</span>
               </div>
 
               <div className="flex justify-between">

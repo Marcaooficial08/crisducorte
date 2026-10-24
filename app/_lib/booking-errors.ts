@@ -9,6 +9,7 @@ export type BookingErrorCode =
   | "RATE_LIMIT"
   | "BUSY" // fila na conexão do banco (P2028)
   | "UNAUTHENTICATED"
+  | "INVALID" // dados forjados ou desatualizados: serviço de outra barbearia, barbearia escondida
   | "NETWORK" // só no navegador: a action nem chegou ao servidor
   | "GENERIC";
 
@@ -18,6 +19,7 @@ export const BOOKING_ERROR_MESSAGES: Record<BookingErrorCode, string> = {
   RATE_LIMIT: RATE_LIMIT_MESSAGE,
   BUSY: BUSY_MESSAGE,
   UNAUTHENTICATED: "Faça login para agendar.",
+  INVALID: "Não conseguimos reservar esse serviço. Atualize a página e tente de novo.",
   NETWORK: "Sem conexão. Verifique a internet e tente de novo.",
   GENERIC: "Não conseguimos reservar agora. Tente de novo em instantes.",
 };

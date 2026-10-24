@@ -13,6 +13,7 @@ import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
 import { AGENDA_CLOSED_MESSAGE, DaySlots, TIME_ZONE, getNextServiceDays, getNow } from "@/app/_lib/schedule";
 import { getDaySlots } from "@/app/_lib/availability";
 import { getNextBooking } from "@/app/_lib/next-booking";
+import { bookingItemSelect } from "@/app/_lib/booking-item-data";
 import { isCalendarioEnabled, isMensalistasEnabled, isNotificacoesEnabled, isPwaInstallEnabled } from "@/app/_lib/flags";
 import { appUrl } from "@/app/_lib/notifications/templates";
 import BookingPicker from "./booking-picker";
@@ -51,7 +52,7 @@ const NewHome = async ({ session }: NewHomeProps) => {
     isAdmin && rangeEnd
       ? db.booking.findMany({
           where: { date: { gte: now, lt: rangeEnd } },
-          include: { service: true, barbershop: true, user: true },
+          select: bookingItemSelect,
           orderBy: { date: "asc" },
         })
       : Promise.resolve([]),

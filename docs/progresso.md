@@ -23,7 +23,8 @@
 | Incidente · Conexão de produção (transaction pooler) | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `docs/pool-producao` |
 | 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
 | 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção e liberado para todos | 2026-10-22 | `prompt20/push` (PR #21, com A, B e C) |
-| 21 · Microinterações (MOTION) | ✅ Publicado em produção — previsto após o merge | 2026-10-23 | `prompt21/motion` |
+| 21 · Microinterações (MOTION) | ✅ Publicado em produção e liberado para todos | 2026-10-23 | `prompt21/motion` (PR #23) |
+| 22 · Revisão final · PR 1 Segurança | 🟡 Em desenvolvimento | 2026-10-23 | `prompt22/seguranca` |
 
 ## Ambientes
 
@@ -855,8 +856,46 @@ Elemento LCP igual antes e depois (deslogado: `<h1>`; admin: imagem do card). `/
 
 **Pendências:**
 - [x] Aceite do dono (na staging, celular).
-- [x] Commit e staging (autorizados pelo dono em 2026-10-23).
+- [x] Commit (autorizado pelo dono em 2026-10-23). Staging só com a última branch do Prompt 22 (`prompt22/docs`).
 - [x] PR e merge (autorizados pelo dono em 2026-10-23).
 - [x] Vercel Production: `MOTION=all` criado pelo dono.
-- [ ] Conferir em produção depois do deploy (home e `/adm` com a conta admin do Cris).
-- [ ] PageSpeed da home em produção com `MOTION=all` (atual: 98/100/100/100).
+- [x] Conferir em produção depois do deploy (aceite do dono ok).
+- [x] PageSpeed da home em produção com `MOTION=all`: 95/100/100/100 (antes 98/100/100/100).
+
+**Publicado em produção (2026-10-23):** PR #23 (squash `03acb55`), deploy de Production ok e `staging` alinhada à `main`. `MOTION=all` em Production desde o merge (criado pelo dono antes). Aceite do dono em produção ok. PageSpeed da home (celular): Desempenho 95, Acessibilidade 100, Práticas recomendadas 100, SEO 100. O desempenho caiu de 98 para 95 numa medição só; no Lighthouse local, lado a lado, a branch não piorou (81 → 82 e 82,5 → 83,5). Acompanhar nas próximas medições do PageSpeed.
+
+## Prompt 22 · Revisão final
+
+**Auditoria (2026-10-23, só leitura):** plano em 7 PRs aprovado pelo dono. Ordem: 1 segurança → 2 notificações → 3 melhorias (5a, 5b, 5c) → 4 flags da home (`NEW_HOME`, `AGENDA_V2`) → 5 flags do painel (`ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO`, `MOTION`) → 6 acessibilidade e testes → 7 documentação.
+
+**Decisões (aprovadas pelo dono em 2026-10-23):**
+- Flags que viram código definitivo: `AGENDA_V2`, `NEW_HOME`, `ADMIN_PANEL_V2`, `MENSALISTAS` (depois do 5a), `CALENDARIO`, `MOTION`. Continuam como botão de desligar: `NOTIFICACOES`, `WEB_PUSH`, `PWA_INSTALL`.
+- D1: `/barbershop/[id]` vira redirecionamento permanente para `/` (PR 4).
+- D2: `/classic` sai já no PR 4 (antes dos 30 dias combinados).
+- D3: lista do `/adm` = "Próximas" + "Últimos 30 dias" (PR 5).
+- D4: `MOTION` definitivo. D5: 5a atrás de `MENSALISTAS` antes de remover a flag.
+- D6: troca do adapter do login (`@auth/prisma-adapter` → `@next-auth/prisma-adapter`) fica para o Prompt 23, junto com o Next 15.
+- D7: mensalista sem horário fixo adiado. D8: `Booking_backup_duplicates` e a linha com falha em `_prisma_migrations` ficam e são documentadas; remoção com backup no Prompt 23.
+- D9: upgrade do Next (14.2.35 não recebe mais correções de segurança) = Prompt 23.
+- 5c: texto da dica do push vai para aprovação do dono antes de publicar.
+- **Regra de publicação:** nenhum merge em produção de sexta 20h até sábado 21h (sábado é dia de movimento). Staging liberada.
+
+### PR 1 · Segurança (`prompt22/seguranca`)
+
+**Feito:**
+- Headers de segurança em todas as rotas (`next.config.mjs`): `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, CSP só com `frame-ancestors 'none'; base-uri 'self'; object-src 'none'` (sem `script-src`: com nonce todas as páginas virariam dinâmicas) e `Permissions-Policy` (câmera, microfone, localização, pagamento, USB desligados). HSTS a Vercel já manda.
+- Dados pessoais no navegador: os cartões de reserva (`BookingItem`, `BookingItemAdm`) são client components e recebiam o `User` inteiro (e-mail, `isAdmin`, `emailReminders`…). Agora as consultas usam `select` (`app/_lib/booking-item-data.ts`): cliente leva só o nome da conta; admin, nome, e-mail e foto. Vale para `/bookings`, `/adm`, home nova (reservas da semana do admin) e home antiga.
+- Fuso: data e hora dos cartões (`BookingItem`, `BookingItemAdm`, `BookingInfo`) sempre em São Paulo (`formatBookingDate`). Antes, o `format` usava o fuso de quem renderiza: o HTML do servidor (UTC na Vercel) saía com +3h e trocava na hidratação.
+- `saveBooking`: entrada validada com zod (ids até 64 caracteres, data ISO com fuso); o serviço tem de ser da barbearia e a barbearia tem de estar visível (antes dava para reservar na "Indisponivel" ou com serviço de outra barbearia chamando a action direto). Erro novo `INVALID`: "Não conseguimos reservar esse serviço. Atualize a página e tente de novo."
+- `cancelBooking`: id validado; sem sessão, reserva inexistente ou de outra pessoa devolvem `{ success: false, error }` em vez de lançar (antes viravam erro genérico); o cliente não cancela reserva que já passou ("Essa reserva já passou e não pode ser cancelada."), o admin continua podendo.
+- Dependências: `next-auth` 4.24.15 (corrige 3 avisos do Auth.js v4), `nodemailer` 10.2.1, `@next-auth/prisma-adapter` removido (não era usado).
+
+**Testes:** unit `security-headers.test.ts` (headers em todas as rotas, CSP sem `script-src`), `booking-item-data.test.ts` (`select` sem `isAdmin`/preferências; fuso de SP, inclusive sexta 23:30), `save-booking.test.ts` (entrada inválida não toca no banco; serviço de outra barbearia ou barbearia escondida recusado sem travar nem gravar), `cancel-booking.test.ts` (erros devolvidos em vez de lançados; reserva passada recusada para o cliente e permitida ao admin; id inválido não chega ao banco). Integração: `bookings` e `cancellation` passam a esperar `{ success: false, error }`. e2e `seo.spec.ts`: headers em `/`, `/privacidade`, `/sw.js` e no manifest.
+
+**Validação (local, 2026-10-23, um de cada vez):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 311 ✅ · `npm run test:int` 84 ✅ (Neon "Testes", 655s) · `npm run build` ✅ · `npm run test:e2e` 60 ✅.
+
+**Pendências:**
+- [x] Removidos `app/_components/booking-carousel.tsx` (sem uso) e `app/barbershop/page.tsx` (cópia da `/bookings` sem link; `/barbershop` passa a dar 404) — autorizado pelo dono em 2026-10-23; lint, unit e build repetidos depois.
+- [ ] Teste de aceite do dono na staging.
+- [x] Commit e staging (autorizados pelo dono em 2026-10-23).
+- [ ] PR e merge: decisão do dono depois do teste na staging.

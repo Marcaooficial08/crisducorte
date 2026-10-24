@@ -1,8 +1,7 @@
-import { Barbershop, Booking, Prisma, Service, User } from "@prisma/client";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Barbershop, Service, User } from "@prisma/client";
 import { Card, CardContent } from "./ui/card";
 import { getCustomerName } from "../_lib/customer-name";
+import { formatBookingDate } from "../_lib/booking-item-data";
 
 interface BookingInfoProps {
   booking: {
@@ -33,15 +32,13 @@ const BookingInfo = ({ booking }: BookingInfoProps) => {
             <div className="flex justify-between">
               <h3 className="text-muted-foreground text-body">Data</h3>
               <h4 className="text-body">
-                {format(booking.date, "dd 'de' MMMM", {
-                  locale: ptBR,
-                })}
+                {formatBookingDate(booking.date, "dd 'de' MMMM")}
               </h4>
             </div>
 
             <div className="flex justify-between">
               <h3 className="text-muted-foreground text-body">Horário</h3>
-              <h4 className="text-body">{format(booking.date, "HH:mm")}</h4>
+              <h4 className="text-body">{formatBookingDate(booking.date, "HH:mm")}</h4>
             </div>
           </>
         )}

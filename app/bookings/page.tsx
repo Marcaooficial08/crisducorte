@@ -4,6 +4,7 @@ import { db } from "../_lib/prisma";
 import BookingItem from "../_components/booking-item";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
+import { bookingItemSelect } from "../_lib/booking-item-data";
 import EmptyState from "../_components/empty-state";
 import { Button } from "../_components/ui/button";
 import { CalendarIcon } from "lucide-react";
@@ -26,11 +27,7 @@ const BookingsPage = async () => {
                     gte: new Date(),
                 }
             },
-            include: {
-                service: true,
-                barbershop: true,
-                user: true,
-            },
+            select: bookingItemSelect,
         }),
         db.booking.findMany({
             where: {
@@ -39,11 +36,7 @@ const BookingsPage = async () => {
                     lt: new Date(),
                 }
             },
-            include: {
-                service: true,
-                barbershop: true,
-                user: true,
-            },
+            select: bookingItemSelect,
         }),
     ]);
 

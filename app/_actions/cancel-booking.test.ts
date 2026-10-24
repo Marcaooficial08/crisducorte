@@ -25,7 +25,7 @@ vi.mock("@/app/_lib/prisma", () => ({
   },
 }));
 
-import { cancelBooking } from "./cancel-booking";
+import { CANCEL_ERRORS, cancelBooking } from "./cancel-booking";
 import { resetRateLimit } from "@/app/_lib/rate-limit";
 
 const sessionOf = (id: string, isAdmin = false) => ({
@@ -33,7 +33,9 @@ const sessionOf = (id: string, isAdmin = false) => ({
   expires: "2999-01-01T00:00:00.000Z",
 });
 
-const slotDate = new Date("2026-10-16T12:00:00.000Z");
+// Reserva futura: o cliente só cancela o que ainda não passou.
+const slotDate = new Date("2099-10-16T12:00:00.000Z");
+const pastDate = new Date("2020-10-16T12:00:00.000Z");
 
 describe("cancelBooking", () => {
   beforeEach(() => {
@@ -49,7 +51,7 @@ describe("cancelBooking", () => {
   it("recusa sem sessão", async () => {
     mocks.getServerSession.mockResolvedValue(null);
 
-    await expect(cancelBooking("booking-1")).rejects.toThrow("Não autenticado.");
+    await expect(cancelBooking("booking-1")).resolves.toEqual({ success: false, error: CANCEL_ERRORS.UNAUTHENTICATED });
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
@@ -67,7 +69,7 @@ describe("cancelBooking", () => {
   it("recusa cancelar a reserva de outro cliente", async () => {
     mocks.getServerSession.mockResolvedValue(sessionOf("cliente-b"));
 
-    await expect(cancelBooking("booking-1")).rejects.toThrow("Sem permissão para cancelar esta reserva.");
+    await expect(cancelBooking("booking-1")).resolves.toEqual({ success: false, error: CANCEL_ERRORS.FORBIDDEN });
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
@@ -116,7 +118,37 @@ describe("cancelBooking", () => {
   it("cancelamento recusado não envia aviso", async () => {
     mocks.getServerSession.mockResolvedValue(sessionOf("cliente-b"));
 
-    await expect(cancelBooking("booking-1")).rejects.toThrow();
+    await expect(cancelBooking("booking-1")).resolves.toMatchObject({ success: false });
     expect(mocks.notifyBookingCancelled).not.toHaveBeenCalled();
+  });
+
+  it("cliente não cancela reserva que já passou (histórico e métricas)", async () => {
+    mocks.findUnique.mockResolvedValue({ id: "booking-1", userId: "cliente-a", date: pastDate, source: "CLIENT" });
+    mocks.getServerSession.mockResolvedValue(sessionOf("cliente-a"));
+
+    await expect(cancelBooking("booking-1")).resolves.toEqual({ success: false, error: CANCEL_ERRORS.PAST });
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(mocks.notifyBookingCancelled).not.toHaveBeenCalled();
+  });
+
+  it("admin ainda pode apagar uma reserva passada", async () => {
+    mocks.findUnique.mockResolvedValue({ id: "booking-1", userId: "cliente-a", date: pastDate, source: "CLIENT" });
+    mocks.getServerSession.mockResolvedValue(sessionOf("admin", true));
+
+    await expect(cancelBooking("booking-1")).resolves.toEqual({ success: true });
+  });
+
+  it("reserva inexistente devolve erro em vez de lançar", async () => {
+    mocks.findUnique.mockResolvedValue(null);
+    mocks.getServerSession.mockResolvedValue(sessionOf("cliente-a"));
+
+    await expect(cancelBooking("nao-existe")).resolves.toEqual({ success: false, error: CANCEL_ERRORS.NOT_FOUND });
+  });
+
+  it.each([[""], ["x".repeat(65)], [123 as unknown as string]])("id inválido (%s) não chega ao banco", async (id) => {
+    mocks.getServerSession.mockResolvedValue(sessionOf("cliente-a"));
+
+    await expect(cancelBooking(id)).resolves.toEqual({ success: false, error: CANCEL_ERRORS.INVALID });
+    expect(mocks.findUnique).not.toHaveBeenCalled();
   });
 });

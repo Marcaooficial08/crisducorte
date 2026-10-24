@@ -1,11 +1,9 @@
 "use client";
 
-import { Prisma } from "@prisma/client";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Card, CardContent } from "./ui/card";
-import { format, isFuture } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { isFuture } from "date-fns";
 import {
   Sheet,
   SheetClose,
@@ -34,15 +32,10 @@ import {
 } from "./ui/alert-dialog";
 import BookingInfo from "./booking-info";
 import { track } from "../_lib/track";
+import { BookingItemData, formatBookingDate } from "../_lib/booking-item-data";
 
 interface BookingItemProps {
-  booking: Prisma.BookingGetPayload<{
-    include: {
-      service: true;
-      barbershop: true;
-      user: true;
-    };
-  }>;
+  booking: BookingItemData;
 }
 
 const BookingItem = ({ booking }: BookingItemProps) => {
@@ -97,10 +90,10 @@ const BookingItem = ({ booking }: BookingItemProps) => {
 
             <div className="flex flex-col items-center justify-center flex-1 border-l border-solid border-secondary px-3">
               <p className="text-body capitalize">
-                {format(booking.date, "MMMM", { locale: ptBR })}
+                {formatBookingDate(booking.date, "MMMM")}
               </p>
-              <p className="text-display font-bold">{format(booking.date, "dd")}</p>
-              <p className="text-body text-muted-foreground">{format(booking.date, "HH:mm")}</p>
+              <p className="text-display font-bold">{formatBookingDate(booking.date, "dd")}</p>
+              <p className="text-body text-muted-foreground">{formatBookingDate(booking.date, "HH:mm")}</p>
             </div>
           </CardContent>
         </Card>
