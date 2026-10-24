@@ -15,6 +15,7 @@ export interface EmailMessage {
 export class TransportNotConfiguredError extends Error {
   constructor() {
     super("SMTP não configurado (SMTP_USER/SMTP_PASS).");
+    this.name = "TransportNotConfiguredError";
   }
 }
 

@@ -18,6 +18,9 @@ import AdminAgenda from "./_components/admin-agenda";
 import BookingMetricsCard from "./_components/booking-metrics";
 import { adminBookingItemSelect } from "../_lib/booking-item-data";
 
+// Server Actions desta página enviam e-mail/push em segundo plano (waitUntil): até 60s (Prompt 22).
+export const maxDuration = 60;
+
 const BookingsPageAdm = async () => {
     const session = await getServerSession(authOptions);
 

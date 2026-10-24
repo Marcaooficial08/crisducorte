@@ -69,6 +69,20 @@ export const recordSkipped = async (key: string, kind: NotificationKind, reason:
   }
 };
 
+// Sem tempo na função para enviar (Prompt 22): nada saiu, então fica FAILED com todas as tentativas
+// sobrando e o Cron envia depois. Se a linha já existe, fica como está.
+export const DEFERRED_REASON = "Sem tempo na função; fica para o Cron.";
+
+export const deferToCron = async (key: string, kind: NotificationKind): Promise<void> => {
+  try {
+    await db.notificationLog.create({ data: { key, kind, status: "FAILED", attempts: 0, lastError: DEFERRED_REASON } });
+  } catch (error) {
+    if (!isUniqueViolation(error)) {
+      throw error;
+    }
+  }
+};
+
 // SENDING esquecido: pode ter enviado antes de cair. Fecha como FAILED sem nova tentativa.
 export const expireStuck = async (now: Date): Promise<number> => {
   const result = await db.notificationLog.updateMany({

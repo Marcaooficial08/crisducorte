@@ -10,6 +10,9 @@ import { Button } from "../_components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import Link from "next/link";
 
+// Server Actions desta página enviam e-mail/push em segundo plano (waitUntil): até 60s (Prompt 22).
+export const maxDuration = 60;
+
 const BookingsPage = async () => {
     const session = await getServerSession(authOptions);
 

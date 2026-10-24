@@ -899,3 +899,19 @@ Elemento LCP igual antes e depois (deslogado: `<h1>`; admin: imagem do card). `/
 - [ ] Teste de aceite do dono na staging.
 - [x] Commit e staging (autorizados pelo dono em 2026-10-23).
 - [ ] PR e merge: decisão do dono depois do teste na staging.
+
+### PR 2 · Notificações (`prompt22/notificacoes`)
+
+**Contexto:** 1 `NotificationLog` `ADMIN_NEW_BOOKING` FAILED "Interrompido durante o envio; não reenviado" (23/10 13:58): a linha ficou em `SENDING` e o Cron a fechou. Causa provável: a função da página morreu no meio do envio em segundo plano (o `waitUntil` vive até o `maxDuration` da função, e nenhuma página o definia). O envio é sequencial (confirmação → "Nova reserva"), com o SMTP do Gmail e `connection_limit=1`. Confirmar nos logs da Vercel (dono).
+
+**Feito:**
+- `export const maxDuration = 60` nas páginas cujas Server Actions enviam em segundo plano: home, `/bookings`, `/adm`, `/perfil` e `/barbershop/[id]` (esta sai no PR 4).
+- Reenvio só quando é seguro (`app/_lib/notifications/smtp-errors.ts`): pelo comando SMTP em que o nodemailer falhou. Antes da mensagem (conexão, login, `MAIL FROM`, `RCPT TO`, ou códigos `EAUTH`/`ECONNECTION`/`EDNS`/`ETLS`/`EENVELOPE`, ou SMTP não configurado) → pode tentar de novo. Durante ou depois do `DATA`, ou erro sem essa informação → FAILED final (pode ter sido entregue). Antes, toda falha da confirmação era reenviável (risco pequeno de duplicado).
+- Orçamento de tempo (`SEND_BUDGET_MS` = 40s desde o início da action): passou, a confirmação/"Nova reserva" que falta não começa; fica `FAILED` com `attempts = 0` e "Sem tempo na função; fica para o Cron." (`deferToCron`). Nada saiu, então o Cron envia sem risco de duplicar.
+- Log do tempo do SMTP por envio ("Notificação CONFIRMATION enviada em N ms."), sem e-mail nem texto.
+- A regra "SENDING parado → FAILED final" continua igual.
+
+**Testes:** unit `smtp-errors.test.ts` (antes/depois do `DATA`, sem comando, não configurado); `save-booking.test.ts` (início da função passado ao envio). Integração `notificacoes.int.test.ts`: erros no formato do nodemailer; falha no `DATA` não é reenviada pelo Cron; sem tempo na função → nada enviado, 2 linhas `FAILED`/0 tentativas, o Cron envia 1x cada.
+
+**Validação (local, 2026-10-23, um de cada vez):** lint ✅ · `tsc` ✅ · unit 324 ✅ · integração 86 ✅ · build ✅ · e2e 59/60 na suíte: `mensalistas.spec` passou do tempo esperando o `/adm` carregar ("Carregando agendamentos…" após 5s, lentidão do Neon "Testes"); rodado de novo sozinho, 2/2 ✅. Tratado nos PRs 5 (`/adm` mais leve) e 6 (timeouts).
+

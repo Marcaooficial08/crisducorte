@@ -6,6 +6,9 @@ import { authOptions } from "@/app/_lib/auth";
 import { isAgendaV2Enabled } from "@/app/_lib/flags";
 import { getNextServiceDays } from "@/app/_lib/schedule";
 
+// Server Actions desta página enviam e-mail/push em segundo plano (waitUntil): até 60s (Prompt 22).
+export const maxDuration = 60;
+
 interface BarbershopDetailsPageProps {
   params: {
     id?: string;

@@ -5,8 +5,9 @@ import { dayRange } from "@/app/_lib/availability";
 import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
 import { addDays, dateOf } from "@/app/_lib/mensalista-cycle";
 import { getMensalistas } from "@/app/_lib/mensalistas";
-import { NotificationKind, acquire, expireStuck, markFailed, markSent, recordSkipped, retryableKeys } from "./log";
+import { NotificationKind, acquire, deferToCron, expireStuck, markFailed, markSent, recordSkipped, retryableKeys } from "./log";
 import { sendEmail } from "./transport";
+import { failedBeforeMessage } from "./smtp-errors";
 import { DEFAULT_TTL_SECONDS, isPushConfigured, sendPush } from "./push";
 import { PushPayload, cancelledByCrisPush, reminderPush } from "./push-templates";
 import {
@@ -26,6 +27,12 @@ import { unsubscribeOneClickUrl, unsubscribePageUrl } from "./unsubscribe-token"
 // os erros só ficam no NotificationLog e no log. Cada canal tem a sua key: um falhar não segura o outro.
 
 export type DeliveryResult = "SENT" | "FAILED" | "SKIPPED" | "DUPLICATE";
+
+// Orçamento do envio depois da reserva (Prompt 22). As páginas que reservam e cancelam têm
+// maxDuration = 60s; o waitUntil vive no máximo isso. Passou do orçamento, o e-mail que falta não
+// começa: fica para o Cron (nada saiu, então não duplica). Antes, a função podia morrer no meio do
+// envio (SENDING parado → "Interrompido durante o envio; não reenviado").
+export const SEND_BUDGET_MS = 40_000;
 
 interface Recipient {
   id: string;
@@ -76,9 +83,10 @@ interface Delivery {
   headers?: Record<string, string>;
   replyTo?: string[];
   retryable: boolean;
+  deadline?: number; // Date.now() limite para começar o envio; depois disso adia para o Cron
 }
 
-const deliver = async ({ key, kind, to, content, headers, replyTo, retryable }: Delivery): Promise<DeliveryResult> => {
+const deliver = async ({ key, kind, to, content, headers, replyTo, retryable, deadline }: Delivery): Promise<DeliveryResult> => {
   if (!to) {
     return "SKIPPED";
   }
@@ -86,16 +94,25 @@ const deliver = async ({ key, kind, to, content, headers, replyTo, retryable }: 
     await recordSkipped(key, kind, "Fora da NOTIFY_ALLOWLIST.");
     return "SKIPPED";
   }
+  if (retryable && deadline !== undefined && Date.now() > deadline) {
+    await deferToCron(key, kind);
+    console.warn(`Notificação ${kind} adiada para o Cron (sem tempo na função).`);
+    return "FAILED";
+  }
   if (!(await acquire(key, kind))) {
     return "DUPLICATE";
   }
+  const started = Date.now();
   try {
     await sendEmail({ to, ...content(), headers, replyTo });
   } catch (error) {
-    console.error(`Falha ao enviar ${kind}:`, error);
-    await markFailed(key, error, retryable);
+    console.error(`Falha ao enviar ${kind} em ${Date.now() - started} ms:`, error);
+    // Só tenta de novo se a falha foi antes da mensagem: depois do DATA ela pode ter sido entregue.
+    await markFailed(key, error, retryable && failedBeforeMessage(error));
     return "FAILED";
   }
+  // Tempo do SMTP no log (sem e-mail nem texto), para diagnosticar envio lento.
+  console.info(`Notificação ${kind} enviada em ${Date.now() - started} ms.`);
   // Se gravar SENT falhar, a linha fica SENDING e o Cron fecha como FAILED sem reenviar.
   await markSent(key);
   return "SENT";
@@ -167,7 +184,8 @@ const replyToOf = (admins: Recipient[]): string[] => admins.flatMap((admin) => (
 const slotOf = (booking: BookingSnapshot) => ({ date: booking.date, serviceName: booking.service.name });
 
 // Cliente reservou pelo app: confirmação para ele e "Nova reserva" para o Cris.
-export const notifyBookingCreated = async (bookingId: string): Promise<DeliveryResult[]> => {
+export const notifyBookingCreated = async (bookingId: string, startedAt = Date.now()): Promise<DeliveryResult[]> => {
+  const deadline = startedAt + SEND_BUDGET_MS;
   const booking = await loadBookingSnapshot(bookingId);
   const user = booking?.user;
   if (!booking || !user || !isNotificacoesEnabledForUser(user)) {
@@ -184,6 +202,7 @@ export const notifyBookingCreated = async (bookingId: string): Promise<DeliveryR
       content: () => confirmationEmail({ name: user.name, slot, shop }),
       replyTo: replyToOf(admins),
       retryable: true,
+      deadline,
     }),
   ];
   const customerName = getCustomerName(booking);
@@ -195,6 +214,7 @@ export const notifyBookingCreated = async (bookingId: string): Promise<DeliveryR
         to: admin.email,
         content: () => adminNewBookingEmail({ customerName, slot, shop }),
         retryable: true,
+        deadline,
       }),
     );
   }

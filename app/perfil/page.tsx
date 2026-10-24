@@ -12,6 +12,9 @@ import DeleteAccountButton from "./_components/delete-account-button";
 import EmailRemindersSwitch from "./_components/email-reminders-switch";
 import PushSwitch from "./_components/push-switch";
 
+// Server Actions desta página enviam e-mail/push em segundo plano (waitUntil): até 60s (Prompt 22).
+export const maxDuration = 60;
+
 const ProfilePage = async () => {
   let user: SessionUser;
   const session = await getServerSession(authOptions);

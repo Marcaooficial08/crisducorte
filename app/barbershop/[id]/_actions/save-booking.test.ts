@@ -113,7 +113,7 @@ describe("saveBooking", () => {
     mocks.getServerSession.mockResolvedValue(sessionOf("user-sessao"));
 
     await expect(saveBooking(params)).resolves.toEqual({ success: true });
-    expect(mocks.notifyBookingCreated).toHaveBeenCalledWith("booking-1");
+    expect(mocks.notifyBookingCreated).toHaveBeenCalledWith("booking-1", expect.any(Number));
   });
 
   it("falha no e-mail não impede a reserva", async () => {

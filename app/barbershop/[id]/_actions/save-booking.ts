@@ -36,6 +36,8 @@ const paramsSchema = z.object({
 });
 
 export const saveBooking = async (input: SaveBookingParams): Promise<SaveBookingResult> => {
+  // Início da função: o orçamento do e-mail em segundo plano conta daqui (SEND_BUDGET_MS).
+  const startedAt = Date.now();
   try {
     // userId sempre da sessão, nunca do navegador.
     const session = await getServerSession(authOptions);
@@ -102,7 +104,7 @@ export const saveBooking = async (input: SaveBookingParams): Promise<SaveBooking
     revalidatePath("/adm");
 
     // Depois do commit e em segundo plano: falha no e-mail nunca desfaz nem atrasa a reserva.
-    runInBackground(() => notifyBookingCreated(booking.id));
+    runInBackground(() => notifyBookingCreated(booking.id, startedAt));
 
     return { success: true };
   } catch (error) {

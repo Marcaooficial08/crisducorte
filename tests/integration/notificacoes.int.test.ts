@@ -23,8 +23,14 @@ import { resetRateLimit } from "@/app/_lib/rate-limit";
 import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
 import { cancelBooking } from "@/app/_actions/cancel-booking";
 import { adminCancelBooking } from "@/app/_actions/admin/admin-cancel-booking";
-import { MAX_ATTEMPTS, STUCK_AFTER_MS } from "@/app/_lib/notifications/log";
-import { notifyBookingCreated, retryFailedConfirmations, runNotificationsCron, sendReminders } from "@/app/_lib/notifications/notify";
+import { DEFERRED_REASON, MAX_ATTEMPTS, STUCK_AFTER_MS } from "@/app/_lib/notifications/log";
+import {
+  SEND_BUDGET_MS,
+  notifyBookingCreated,
+  retryFailedConfirmations,
+  runNotificationsCron,
+  sendReminders,
+} from "@/app/_lib/notifications/notify";
 import { disableRemindersByToken } from "@/app/_lib/notifications/reminders-preference";
 import { unsubscribeToken } from "@/app/_lib/notifications/unsubscribe-token";
 import { dateToDb } from "@/app/_lib/mensalista-cycle";
@@ -60,6 +66,10 @@ const book = (user: Parameters<typeof sessionOf>[0], date = FRIDAY_1030, isAdmin
 const sentTo = () => mocks.sendEmail.mock.calls.map(([message]) => message.to as string);
 const subjects = () => mocks.sendEmail.mock.calls.map(([message]) => message.subject as string);
 const logs = () => db.notificationLog.findMany({ orderBy: { key: "asc" } });
+
+// Erros no formato do nodemailer (Prompt 22): comando SMTP em que falhou + código.
+const smtpError = (message: string, command: string, code: string) => Object.assign(new Error(message), { command, code });
+const beforeMessage = (message = "timeout") => smtpError(message, "CONN", "ETIMEDOUT");
 
 const createBookingRow = (data: { userId?: string | null; date?: Date; source?: "CLIENT" | "MANUAL" | "MENSALISTA"; mensalistaId?: string; customerName?: string }) =>
   db.booking.create({ data: { barbershopId: barbershop.id, serviceId: service.id, date: FRIDAY_1030, userId: clienteA.id, ...data } });
@@ -139,7 +149,7 @@ describe("notificações (banco real, envio mockado)", () => {
     });
 
     it("SMTP fora do ar: a reserva fica gravada, linhas FAILED e o Cron tenta de novo até o limite", async () => {
-      mocks.sendEmail.mockRejectedValue(new Error("421 <cliente-a@teste.local> tente mais tarde"));
+      mocks.sendEmail.mockRejectedValue(smtpError("421 <cliente-a@teste.local> tente mais tarde", "RCPT TO", "EENVELOPE"));
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
       await expect(book(clienteA)).resolves.toEqual({ success: true });
@@ -163,7 +173,7 @@ describe("notificações (banco real, envio mockado)", () => {
 
     it("falha só na primeira vez: o Cron reenvia e marca SENT", async () => {
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-      mocks.sendEmail.mockRejectedValueOnce(new Error("timeout"));
+      mocks.sendEmail.mockRejectedValueOnce(beforeMessage());
       await book(clienteA);
       await flush();
 
@@ -172,6 +182,41 @@ describe("notificações (banco real, envio mockado)", () => {
       expect((await logs()).map((row) => row.status)).toEqual(["SENT", "SENT"]);
       expect(mocks.sendEmail).toHaveBeenCalledTimes(3);
       consoleError.mockRestore();
+    });
+
+    it("falha depois do DATA (talvez entregue): FAILED final, o Cron não reenvia", async () => {
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      mocks.sendEmail.mockRejectedValueOnce(smtpError("timeout esperando 250", "DATA", "ETIMEDOUT"));
+      await book(clienteA);
+      await flush();
+
+      const confirmation = (await logs()).find((row) => row.kind === "CONFIRMATION");
+      expect([confirmation?.status, confirmation?.attempts]).toEqual(["FAILED", MAX_ATTEMPTS]);
+
+      await retryFailedConfirmations(THURSDAY_20H);
+      // 1ª confirmação (falhou) + "Nova reserva" na hora; o Cron não manda a confirmação de novo.
+      expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
+      consoleError.mockRestore();
+    });
+
+    it("sem tempo na função: não começa o envio, fica para o Cron e sai 1x", async () => {
+      const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const booking = await createBookingRow({});
+
+      // Função começou há mais que o orçamento: nada é enviado agora.
+      await notifyBookingCreated(booking.id, Date.now() - SEND_BUDGET_MS - 1);
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+      const deferred = await logs();
+      expect(deferred.map((row) => [row.kind, row.status, row.attempts, row.lastError])).toEqual([
+        ["ADMIN_NEW_BOOKING", "FAILED", 0, DEFERRED_REASON],
+        ["CONFIRMATION", "FAILED", 0, DEFERRED_REASON],
+      ]);
+
+      await retryFailedConfirmations(THURSDAY_20H);
+      await retryFailedConfirmations(THURSDAY_20H);
+      expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
+      expect((await logs()).map((row) => row.status)).toEqual(["SENT", "SENT"]);
+      consoleWarn.mockRestore();
     });
 
     it("NOTIFY_ALLOWLIST: só quem está na lista recebe; o resto fica SKIPPED", async () => {
@@ -301,7 +346,7 @@ describe("notificações (banco real, envio mockado)", () => {
 
     it("falha passageira: segunda tentativa na mesma rodada", async () => {
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-      mocks.sendEmail.mockRejectedValueOnce(new Error("timeout"));
+      mocks.sendEmail.mockRejectedValueOnce(beforeMessage());
       await createBookingRow({});
 
       const summary = await sendReminders(FRIDAY, THURSDAY_20H);
