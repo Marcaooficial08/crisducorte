@@ -851,9 +851,12 @@ Elemento LCP igual antes e depois (deslogado: `<h1>`; admin: imagem do card). `/
 
 **Tempo do cancelamento no `/adm`** (mesma suíte e2e antes, banco Neon "Testes", 1 rodada cada): `main` toast 2,35s / linha 5,08s; esta branch toast 2,78s / linha 6,25s. A `main` já passa de 5s e o toast (antes de qualquer código do Prompt 21) também atrasou: variação da rede até o Neon, não regressão.
 
+**Aceite do dono na staging (2026-10-23, celular, `MOTION=admin` no Preview):** grade entrando ao trocar o dia, pop do horário, ✓ desenhado, cores do `/adm` (bloqueado âmbar, reservado roxo) e pulinho das métricas ok. `MOTION=all` criado em Production pelo dono antes do merge.
+
 **Pendências:**
-- [ ] Teste de aceite do dono no localhost.
+- [x] Aceite do dono (na staging, celular).
 - [x] Commit e staging (autorizados pelo dono em 2026-10-23).
-- [ ] PR (só com autorização do dono).
-- [ ] Vercel Production: criar `MOTION=admin` (dono), conferir com a conta admin do Cris e depois `MOTION=all` com redeploy.
-- [ ] PageSpeed da home em produção depois de `MOTION=all` (atual: 98/100/100/100).
+- [x] PR e merge (autorizados pelo dono em 2026-10-23).
+- [x] Vercel Production: `MOTION=all` criado pelo dono.
+- [ ] Conferir em produção depois do deploy (home e `/adm` com a conta admin do Cris).
+- [ ] PageSpeed da home em produção com `MOTION=all` (atual: 98/100/100/100).
