@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TIME_GRID, buildDaySlots, getNextServiceDays, getNow, isBookableSlot, serviceDayLabel } from "./schedule";
+import { TIME_GRID, getNextServiceDays, getNow, serviceDayLabel } from "./schedule";
 
 // Semana de seg 12/10/2026 a dom 18/10/2026, horário de São Paulo (UTC-3).
 const at = (isoLocal: string) => new Date(`${isoLocal}-03:00`);
@@ -90,37 +90,6 @@ describe("TIME_GRID", () => {
   });
 });
 
-describe("isBookableSlot", () => {
-  const wednesday = at("2026-10-14T12:00:00");
-
-  it("aceita horário da grade na sexta e no sábado desta semana", () => {
-    expect(isBookableSlot(at("2026-10-16T09:00:00"), wednesday)).toBe(true);
-    expect(isBookableSlot(at("2026-10-17T19:30:00"), wednesday)).toBe(true);
-  });
-
-  it("recusa sábado da semana seguinte", () => {
-    expect(isBookableSlot(at("2026-10-24T09:00:00"), wednesday)).toBe(false);
-  });
-
-  it("recusa dia que não é sexta nem sábado", () => {
-    expect(isBookableSlot(at("2026-10-15T09:00:00"), wednesday)).toBe(false);
-  });
-
-  it("recusa horário fora da grade", () => {
-    expect(isBookableSlot(at("2026-10-16T10:00:00"), wednesday)).toBe(false);
-    expect(isBookableSlot(at("2026-10-16T09:00:30"), wednesday)).toBe(false);
-  });
-
-  it("recusa horário que já passou", () => {
-    expect(isBookableSlot(at("2026-10-16T09:00:00"), at("2026-10-16T14:00:00"))).toBe(false);
-    expect(isBookableSlot(at("2026-10-16T14:30:00"), at("2026-10-16T14:00:00"))).toBe(true);
-  });
-
-  it("recusa data inválida", () => {
-    expect(isBookableSlot(new Date("lixo"), wednesday)).toBe(false);
-  });
-});
-
 describe("getNow", () => {
   const FIXED = "2026-10-14T15:00:00.000Z";
 
@@ -154,29 +123,5 @@ describe("getNow", () => {
     vi.stubEnv("E2E", "1");
     vi.stubEnv("VERCEL", undefined);
     expect(Number.isNaN(getNow().getTime())).toBe(false);
-  });
-});
-
-describe("buildDaySlots", () => {
-  it("rótulo curto do dia", () => {
-    expect(serviceDayLabel("2026-10-16")).toBe("Sex 16");
-    expect(serviceDayLabel("2026-10-17")).toBe("Sáb 17");
-  });
-
-  it("marca ocupados pelo horário de São Paulo e conta os livres", () => {
-    const days = getNextServiceDays(at("2026-10-14T12:00:00"));
-    const result = buildDaySlots(days, [at("2026-10-16T10:30:00"), at("2026-10-17T19:30:00"), at("2026-10-23T10:30:00")]);
-
-    expect(result.map((day) => [day.label, day.freeCount])).toEqual([
-      ["Sex 16", 10],
-      ["Sáb 17", 10],
-    ]);
-    expect(result[0].slots.find((slot) => slot.time === "10:30")).toEqual({ time: "10:30", booked: true });
-    expect(result[0].slots.find((slot) => slot.time === "19:30")).toEqual({ time: "19:30", booked: false });
-    expect(result[1].slots.at(-1)).toEqual({ time: "19:30", booked: true });
-  });
-
-  it("no domingo não há dias", () => {
-    expect(buildDaySlots(getNextServiceDays(at("2026-10-18T12:00:00")), [])).toEqual([]);
   });
 });

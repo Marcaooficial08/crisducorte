@@ -17,7 +17,7 @@ import { saveMensalista } from "@/app/_actions/admin/save-mensalista";
 import { registerMensalistaPayment } from "@/app/_actions/admin/register-mensalista-payment";
 import { excludeMensalista, pauseMensalista, reactivateMensalista } from "@/app/_actions/admin/mensalista-status";
 import { adminCancelBooking } from "@/app/_actions/admin/admin-cancel-booking";
-import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
+import { saveBooking } from "@/app/_actions/save-booking";
 import { FIXTURES, resetDatabase, seedFixtures } from "../setup/fixtures";
 
 const { barbershop, service, clienteA, admin } = FIXTURES;
@@ -211,7 +211,6 @@ describe("mensalistas (banco real, relógio fixo)", () => {
     });
 
     it("o cliente não reserva o horário do mensalista quando a semana abre", async () => {
-      vi.stubEnv("NEW_HOME", "all");
       const pedro = await create();
       await pay(pedro.id);
 
@@ -285,7 +284,6 @@ describe("mensalistas (banco real, relógio fixo)", () => {
       expect(await itemOf(pedro.id)).toMatchObject({ status: "PAUSADO", needsRenewal: false, nextBooking: null });
 
       // Horário livre para cliente de novo.
-      vi.stubEnv("NEW_HOME", "all");
       expect(
         await as(clienteA, () => saveBooking({ barbershopId: barbershop.id, serviceId: service.id, date: at1030(FRIDAYS[1]).toISOString() })),
       ).toEqual({ success: true });

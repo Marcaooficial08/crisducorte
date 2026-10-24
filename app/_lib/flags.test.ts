@@ -6,7 +6,6 @@ import {
   isEnabled,
   isMensalistasEnabled,
   isMotionEnabled,
-  isNewHomeEnabled,
   isNotificacoesEnabled,
   isNotificacoesEnabledForUser,
   isPwaInstallEnabled,
@@ -25,48 +24,34 @@ describe("feature flags", () => {
   });
 
   it("sem variável fica off", () => {
-    vi.stubEnv("AGENDA_V2", undefined);
-    expect(getFlagMode("AGENDA_V2")).toBe("off");
-    expect(isEnabled("AGENDA_V2", sessionOf(true))).toBe(false);
+    vi.stubEnv("NOTIFICACOES", undefined);
+    expect(getFlagMode("NOTIFICACOES")).toBe("off");
+    expect(isEnabled("NOTIFICACOES", sessionOf(true))).toBe(false);
   });
 
   it("valor inválido fica off", () => {
-    vi.stubEnv("AGENDA_V2", "sim");
-    expect(getFlagMode("AGENDA_V2")).toBe("off");
-    expect(isEnabled("AGENDA_V2", sessionOf(true))).toBe(false);
+    vi.stubEnv("NOTIFICACOES", "sim");
+    expect(getFlagMode("NOTIFICACOES")).toBe("off");
+    expect(isEnabled("NOTIFICACOES", sessionOf(true))).toBe(false);
   });
 
   it("off desliga para todos", () => {
-    vi.stubEnv("AGENDA_V2", "off");
-    expect(isEnabled("AGENDA_V2", sessionOf(true))).toBe(false);
-    expect(isEnabled("AGENDA_V2", sessionOf(false))).toBe(false);
+    vi.stubEnv("NOTIFICACOES", "off");
+    expect(isEnabled("NOTIFICACOES", sessionOf(true))).toBe(false);
+    expect(isEnabled("NOTIFICACOES", sessionOf(false))).toBe(false);
   });
 
   it("admin liga só para quem tem isAdmin", () => {
-    vi.stubEnv("AGENDA_V2", "admin");
-    expect(isEnabled("AGENDA_V2", sessionOf(true))).toBe(true);
-    expect(isEnabled("AGENDA_V2", sessionOf(false))).toBe(false);
-    expect(isEnabled("AGENDA_V2", null)).toBe(false);
+    vi.stubEnv("NOTIFICACOES", "admin");
+    expect(isEnabled("NOTIFICACOES", sessionOf(true))).toBe(true);
+    expect(isEnabled("NOTIFICACOES", sessionOf(false))).toBe(false);
+    expect(isEnabled("NOTIFICACOES", null)).toBe(false);
   });
 
   it("all liga para todos, inclusive sem login", () => {
-    vi.stubEnv("AGENDA_V2", " ALL ");
-    expect(isEnabled("AGENDA_V2", sessionOf(false))).toBe(true);
-    expect(isEnabled("AGENDA_V2", null)).toBe(true);
-  });
-
-  it("NEW_HOME=admin: home nova só para o admin", () => {
-    vi.stubEnv("NEW_HOME", "admin");
-    expect(isNewHomeEnabled(sessionOf(true))).toBe(true);
-    expect(isNewHomeEnabled(sessionOf(false))).toBe(false);
-    expect(isNewHomeEnabled(null)).toBe(false);
-  });
-
-  it("NEW_HOME independe de AGENDA_V2", () => {
-    vi.stubEnv("NEW_HOME", "all");
-    vi.stubEnv("AGENDA_V2", "off");
-    expect(isNewHomeEnabled(null)).toBe(true);
-    expect(isEnabled("AGENDA_V2", null)).toBe(false);
+    vi.stubEnv("NOTIFICACOES", " ALL ");
+    expect(isEnabled("NOTIFICACOES", sessionOf(false))).toBe(true);
+    expect(isEnabled("NOTIFICACOES", null)).toBe(true);
   });
 
   it("ADMIN_PANEL_V2: padrão off; admin ou all ligam para o admin", () => {

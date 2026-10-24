@@ -34,7 +34,7 @@ const addDays = (isoDate: string, days: number) => {
  * a agenda abre na segunda-feira só para a sexta e o sábado daquela semana.
  * Seg–qui: sexta e sábado. Sexta: sexta (horários futuros) e sábado. Sábado: só o sábado
  * (horários futuros). Domingo: nenhum dia. Dia sem horário futuro sai da lista.
- * Usada na tela e no saveBooking quando a flag AGENDA_V2 está ligada.
+ * Usada na home, no saveBooking e no painel (getSlotStatus).
  */
 export const getNextServiceDays = (now: Date): ServiceDay[] => {
   const today = formatInTimeZone(now, TIME_ZONE, "yyyy-MM-dd");
@@ -92,28 +92,4 @@ export interface DaySlots {
   slots: DaySlot[];
 }
 
-// Horários de cada dia liberado, marcando os já reservados (comparados no fuso de São Paulo).
-export const buildDaySlots = (days: ServiceDay[], bookedDates: Date[]): DaySlots[] => {
-  const booked = new Set(bookedDates.map((date) => formatInTimeZone(date, TIME_ZONE, "yyyy-MM-dd HH:mm")));
-  return days.map((day) => {
-    const slots = day.times.map((time) => ({ time, booked: booked.has(`${day.date} ${time}`) }));
-    return {
-      date: day.date,
-      label: serviceDayLabel(day.date),
-      freeCount: slots.filter((slot) => !slot.booked).length,
-      slots,
-    };
-  });
-};
-
 export const SLOT_UNAVAILABLE_MESSAGE = "Esse horário não está mais disponível.";
-
-// O horário pedido é um dos liberados agora? (dia liberado, horário da grade, ainda por vir)
-export const isBookableSlot = (slot: Date, now: Date): boolean => {
-  if (Number.isNaN(slot.getTime()) || slot.getUTCSeconds() !== 0 || slot.getUTCMilliseconds() !== 0) {
-    return false;
-  }
-  const date = formatInTimeZone(slot, TIME_ZONE, "yyyy-MM-dd");
-  const time = formatInTimeZone(slot, TIME_ZONE, "HH:mm");
-  return getNextServiceDays(now).some((day) => day.date === date && day.times.includes(time));
-};

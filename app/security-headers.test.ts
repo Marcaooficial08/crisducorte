@@ -20,3 +20,13 @@ describe("headers de segurança", () => {
     expect(byKey["Permissions-Policy"]).toContain("camera=()");
   });
 });
+
+// Prompt 22 (D1, D2): a página da barbearia e a home antiga redirecionam para a home, permanente.
+describe("redirecionamentos", () => {
+  it("/barbershop/:id e /classic vão para /", async () => {
+    expect(await nextConfig.redirects?.()).toEqual([
+      { source: "/barbershop/:id", destination: "/", permanent: true },
+      { source: "/classic", destination: "/", permanent: true },
+    ]);
+  });
+});

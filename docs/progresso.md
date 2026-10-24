@@ -927,3 +927,18 @@ Elemento LCP igual antes e depois (deslogado: `<h1>`; admin: imagem do card). `/
 
 **Validação (local, 2026-10-23, um de cada vez):** lint ✅ · `tsc` ✅ · unit 330 ✅ · integração 86 ✅ · build ✅ · e2e 61 ✅.
 
+### PR 4 · Flags da home: `NEW_HOME` e `AGENDA_V2` viram código (`prompt22/flags-home`)
+
+**Feito:**
+- Home nova é a única home; a regra da agenda (sexta e sábado da semana, grade fixa, só horário por vir) vale sempre no `saveBooking` (`getSlotStatus`), para cliente e admin.
+- D1: `/barbershop/[id]` → redirecionamento permanente (308) para `/` (`next.config.mjs`). D2: `/classic` removido e também redirecionado para `/`.
+- `saveBooking` mudou de lugar: `app/barbershop/[id]/_actions/` → `app/_actions/save-booking.ts` (a rota saiu).
+- Sitemap só com home e privacidade; `/classic` saiu do `robots.txt`; `images.remotePatterns` (`utfs.io`) removido (nenhuma imagem remota com `next/image`).
+- `AGENDA_V2` e `NEW_HOME` saíram de `flags.ts`, `.env.example`, `vitest.config.mts` e `playwright.config.ts`. **Vercel (dono):** as duas variáveis podem ser apagadas em Production e Preview depois do merge (o código não lê mais).
+
+**Removido:** `app/classic/page.tsx`; `app/barbershop/[id]/page.tsx`, `_components/service-item.tsx`, `_components/barbershop-info.tsx`, `_actions/get-day-bookings.ts` (+ teste); `app/(home)/_components/classic-home.tsx`, `search.tsx`, `barbershop-item.tsx`; `app/_components/ui/form.tsx`, `ui/calendar.tsx`; `isBookableSlot` e `buildDaySlots` (`schedule.ts`, + testes); `isAgendaV2Enabled`, `isNewHomeEnabled`; dependências `react-hook-form`, `@hookform/resolvers`, `react-day-picker`.
+
+**Testes:** unit `save-booking.test.ts` (regra sempre ligada, relógio fixo), `flags.test.ts` (exemplos com `NOTIFICACOES`), `schedule.test.ts`, `security-headers.test.ts` (redirecionamentos). Integração: `agenda-v2.int.test.ts` → `agenda.int.test.ts`; `bookings` e `notificacoes` com relógio fixo (quarta 02/01/2030); `admin-panel` sem o caminho "flags desligadas" e com `getTakenInstants` no lugar do `getDayBookings`. e2e: `fluxos`, `estados` (sábado lotado sugere a sexta) e `acessibilidade` (44px e 390px) passam a usar a home; `home-nova` sem `/classic`; `admin-painel` sem a `/barbershop`; `seo` com sitemap novo e os dois 308.
+
+**Validação (local, 2026-10-23, um de cada vez):** lint ✅ · `tsc` ✅ · unit 315 ✅ · integração 86 ✅ · build ✅ · e2e 62 ✅.
+

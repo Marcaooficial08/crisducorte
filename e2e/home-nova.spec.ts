@@ -3,7 +3,7 @@ import { FIXTURES } from "../tests/setup/fixtures";
 import { E2E, testDb } from "./db";
 import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs, waitForServerActions } from "./helpers";
 
-// e2e roda com NEW_HOME=all e o relógio do servidor (SCHEDULE_NOW) numa quarta futura.
+// e2e roda com o relógio do servidor (SCHEDULE_NOW) numa quarta futura.
 const { barbershop, service, clienteA, admin } = FIXTURES;
 const { clienteC } = E2E;
 
@@ -27,20 +27,16 @@ const cleanUp = async () => {
 
 test.afterAll(cleanUp);
 
-test("cliente comum vê a home nova e a antiga em /classic", async ({ page, context }) => {
+test("cliente comum vê a home (sem as listas da home antiga)", async ({ page, context }) => {
   await loginAs(context, clienteA.sessionToken);
   await gotoLoggedIn(page, "/", clienteA.id);
   await expect(page.getByRole("heading", { level: 1, name: "Olá, Cliente!" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Escolha o dia" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Recomendados" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Reservas da semana (admin)" })).toHaveCount(0);
-
-  await page.goto("/classic");
-  await expect(page).toHaveURL(/\/classic$/);
-  await expect(page.getByRole("heading", { name: "Recomendados" })).toBeVisible();
 });
 
-test("admin vê a home nova e a antiga em /classic", async ({ page, context }) => {
+test("admin vê a home com endereço, dias e o CTA desabilitado", async ({ page, context }) => {
   await loginAs(context, admin.sessionToken);
   await gotoLoggedIn(page, "/", admin.id);
   await expect(page.getByRole("heading", { level: 1, name: "Olá, Admin!" })).toBeVisible();
@@ -51,10 +47,6 @@ test("admin vê a home nova e a antiga em /classic", async ({ page, context }) =
   // Sem busca e sem as listas antigas.
   await expect(page.getByRole("heading", { name: "Recomendados" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Populares" })).toHaveCount(0);
-
-  await page.goto("/classic");
-  await expect(page).toHaveURL(/\/classic$/);
-  await expect(page.getByRole("heading", { name: "Recomendados" })).toBeVisible();
 });
 
 test("admin reserva pela home nova em 3 toques; ocupado fica riscado e desabilitado", async ({ page, context }) => {

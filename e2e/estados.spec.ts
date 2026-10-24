@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { FIXTURES } from "../tests/setup/fixtures";
 import { E2E, testDb } from "./db";
-import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs, waitForServerActions } from "./helpers";
+import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs } from "./helpers";
 
 const { barbershop, service, clienteA, admin } = FIXTURES;
 
@@ -38,24 +38,13 @@ test("sábado lotado sugere a sexta", async ({ page, context }) => {
     await db.$disconnect();
   }
 
+  // Home: o sábado lotado mostra o aviso e oferece a sexta (relógio do servidor numa quarta futura).
   await loginAs(context, clienteA.sessionToken);
-  await page.clock.setFixedTime(wednesday);
-  await gotoLoggedIn(page, `/barbershop/${barbershop.id}`, clienteA.id);
-  await page.getByRole("button", { name: "Reservar" }).first().click();
-  const sheet = page.getByRole("dialog");
-  await expect(sheet.getByText("Fazer Reserva")).toBeVisible();
-  if (saturday.getUTCMonth() !== wednesday.getUTCMonth()) {
-    await sheet.getByRole("button", { name: "Go to next month" }).click();
-  }
+  await gotoLoggedIn(page, "/", clienteA.id);
+  await page.getByRole("button", { name: new RegExp(`^Sáb ${saturday.getUTCDate()}`) }).click();
+  await expect(page.getByText("Todos os horários de sábado já foram reservados.")).toBeVisible();
+  await expect(page.getByText("Que tal sexta?")).toBeVisible();
 
-  const saturdayLoaded = waitForServerActions(page);
-  await sheet.getByRole("gridcell", { name: String(saturday.getUTCDate()), exact: true, disabled: false }).click();
-  await saturdayLoaded;
-  await expect(sheet.getByText("Todos os horários de sábado já foram reservados.")).toBeVisible();
-  await expect(sheet.getByText("Que tal sexta?")).toBeVisible();
-
-  const fridayLoaded = waitForServerActions(page);
-  await sheet.getByRole("button", { name: "Ver sexta" }).click();
-  await fridayLoaded;
-  await expect(sheet.getByRole("button", { name: "19:30" })).toBeVisible();
+  await page.getByRole("button", { name: "Ver sexta" }).click();
+  await expect(page.getByRole("button", { name: "19:30", exact: true })).toBeVisible();
 });

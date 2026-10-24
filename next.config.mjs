@@ -11,13 +11,12 @@ export const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["date-fns-tz"],
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "utfs.io",
-      },
-    ],
+  // Prompt 22 (D1, D2): a página da barbearia e a home antiga saíram; links antigos e o Google caem na home.
+  async redirects() {
+    return [
+      { source: "/barbershop/:id", destination: "/", permanent: true },
+      { source: "/classic", destination: "/", permanent: true },
+    ];
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

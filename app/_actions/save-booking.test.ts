@@ -56,6 +56,14 @@ describe("saveBooking", () => {
     mocks.findBlock.mockResolvedValue(null);
     mocks.lock.mockResolvedValue(1);
     mocks.findService.mockResolvedValue({ id: "service-1" });
+    // Relógio: quarta 14/10/2026 12:00 em SP; params é a sexta 16 às 09:00 (liberada).
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-14T15:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
   });
 
   describe("entrada do navegador (Prompt 22)", () => {
@@ -203,51 +211,20 @@ describe("saveBooking", () => {
     expect(mocks.create).toHaveBeenCalledTimes(10);
   });
 
-  describe("flag AGENDA_V2", () => {
+  describe("regra da agenda (sempre ligada desde o Prompt 22)", () => {
     // Quarta 14/10/2026 12:00 em São Paulo: liberados sexta 16 e sábado 17.
     const outOfRule = { ...params, date: "2026-10-24T12:00:00.000Z" }; // sábado seguinte, 09:00 SP
-    const valid = { ...params, date: "2026-10-16T12:00:00.000Z" }; // sexta 16, 09:00 SP
 
-    beforeEach(() => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      vi.setSystemTime(new Date("2026-10-14T15:00:00.000Z"));
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-      vi.unstubAllEnvs();
-    });
-
-    it("off: aceita como hoje, mesmo fora da regra nova", async () => {
-      vi.stubEnv("AGENDA_V2", "off");
-      mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
-
-      expect(await saveBooking(outOfRule)).toEqual({ success: true });
-    });
-
-    it("admin: valida para o admin e não para o cliente comum", async () => {
-      vi.stubEnv("AGENDA_V2", "admin");
-
-      mocks.getServerSession.mockResolvedValueOnce(sessionOf("admin-1", true));
-      expect(await saveBooking(outOfRule)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
-
-      mocks.getServerSession.mockResolvedValueOnce(sessionOf("user-1"));
-      expect(await saveBooking(outOfRule)).toEqual({ success: true });
-      expect(mocks.create).toHaveBeenCalledTimes(1);
-    });
-
-    it("all: recusa horário bloqueado (SlotBlock)", async () => {
-      vi.stubEnv("AGENDA_V2", "all");
+    it("recusa horário bloqueado (SlotBlock)", async () => {
       mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
       mocks.findBlock.mockResolvedValue({ id: "block-1" });
 
-      expect(await saveBooking(valid)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
-      expect(mocks.findBlock).toHaveBeenCalledWith({ where: { date: new Date(valid.date) }, select: { id: true } });
+      expect(await saveBooking(params)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
+      expect(mocks.findBlock).toHaveBeenCalledWith({ where: { date: new Date(params.date) }, select: { id: true } });
       expect(mocks.create).not.toHaveBeenCalled();
     });
 
-    it("all: recusa horário com segundos", async () => {
-      vi.stubEnv("AGENDA_V2", "all");
+    it("recusa horário com segundos", async () => {
       mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
 
       expect(await saveBooking({ ...params, date: "2026-10-16T12:00:30.000Z" })).toEqual({
@@ -258,43 +235,15 @@ describe("saveBooking", () => {
       expect(mocks.create).not.toHaveBeenCalled();
     });
 
-    it("all: recusa fora da regra e aceita horário liberado", async () => {
-      vi.stubEnv("AGENDA_V2", "all");
-      mocks.getServerSession.mockResolvedValue(sessionOf("user-1"));
-
+    it("recusa fora da regra para todos (cliente e admin) e aceita horário liberado", async () => {
+      mocks.getServerSession.mockResolvedValueOnce(sessionOf("user-1"));
+      expect(await saveBooking(outOfRule)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
+      mocks.getServerSession.mockResolvedValueOnce(sessionOf("admin-1", true));
       expect(await saveBooking(outOfRule)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
       expect(mocks.create).not.toHaveBeenCalled();
-      expect(await saveBooking(valid)).toEqual({ success: true });
-    });
-  });
 
-  describe("flag NEW_HOME", () => {
-    const outOfRule = { ...params, date: "2026-10-24T12:00:00.000Z" }; // sábado seguinte, 09:00 SP
-    const valid = { ...params, date: "2026-10-16T12:00:00.000Z" }; // sexta 16, 09:00 SP
-
-    beforeEach(() => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      vi.setSystemTime(new Date("2026-10-14T15:00:00.000Z"));
-      vi.stubEnv("AGENDA_V2", "off");
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-      vi.unstubAllEnvs();
-    });
-
-    it("home nova ligada valida a regra mesmo com AGENDA_V2 off", async () => {
-      vi.stubEnv("NEW_HOME", "admin");
-
-      mocks.getServerSession.mockResolvedValueOnce(sessionOf("admin-1", true));
-      expect(await saveBooking(outOfRule)).toEqual({ success: false, code: "SLOT_UNAVAILABLE", error: BOOKING_ERROR_MESSAGES.SLOT_UNAVAILABLE });
-
-      mocks.getServerSession.mockResolvedValueOnce(sessionOf("admin-1", true));
-      expect(await saveBooking(valid)).toEqual({ success: true });
-
-      // Cliente sem a home nova: como antes.
       mocks.getServerSession.mockResolvedValueOnce(sessionOf("user-1"));
-      expect(await saveBooking(outOfRule)).toEqual({ success: true });
+      expect(await saveBooking(params)).toEqual({ success: true });
     });
   });
 });

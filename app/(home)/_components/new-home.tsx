@@ -29,7 +29,7 @@ const endOfServiceDays = (lastDate: string) => {
   return fromZonedTime(`${next.toISOString().slice(0, 10)}T00:00:00`, TIME_ZONE);
 };
 
-// Home nova (spec §4.1, flag NEW_HOME). Dias, horários e reservas calculados só no servidor.
+// Home (spec §4.1). Dias, horários e reservas calculados só no servidor.
 const NewHome = async ({ session }: NewHomeProps) => {
   const now = getNow();
   const user = session?.user;

@@ -4,8 +4,7 @@ import { db } from "@/app/_lib/prisma";
 import { DaySlots, TIME_ZONE, getNextServiceDays, getNow, serviceDayLabel } from "@/app/_lib/schedule";
 
 // Disponibilidade de um horário (spec §5): está na grade e nos dias liberados, não tem Booking
-// e não tem SlotBlock. Ponto único para a home nova, a /barbershop/[id], o saveBooking, o painel do
-// admin e (depois) os mensalistas.
+// e não tem SlotBlock. Ponto único para a home, o saveBooking, o painel do admin e os mensalistas.
 
 type DbClient = Pick<Prisma.TransactionClient, "booking" | "slotBlock">;
 
@@ -33,8 +32,7 @@ export const slotFromInstant = (instant: Date): { date: string; time: string } |
   };
 };
 
-// Só reserva e bloqueio naquele instante, sem a regra da agenda.
-// Usada pelo saveBooking com as flags desligadas (agenda antiga, data montada no navegador).
+// Só reserva e bloqueio naquele instante, sem a regra da agenda (base do getSlotStatus).
 export const getInstantStatus = async (
   barbershopId: string,
   instant: Date,
@@ -67,7 +65,7 @@ export const dayRange = (date: string): { gte: Date; lt: Date } => {
 };
 
 // Instantes ocupados (reserva da barbearia ou bloqueio) num intervalo. Só as datas: nada de dado
-// pessoal, porque também vai para o navegador (getDayBookings da /barbershop/[id]).
+// pessoal, porque a grade vai para o navegador.
 export const getTakenInstants = async (
   barbershopId: string,
   range: { gte: Date; lt?: Date; lte?: Date },

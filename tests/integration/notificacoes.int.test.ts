@@ -20,7 +20,7 @@ vi.mock("@/app/_lib/notifications/background", () => ({
 
 import { db } from "@/app/_lib/prisma";
 import { resetRateLimit } from "@/app/_lib/rate-limit";
-import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
+import { saveBooking } from "@/app/_actions/save-booking";
 import { cancelBooking } from "@/app/_actions/cancel-booking";
 import { adminCancelBooking } from "@/app/_actions/admin/admin-cancel-booking";
 import { DEFERRED_REASON, MAX_ATTEMPTS, STUCK_AFTER_MS } from "@/app/_lib/notifications/log";
@@ -83,11 +83,15 @@ describe("notificações (banco real, envio mockado)", () => {
     vi.stubEnv("NOTIFICACOES", "all");
     vi.stubEnv("NEXTAUTH_SECRET", "segredo-int");
     vi.stubEnv("NOTIFY_ALLOWLIST", "");
+    // Regra da agenda sempre ligada (Prompt 22): quarta 02/01/2030 12:00 em SP libera a sexta 04.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2030-01-02T15:00:00.000Z"));
     await resetDatabase(db);
     await seedFixtures(db);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
   });
 

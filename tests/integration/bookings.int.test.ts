@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ getServerSession: vi.fn() }));
 
@@ -9,7 +9,7 @@ vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
 
 import { db } from "@/app/_lib/prisma";
 import { resetRateLimit } from "@/app/_lib/rate-limit";
-import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
+import { saveBooking } from "@/app/_actions/save-booking";
 import { cancelBooking } from "@/app/_actions/cancel-booking";
 import { FIXTURES, resetDatabase, seedFixtures } from "../setup/fixtures";
 
@@ -33,8 +33,15 @@ describe("reservas no banco real", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     resetRateLimit();
+    // Regra da agenda sempre ligada (Prompt 22): quarta 02/01/2030 12:00 em SP libera sexta 04 e sábado 05.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2030-01-02T15:00:00.000Z"));
     await resetDatabase(db);
     await seedFixtures(db);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   afterAll(async () => {

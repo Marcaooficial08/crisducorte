@@ -3,7 +3,7 @@ import { FIXTURES } from "../tests/setup/fixtures";
 import { E2E, testDb } from "./db";
 import { atSaoPauloTime, futureWednesdayNoon, loginAs, waitForServerActions } from "./helpers";
 
-// Voltar com a seleção depois do login (MEL-009). e2e roda com NEW_HOME=all e SCHEDULE_NOW numa quarta futura.
+// Voltar com a seleção depois do login (MEL-009). e2e roda com SCHEDULE_NOW numa quarta futura.
 // Sem Google: o POST do signIn é interceptado, o cookie de sessão é criado e a resposta manda para o callbackUrl.
 const { barbershop, service, clienteA } = FIXTURES;
 const { clienteC } = E2E;

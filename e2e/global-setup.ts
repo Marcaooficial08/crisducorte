@@ -34,10 +34,10 @@ const warmUpServer = async (baseURL: string | undefined) => {
     return;
   }
   const asUser = (token: string) => ({ headers: { cookie: `next-auth.session-token=${token}` } });
-  const { clienteA, admin, barbershop } = FIXTURES;
+  const { clienteA, admin } = FIXTURES;
   await fetch(`${baseURL}/`);
   await Promise.all([
-    fetch(`${baseURL}/barbershop/${barbershop.id}`, asUser(clienteA.sessionToken)),
+    fetch(`${baseURL}/perfil`, asUser(clienteA.sessionToken)),
     fetch(`${baseURL}/api/auth/session`, asUser(clienteA.sessionToken)),
     fetch(`${baseURL}/bookings`, asUser(clienteA.sessionToken)),
     fetch(`${baseURL}/adm`, asUser(admin.sessionToken)),

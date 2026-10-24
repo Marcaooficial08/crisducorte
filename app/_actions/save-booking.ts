@@ -7,10 +7,9 @@ import { db } from "@/app/_lib/prisma";
 import { authOptions } from "@/app/_lib/auth";
 import { AuthError, assertUser } from "@/app/_lib/auth-guards";
 import { checkRateLimit } from "@/app/_lib/rate-limit";
-import { isAgendaV2Enabled, isNewHomeEnabled } from "@/app/_lib/flags";
 import { getNow } from "@/app/_lib/schedule";
 import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
-import { SlotStatus, getInstantStatus, getSlotStatus, slotFromInstant } from "@/app/_lib/availability";
+import { getSlotStatus, slotFromInstant } from "@/app/_lib/availability";
 import { lockSlot } from "@/app/_lib/slot-lock";
 import { INTERACTIVE_TX_OPTIONS, isTransactionTimeout } from "@/app/_lib/transaction";
 import { BOOKING_ERROR_MESSAGES, BookingErrorCode } from "@/app/_lib/booking-errors";
@@ -63,10 +62,9 @@ export const saveBooking = async (input: SaveBookingParams): Promise<SaveBooking
       return fail("INVALID");
     }
 
-    // Agenda nova (AGENDA_V2 ou home nova): só dias liberados, horários da grade e ainda por vir.
-    const useSchedule = isAgendaV2Enabled(session) || isNewHomeEnabled(session);
+    // Regra da agenda: só dias liberados, horários da grade e ainda por vir.
     const slot = slotFromInstant(bookingDate);
-    if (useSchedule && !slot) {
+    if (!slot) {
       return fail("SLOT_UNAVAILABLE");
     }
 
@@ -74,12 +72,8 @@ export const saveBooking = async (input: SaveBookingParams): Promise<SaveBooking
       // Mesma trava do painel do admin: bloqueio e reserva do mesmo horário não gravam juntos.
       await lockSlot(tx, params.barbershopId, bookingDate);
 
-      // Disponibilidade pelo ponto único (app/_lib/availability.ts). Flags desligadas: só reserva e
-      // bloqueio no instante exato, como a agenda antiga (data montada no navegador).
-      const status: SlotStatus =
-        useSchedule && slot
-          ? await getSlotStatus(slot.date, slot.time, { barbershopId: params.barbershopId, now: getNow(), client: tx })
-          : await getInstantStatus(params.barbershopId, bookingDate, tx);
+      // Disponibilidade pelo ponto único (app/_lib/availability.ts): agenda, reserva e bloqueio.
+      const status = await getSlotStatus(slot.date, slot.time, { barbershopId: params.barbershopId, now: getNow(), client: tx });
 
       if (status === "TAKEN") {
         throw new Error("SLOT_TAKEN");

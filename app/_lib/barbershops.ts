@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
 
-// Barbearias fora das listagens. Não são apagadas (têm reservas antigas);
-// o link direto /barbershop/[id] continua funcionando.
+// Barbearias fora das listagens e da reserva. Não são apagadas (têm reservas antigas).
 export const HIDDEN_BARBERSHOP_NAMES = ["Indisponivel"];
 
 export const visibleBarbershopWhere: Prisma.BarbershopWhereInput = {

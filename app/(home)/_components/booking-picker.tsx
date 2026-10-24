@@ -17,7 +17,7 @@ import SuccessCheck from "@/app/_components/success-check";
 import { useMotion } from "@/app/_providers/motion";
 import { Button } from "@/app/_components/ui/button";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/app/_components/ui/sheet";
-import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
+import { saveBooking } from "@/app/_actions/save-booking";
 import { BOOKING_ERROR_MESSAGES, clientBookingErrorCode, shouldReloadSlots } from "@/app/_lib/booking-errors";
 import { DaySlots, TIME_ZONE } from "@/app/_lib/schedule";
 import { track } from "@/app/_lib/track";

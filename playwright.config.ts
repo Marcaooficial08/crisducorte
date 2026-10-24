@@ -40,10 +40,7 @@ export default defineConfig({
       NEXTAUTH_SECRET: "e2e-secret-nao-usar-em-producao",
       GOOGLE_CLIENT_ID: "e2e-google-client-id",
       GOOGLE_CLIENT_SECRET: "e2e-google-client-secret",
-      // O `next start` também lê o .env local; fixa a flag para o e2e dar igual local e no CI.
-      AGENDA_V2: "off",
-      // Home nova para todos, como em produção desde 2026-10-17; a antiga continua em /classic.
-      NEW_HOME: "all",
+      // O `next start` também lê o .env local: as flags ficam fixas para o e2e dar igual local e no CI.
       // Painel do admin novo (grade, bloqueios, reserva manual).
       ADMIN_PANEL_V2: "admin",
       // Mensalistas (aba do /adm e "Meu próximo agendamento" do mensalista com conta).
