@@ -13,10 +13,16 @@ const BookingCTA = ({ dayLabel, time, loading, onClick }: BookingCTAProps) => {
   const ready = !!dayLabel && !!time;
 
   return (
-    <Button className="h-[52px] w-full rounded-[var(--radius-lg)] text-base font-bold" disabled={!ready || loading} onClick={onClick}>
+    <Button
+      className="h-[52px] w-full rounded-[var(--radius-lg)] text-base font-bold"
+      disabled={!ready || loading}
+      aria-busy={loading}
+      onClick={onClick}
+    >
       {loading ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+          {/* Com "reduzir movimento", o ícone fica parado: o texto já diz que está reservando. */}
+          <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
           Reservando…
         </>
       ) : ready ? (

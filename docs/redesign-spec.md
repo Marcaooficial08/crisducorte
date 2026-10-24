@@ -95,6 +95,7 @@ Os tokens substituem as variáveis atuais de `app/globals.css`, mantendo os nome
     --dur-fast: 150ms;
     --dur-base: 200ms;
     --dur-slow: 300ms;
+    --ease-motion: cubic-bezier(0.2, 0.8, 0.2, 1); /* microinterações (Prompt 21) */
   }
 }
 
@@ -156,7 +157,10 @@ const brand = Permanent_Marker({ subsets: ["latin"], weight: "400", variable: "-
 
 **Espaçamento:** escala Tailwind padrão (4px). Margem lateral da página 20px (`px-5`), espaço entre seções 16–20px, entre itens de grade 6–8px. Container `max-w-md mx-auto` no mobile e `max-w-3xl` a partir de 1024px.
 
-**Motion:** troca de dia = fade + subida de 4px nos horários (200ms, `ease-out`, 20ms de atraso entre itens); confirmação = check animado (300ms); nada passa de 300ms; tudo desliga com reduzir movimento.
+**Motion (Prompt 21, flag `MOTION`; protótipo aprovado pelo dono em 2026-10-23, substitui a versão anterior de 4px com 20ms entre itens):** só `transform` e `opacity` (e cores em `transition`), durações de 150–320ms com `cubic-bezier(.2,.8,.2,1)` (`--ease-motion`), nenhuma animação no primeiro carregamento.
+- Cliente: troca de dia = chip acende com cor, borda e brilho (180ms) e a grade entra com fade + 8px para cima (220ms, a grade inteira, sem atraso entre itens); horário escolhido = "pop" (escala 1 → 1.07 → 1, 200ms) + cor; toque em botão = `scale(.97)` no `:active`; reservar = "Reservando…" com spinner pelo tempo real da Server Action (`aria-busy`); sucesso = cartão sobe com fade (320ms) e o ✓ é desenhado (`stroke-dashoffset`, exceção aprovada: SVG de 20px) num círculo roxo com um anel que pulsa uma vez.
+- Painel do Cris: linha do horário troca de cor (livre cinza → bloqueado âmbar → reservado roxo, 220ms) e o status entra com fade + 6px lateral; toast sobe com fade (240ms) e sai descendo (200ms); número das métricas dá um "pulinho" (escala 1.25, 240ms) quando muda; Sheet abre em 300ms e fecha em 200ms.
+- "Reduzir movimento": tudo funciona igual, sem animação (estado final direto). Nenhuma animação atrasa a reserva, esconde informação ou bloqueia clique.
 
 ## 3. Componentes e estados
 

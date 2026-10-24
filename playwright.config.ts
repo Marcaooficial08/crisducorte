@@ -58,6 +58,8 @@ export default defineConfig({
       // Web Push: switch do Perfil só para o admin. Só a chave pública (gerada para o e2e; a privada foi
       // descartada): o switch aparece, mas sem VAPID_PRIVATE_KEY nenhum push sai do e2e.
       WEB_PUSH: "admin",
+      // Microinterações (Prompt 21) só para o admin, como no rollout.
+      MOTION: "admin",
       VAPID_PUBLIC_KEY: "BMM8W9wROJhu82APZiwpllaK79weh5eziyTMcDseT0KZU4hRZeMnrBPzOsp9uomsHq55RBYhR_vuxDU1E8ltYes",
       VAPID_PRIVATE_KEY: "",
       VAPID_SUBJECT: "",

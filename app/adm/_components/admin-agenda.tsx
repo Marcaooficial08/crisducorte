@@ -70,7 +70,8 @@ const AdminAgenda = ({ days, services }: AdminAgendaProps) => {
       <ul aria-label={`Horários de ${day.label}`} className="mt-4 flex flex-col gap-2">
         {day.slots.map((slot) => (
           <SlotRow
-            key={slot.time}
+            // Dia + horário: trocar de dia monta linhas novas (a animação de "mudou de estado" não dispara).
+            key={`${day.date}-${slot.time}`}
             date={day.date}
             dayLabel={day.label}
             slot={slot}

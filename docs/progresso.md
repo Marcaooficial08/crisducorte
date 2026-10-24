@@ -23,6 +23,7 @@
 | Incidente · Conexão de produção (transaction pooler) | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `docs/pool-producao` |
 | 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
 | 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção e liberado para todos | 2026-10-22 | `prompt20/push` (PR #21, com A, B e C) |
+| 21 · Microinterações (MOTION) | ✅ Publicado em produção — previsto após o merge | 2026-10-23 | `prompt21/motion` |
 
 ## Ambientes
 
@@ -818,3 +819,44 @@ Local fica acima de 2,5s nas duas versões porque o servidor local consulta o Ne
 - [ ] Revisão jurídica da Política de Privacidade (inclui o parágrafo do push).
 
 **Publicado em produção (2026-10-22):** PR #21 (squash `14e296c`), deploy de Production ok e `staging` alinhada à `main`. Aceite do dono em produção com a conta admin do Cris: calendário, instalação do app e push "Notificações ligadas" ok. PageSpeed da home (celular): Desempenho 98, Acessibilidade 100, Práticas recomendadas 100, SEO 100. **Liberado para todos:** `CALENDARIO`, `PWA_INSTALL` e `WEB_PUSH` trocados para `all` em Production pelo dono, com redeploy.
+
+## Prompt 21 · Microinterações (MOTION)
+
+**Decisões (aprovadas pelo dono em 2026-10-23):** flag pelo atributo `data-motion` no `<html>` + variante `fx:` do Tailwind (com a flag off, algumas classes `fx:` ficam no HTML sem efeito; os testes conferem o estilo calculado); ✓ desenhado com `stroke-dashoffset` (exceção a "só transform e opacity": SVG de 20px, só repintura); seguir o protótipo (grade sobe 8px, sem atraso entre itens) e atualizar a spec §2; `aria-busy` e área `aria-live` do sucesso **fora** da flag (invisíveis, corrigem o anúncio); fundos novos das linhas do `/adm` atrás da flag; transição de altura do sonner mantida (toast é `fixed`, não move a página). Sem dependência nova (framer-motion custaria ~30–50 KB gzip): tudo em CSS.
+
+**Feito:**
+- Flag `MOTION` (`off | admin | all`) em `flags.ts`; `app/_lib/motion.ts` (`isMotionOn`, `hasChangedSinceMount`); `MotionProvider` (`app/_providers/motion.tsx`) no `layout.tsx`: `all` põe `data-motion="on"` no `<html>` já no servidor; `admin` decide no navegador pelo `useSession()` (o layout não lê a sessão, as páginas estáticas continuam estáticas). `useMotion()` só para decisões de JS.
+- `tailwind.config.ts`: variante `fx:` (`html[data-motion="on"] &`), sempre com `motion-safe:`; keyframes `slots-in`, `pop`, `card-in`, `check-draw`, `ring-pulse`, `status-in`, `bump`; curva `ease-motion` (`--ease-motion: cubic-bezier(.2,.8,.2,1)` no `globals.css`).
+- `globals.css` (só com a flag e sem "reduzir movimento"): `button:active` com `scale(.97)`; toast do sonner com 240ms na entrada e 200ms na saída (o arrasto continua sem transição).
+- Home nova: chip do dia com cor/borda/brilho em 180ms; grade com `key` pelo dia e `slots-in` **só depois de trocar de dia** (nada anima no primeiro carregamento); horário escolhido com `pop`; CTA e botão do Sheet com `aria-busy` e "Reservando…" pelo tempo real da action (spinner com `motion-safe:`: com "reduzir movimento" fica parado); cartão "Reservado!" dentro de uma área `aria-live="polite"` sempre montada (saiu o `role="status"` do cartão, que nascia preenchido), com `card-in` e, com a flag, o ✓ novo (`success-check.tsx`: círculo roxo, anel que pulsa uma vez, traço desenhado).
+- `/adm`: linha do horário com `data-state` e cor por estado, como no protótipo (220ms): livre neutro; bloqueado com fundo âmbar 14%, borda âmbar sólida (sem o tracejado) e "Bloqueado · motivo" em `--warning` (#FBBF24) com cadeado; reservado com fundo roxo 12% e borda `accent/70`. Contraste do texto: âmbar 7,5–8,1:1, reservado 5,8–14,5:1, livre 6,4:1; status entra com `status-in` só quando o estado muda (`useChangedSinceMount`; `key` da linha agora é dia + horário); `aria-busy` nos botões Cancelar/Desbloquear; números das métricas com `AnimatedNumber` (`bump` quando mudam depois de uma ação).
+- Sheet (inclui o menu lateral) abre em 300ms e fecha em 200ms com a flag (antes 500/300); AlertDialog com a curva nova.
+- Spec §2 (Motion) reescrita conforme o protótipo; `CLAUDE.md` e `.env.example` com a flag.
+
+**Testes:**
+- Unit: `flags.test.ts` (MOTION), `motion.test.ts` (`isMotionOn`, `hasChangedSinceMount`), `booking-cta.test.ts` (carregando: `aria-busy`, desabilitado, "Reservando…", spinner só em `motion-safe:`).
+- e2e `e2e/motion.spec.ts` (`MOTION=admin`; nada depende do tempo das animações: atributo, classes e `animation-name` calculado): admin vê a grade entrar só depois de trocar o dia, `pop`, carregando com `aria-busy` (Server Action segurada pelo `page.route`), ✓ e cartão dentro do `aria-live`; regra do `:active` presente; cliente comum sem `data-motion` e sem animação; `emulateMedia({ reducedMotion: "reduce" })` com a flag: nada anima e a reserva funciona igual; `/adm`: bloquear muda estado e cor e anima o status, toast com 0,24s; cancelar faz Canceladas dar o pulinho. `home-nova.spec.ts`: o cartão agora é procurado como região dentro da área `aria-live`.
+- `vitest.config.mts`: `MOTION=off`. `playwright.config.ts`: `MOTION=admin`.
+
+**Validação (local, 2026-10-23, um de cada vez):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 294 ✅ · `npm run test:int` 84 ✅ (Neon "Testes") · `npm run build` ✅ · `npm run test:e2e` 59 ✅.
+
+**Lighthouse mobile (local, `next start`, banco Neon "Testes"; antes = `main` num worktree, depois = esta branch com `MOTION=all`, as duas com as mesmas flags; rodadas intercaladas, mediana de 10):**
+
+| Cenário | Desempenho antes → depois | LCP antes → depois | TBT | CLS | Acessibilidade |
+|---|---|---|---|---|---|
+| Home deslogado | 81 → 82 | 4,40s → 4,28s | 196 → 179ms | 0,026 → 0,026 | 100 → 100 (10/10 rodadas) |
+| Home admin logado | 82,5 → 83,5 | 4,42s → 4,45s | 133 → 96ms | 0 → 0 | 100 → 100 (10/10 rodadas) |
+
+Elemento LCP igual antes e depois (deslogado: `<h1>`; admin: imagem do card). `/adm` com `MOTION=admin`, uma linha bloqueada e uma reservada na tela (Lighthouse 12.8.2, acessibilidade): 100 em 3 de 3 rodadas. Peso: CSS +0,5 KB gzip, JS da home +0,6 KB (First Load 192 → 193 kB). O LCP local fica acima do de produção nas duas versões (servidor local + Neon pela internet); a comparação é lado a lado.
+
+**Tempo do cancelamento no `/adm`** (mesma suíte e2e antes, banco Neon "Testes", 1 rodada cada): `main` toast 2,35s / linha 5,08s; esta branch toast 2,78s / linha 6,25s. A `main` já passa de 5s e o toast (antes de qualquer código do Prompt 21) também atrasou: variação da rede até o Neon, não regressão.
+
+**Aceite do dono na staging (2026-10-23, celular, `MOTION=admin` no Preview):** grade entrando ao trocar o dia, pop do horário, ✓ desenhado, cores do `/adm` (bloqueado âmbar, reservado roxo) e pulinho das métricas ok. `MOTION=all` criado em Production pelo dono antes do merge.
+
+**Pendências:**
+- [x] Aceite do dono (na staging, celular).
+- [x] Commit e staging (autorizados pelo dono em 2026-10-23).
+- [x] PR e merge (autorizados pelo dono em 2026-10-23).
+- [x] Vercel Production: `MOTION=all` criado pelo dono.
+- [ ] Conferir em produção depois do deploy (home e `/adm` com a conta admin do Cris).
+- [ ] PageSpeed da home em produção com `MOTION=all` (atual: 98/100/100/100).

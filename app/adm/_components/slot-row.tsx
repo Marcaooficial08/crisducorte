@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, LockIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/app/_components/ui/badge";
 import { Button } from "@/app/_components/ui/button";
@@ -22,6 +22,7 @@ import type { AdminSlot } from "@/app/_lib/admin-agenda";
 import { formatPhone, whatsappUrl } from "@/app/_lib/phone";
 import { track } from "@/app/_lib/track";
 import { cn } from "@/app/_lib/utils";
+import { useChangedSinceMount } from "@/app/_lib/use-changed-since-mount";
 import { showAdminResult } from "./admin-result";
 
 interface SlotRowProps {
@@ -54,21 +55,36 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
   // Mensalista: "Desmarcar esta semana" (spec §4.4); a falta conta como usada no ciclo (D2).
   const isMensalista = booking?.source === "MENSALISTA";
 
+  // MOTION: a linha troca de cor com o estado e o texto do status entra com fade + deslize lateral,
+  // só quando o estado muda (bloquear, desbloquear, cancelar, reservar na mão), não ao abrir a página.
+  const state = booking ? "booked" : block ? "blocked" : "free";
+  const stateChanged = useChangedSinceMount(state);
+
   const handleCancel = () =>
     booking && run(() => adminCancelBooking(booking.id), () => track("booking_cancelled", { by: "admin" }));
 
   return (
     <li
+      data-state={state}
       className={cn(
         // Celular: botões abaixo; computador: na mesma linha, à direita.
         "flex flex-col gap-3 rounded-[var(--radius-lg)] border p-3 sm:flex-row sm:items-center sm:justify-between",
         block && !booking ? "border-dashed border-border" : "border-border",
+        // MOTION: livre neutro → bloqueado âmbar (borda sólida) → reservado roxo, com transição de cor de 220ms.
+        "fx:transition-colors fx:duration-[220ms] fx:ease-motion",
+        state === "free" && "fx:bg-secondary/40",
+        state === "blocked" && "fx:border-solid fx:border-warning fx:bg-warning/[0.14]",
+        state === "booked" && "fx:border-accent/70 fx:bg-accent/[0.12]",
         past && "opacity-70",
       )}
     >
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <span className="w-14 shrink-0 text-body font-bold">{time}</span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div
+          key={state}
+          data-testid="slot-status"
+          className={cn("flex min-w-0 flex-1 flex-col gap-1", stateChanged && "fx:motion-safe:animate-status-in")}
+        >
           {booking ? (
             <>
               <p className="text-body">
@@ -94,9 +110,13 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
               )}
             </>
           ) : block ? (
-            <p className="text-body">
-              <span className="font-bold">Bloqueado</span>
-              {block.reason && <span className="text-muted-foreground"> · {block.reason}</span>}
+            // MOTION: "Bloqueado · motivo" em âmbar (#FBBF24, ~8:1 sobre o fundo âmbar) com cadeado.
+            <p className="text-body fx:flex fx:items-center fx:gap-1.5 fx:text-warning">
+              <LockIcon className="hidden h-4 w-4 shrink-0 fx:inline-block" aria-hidden="true" />
+              <span>
+                <span className="font-bold">Bloqueado</span>
+                {block.reason && <span className="text-muted-foreground fx:text-warning"> · {block.reason}</span>}
+              </span>
             </p>
           ) : (
             <p className="text-body text-muted-foreground">Livre</p>
@@ -114,6 +134,7 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
                   variant="destructive"
                   size="sm"
                   disabled={loading}
+                  aria-busy={loading}
                   aria-label={isMensalista ? `Desmarcar esta semana ${time}` : `Cancelar reserva das ${time}`}
                 >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
@@ -144,6 +165,7 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
               variant="secondary"
               size="sm"
               disabled={loading}
+              aria-busy={loading}
               aria-label={`Desbloquear ${time}`}
               onClick={() => run(() => unblockSlot({ date, time }))}
             >
