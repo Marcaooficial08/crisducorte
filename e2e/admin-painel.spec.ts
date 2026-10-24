@@ -129,6 +129,17 @@ test("reserva manual aparece na grade com WhatsApp; cancelamento pelo admin libe
   await expect(whatsapp).toHaveAttribute("href", "https://wa.me/5511912345678");
   await expect(whatsapp).toHaveText("(11) 91234-5678");
 
+  // "Lembrar no WhatsApp" (Prompt 22, 5b): wa.me do cliente com dia, horário e endereço prontos.
+  const reminder = row.getByRole("link", { name: "Lembrar Maria Manual no WhatsApp" });
+  const reminderUrl = new URL((await reminder.getAttribute("href")) ?? "");
+  expect(`${reminderUrl.origin}${reminderUrl.pathname}`).toBe("https://wa.me/5511912345678");
+  const text = reminderUrl.searchParams.get("text") ?? "";
+  expect(text).toMatch(/^Olá, Maria! Passando para lembrar do seu horário com o Cris: /);
+  expect(text).toContain(`${service.name}, sexta `);
+  expect(text).toContain("às 18:30");
+  expect(text).toContain(`Endereço: ${barbershop.address}.`);
+  expect((await reminder.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+
   const db = testDb();
   try {
     const booking = await db.booking.findFirstOrThrow({ where: { date: atSaoPauloTime(friday, "18:30") } });

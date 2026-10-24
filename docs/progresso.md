@@ -915,3 +915,15 @@ Elemento LCP igual antes e depois (deslogado: `<h1>`; admin: imagem do card). `/
 
 **Validação (local, 2026-10-23, um de cada vez):** lint ✅ · `tsc` ✅ · unit 324 ✅ · integração 86 ✅ · build ✅ · e2e 59/60 na suíte: `mensalistas.spec` passou do tempo esperando o `/adm` carregar ("Carregando agendamentos…" após 5s, lentidão do Neon "Testes"); rodado de novo sozinho, 2/2 ✅. Tratado nos PRs 5 (`/adm` mais leve) e 6 (timeouts).
 
+### PR 3 · Pequenas melhorias (`prompt22/melhorias`)
+
+**Feito:**
+- **5a** `/bookings` lista também a reserva de mensalista ativo com o e-mail da conta (mesma regra de "Meu próximo agendamento", agora em `bookingOwnersWhere`, `app/_lib/next-booking.ts`), atrás de `MENSALISTAS`. O cartão ganha o selo "Mensalista"; no detalhe, "Para remarcar, fale com o Cris." no lugar do "Cancelar Reserva" (`BookingItem` com `readOnly`; o `cancelBooking` já recusava, a reserva não tem `userId`).
+- **5b** Painel: "Lembrar no WhatsApp" nas reservas na mão com telefone (horário ainda por vir). Abre `wa.me` do cliente com o texto "Olá, {primeiro nome}! Passando para lembrar do seu horário com o Cris: {serviço}, {sexta 23/10} às {10:30}. Endereço: {endereço}. Até lá!" (`whatsappReminderUrl`, `app/_lib/whatsapp-message.ts`). Só o admin vê: sem flag. Botão de 44px.
+- **5c** Perfil, abaixo do switch "Notificações no celular" e só com ele ligado (atrás de `WEB_PUSH`): "Não está recebendo? Em alguns celulares, como Xiaomi, libere as notificações e o uso de bateria do Chrome nas configurações do aparelho." (texto aprovado pelo dono em 2026-10-23).
+- 5d (mensalista sem horário fixo) adiado (D7).
+
+**Testes:** unit `next-booking.test.ts` (com e sem flag, e-mail sem diferenciar maiúsculas, conta sem e-mail), `whatsapp-message.test.ts` (texto do lembrete, sem nome, link). e2e: `mensalistas.spec` (a `/bookings` do mensalista mostra o selo, "Para remarcar…" e nenhum "Cancelar Reserva"), `admin-painel.spec` (link do lembrete com telefone, nome, serviço, dia, hora e endereço; 44px), `web-push.spec` (dica só com o push ligado, com a inscrição do navegador simulada).
+
+**Validação (local, 2026-10-23, um de cada vez):** lint ✅ · `tsc` ✅ · unit 330 ✅ · integração 86 ✅ · build ✅ · e2e 61 ✅.
+

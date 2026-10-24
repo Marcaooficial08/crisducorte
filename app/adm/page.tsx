@@ -76,7 +76,7 @@ const BookingsPageAdm = async () => {
                 {barbershop && agenda && (
                     <section aria-labelledby="agenda-admin" className="mb-8">
                         <h1 id="agenda-admin" className="text-title font-bold mb-4">Agenda</h1>
-                        <AdminAgenda days={agenda} services={barbershop.services} />
+                        <AdminAgenda days={agenda} services={barbershop.services} address={barbershop.address} />
                     </section>
                 )}
 

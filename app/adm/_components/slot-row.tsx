@@ -20,6 +20,7 @@ import { adminCancelBooking } from "@/app/_actions/admin/admin-cancel-booking";
 import { unblockSlot } from "@/app/_actions/admin/unblock-slot";
 import type { AdminSlot } from "@/app/_lib/admin-agenda";
 import { formatPhone, whatsappUrl } from "@/app/_lib/phone";
+import { whatsappReminderUrl } from "@/app/_lib/whatsapp-message";
 import { track } from "@/app/_lib/track";
 import { cn } from "@/app/_lib/utils";
 import { useChangedSinceMount } from "@/app/_lib/use-changed-since-mount";
@@ -29,12 +30,13 @@ interface SlotRowProps {
   date: string;
   dayLabel: string;
   slot: AdminSlot;
+  address: string; // endereço da barbearia, para o "Lembrar no WhatsApp"
   onBlock: () => void;
   onManualBooking: () => void;
 }
 
 // Um horário da grade do admin (spec §4.4): estado + ações. Horário passado não tem ações.
-const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProps) => {
+const SlotRow = ({ date, dayLabel, slot, address, onBlock, onManualBooking }: SlotRowProps) => {
   const [loading, setLoading] = useState(false);
   const { time, past, booking, block } = slot;
 
@@ -127,6 +129,26 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
 
       {!past && (
         <div className="flex flex-wrap gap-2 sm:shrink-0 sm:justify-end">
+          {/* Reserva na mão: o cliente não recebe e-mail; o Cris lembra pelo WhatsApp (texto pronto). */}
+          {booking?.source === "MANUAL" && booking.customerPhone && (
+            <Button asChild variant="secondary" size="sm">
+              <a
+                href={whatsappReminderUrl({
+                  phone: booking.customerPhone,
+                  customerName: booking.customerName,
+                  address,
+                  serviceName: booking.serviceName,
+                  date,
+                  time,
+                })}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Lembrar ${booking.customerName} no WhatsApp`}
+              >
+                Lembrar no WhatsApp
+              </a>
+            </Button>
+          )}
           {booking && (
             <AlertDialog>
               <AlertDialogTrigger asChild>

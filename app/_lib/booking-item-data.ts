@@ -9,6 +9,7 @@ export const bookingItemSelect = {
   id: true,
   date: true,
   customerName: true,
+  source: true,
   service: { select: { name: true, price: true } },
   barbershop: { select: { name: true, address: true, imageUrl: true } },
   user: { select: { name: true } },

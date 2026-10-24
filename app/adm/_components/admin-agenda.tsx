@@ -19,12 +19,13 @@ import { showAdminResult } from "./admin-result";
 interface AdminAgendaProps {
   days: AdminDay[]; // semana aberta, calculada no servidor
   services: PanelService[];
+  address: string; // endereço da barbearia (texto do "Lembrar no WhatsApp")
 }
 
 type BlockTarget = { kind: "slot"; time: string } | { kind: "day" };
 
 // Grade da semana aberta no /adm (spec §4.4, flag ADMIN_PANEL_V2).
-const AdminAgenda = ({ days, services }: AdminAgendaProps) => {
+const AdminAgenda = ({ days, services, address }: AdminAgendaProps) => {
   const [selectedDate, setSelectedDate] = useState(days[0]?.date);
   const [blockTarget, setBlockTarget] = useState<BlockTarget | null>(null);
   const [manualSlot, setManualSlot] = useState<{ date: string; dayLabel: string; time: string } | null>(null);
@@ -75,6 +76,7 @@ const AdminAgenda = ({ days, services }: AdminAgendaProps) => {
             date={day.date}
             dayLabel={day.label}
             slot={slot}
+            address={address}
             onBlock={() => setBlockTarget({ kind: "slot", time: slot.time })}
             onManualBooking={() => setManualSlot({ date: day.date, dayLabel: day.label, time: slot.time })}
           />
