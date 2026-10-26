@@ -3,7 +3,7 @@ import { FIXTURES } from "../tests/setup/fixtures";
 import { testDb } from "./db";
 import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs } from "./helpers";
 
-// e2e com MENSALISTAS=all, ADMIN_PANEL_V2=admin e o relógio do servidor (SCHEDULE_NOW) numa quarta
+// e2e com o relógio do servidor (SCHEDULE_NOW) numa quarta
 // futura. Este arquivo usa a sexta às 16:30 (Pedro) e o sábado às 16:30 (conflito do João), nesta
 // semana e nas seguintes, e um cliente próprio (o "mensalista com conta"). Limpa tudo no fim.
 const { barbershop, service, clienteA, admin } = FIXTURES;
@@ -128,6 +128,15 @@ test("cadastra mensalista com ciclo em andamento, vê na grade e na home dele, c
     // Para os outros clientes, o horário aparece ocupado.
     await clientPage.getByRole("button", { name: new RegExp(`^${fridayLabel}`) }).click();
     await expect(clientPage.getByRole("button", { name: "16:30, ocupado" })).toBeDisabled();
+
+    // /bookings também lista a reserva de mensalista (Prompt 22, 5a): selo e sem cancelar pelo app.
+    await gotoLoggedIn(clientPage, "/bookings", pedroConta.id);
+    const card = clientPage.getByRole("button").filter({ hasText: "Mensalista" }).first();
+    await expect(card).toContainText("16:30");
+    await card.click();
+    const sheet = clientPage.getByRole("dialog", { name: "Informações da Reserva" });
+    await expect(sheet.getByText("Para remarcar, fale com o Cris.")).toBeVisible();
+    await expect(sheet.getByRole("button", { name: "Cancelar Reserva" })).toHaveCount(0);
   } finally {
     await clientContext.close();
   }

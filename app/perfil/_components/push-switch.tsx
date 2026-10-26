@@ -28,6 +28,9 @@ const registration = async () => {
   return navigator.serviceWorker.ready;
 };
 
+export const PUSH_DELIVERY_TIP =
+  "Não está recebendo? Em alguns celulares, como Xiaomi, libere as notificações e o uso de bateria do Chrome nas configurações do aparelho.";
+
 // Switch "Notificações no celular" (Prompt 20, flag WEB_PUSH): inscrição deste aparelho no Web Push.
 // No iPhone só funciona com o app instalado (iOS 16.4+). A linha inteira é o alvo de toque.
 const PushSwitch = ({ vapidPublicKey }: PushSwitchProps) => {
@@ -111,36 +114,40 @@ const PushSwitch = ({ vapidPublicKey }: PushSwitchProps) => {
   const blocked = status !== "on" && status !== "off";
 
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      aria-describedby="push-descricao"
-      disabled={saving || blocked}
-      onClick={toggle}
-      className="flex min-h-11 w-full items-center justify-between gap-4 rounded-[var(--radius-sm)] border border-border px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-70"
-    >
-      <span className="flex flex-col">
-        <span className="font-bold">Notificações no celular</span>
-        <span id="push-descricao" className="text-body text-muted-foreground">
-          {message ?? "Lembrete na véspera e aviso se o Cris cancelar."}
-        </span>
-      </span>
-      <span
-        aria-hidden="true"
-        className={cn(
-          "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors",
-          enabled ? "border-primary bg-primary" : "border-border bg-secondary",
-        )}
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-describedby="push-descricao"
+        disabled={saving || blocked}
+        onClick={toggle}
+        className="flex min-h-11 w-full items-center justify-between gap-4 rounded-[var(--radius-sm)] border border-border px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-70"
       >
+        <span className="flex flex-col">
+          <span className="font-bold">Notificações no celular</span>
+          <span id="push-descricao" className="text-body text-muted-foreground">
+            {message ?? "Lembrete na véspera e aviso se o Cris cancelar."}
+          </span>
+        </span>
         <span
+          aria-hidden="true"
           className={cn(
-            "inline-block h-5 w-5 rounded-full bg-foreground transition-transform",
-            enabled ? "translate-x-5" : "translate-x-0.5",
+            "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors",
+            enabled ? "border-primary bg-primary" : "border-border bg-secondary",
           )}
-        />
-      </span>
-    </button>
+        >
+          <span
+            className={cn(
+              "inline-block h-5 w-5 rounded-full bg-foreground transition-transform",
+              enabled ? "translate-x-5" : "translate-x-0.5",
+            )}
+          />
+        </span>
+      </button>
+      {/* Dica quando o push está ligado mas não chega (Prompt 22; texto aprovado pelo dono em 2026-10-23). */}
+      {enabled && <p className="px-1 text-caption text-muted-foreground">{PUSH_DELIVERY_TIP}</p>}
+    </div>
   );
 };
 

@@ -23,7 +23,8 @@
 | Incidente · Conexão de produção (transaction pooler) | ✅ Publicado em produção — previsto após o merge | 2026-10-19 | `docs/pool-producao` |
 | 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
 | 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção e liberado para todos | 2026-10-22 | `prompt20/push` (PR #21, com A, B e C) |
-| 21 · Microinterações (MOTION) | ✅ Publicado em produção — previsto após o merge | 2026-10-23 | `prompt21/motion` |
+| 21 · Microinterações (MOTION) | ✅ Publicado em produção e liberado para todos | 2026-10-23 | `prompt21/motion` (PR #23) |
+| 22 · Revisão final (segurança, notificações, melhorias, limpeza de flags) | ✅ Publicado em produção — previsto após o merge | 2026-10-26 | `prompt22/docs` (PR único com os 7) |
 
 ## Ambientes
 
@@ -855,8 +856,182 @@ Elemento LCP igual antes e depois (deslogado: `<h1>`; admin: imagem do card). `/
 
 **Pendências:**
 - [x] Aceite do dono (na staging, celular).
-- [x] Commit e staging (autorizados pelo dono em 2026-10-23).
+- [x] Commit (autorizado pelo dono em 2026-10-23). Staging só com a última branch do Prompt 22 (`prompt22/docs`).
 - [x] PR e merge (autorizados pelo dono em 2026-10-23).
 - [x] Vercel Production: `MOTION=all` criado pelo dono.
-- [ ] Conferir em produção depois do deploy (home e `/adm` com a conta admin do Cris).
-- [ ] PageSpeed da home em produção com `MOTION=all` (atual: 98/100/100/100).
+- [x] Conferir em produção depois do deploy (aceite do dono ok).
+- [x] PageSpeed da home em produção com `MOTION=all`: 95/100/100/100 (antes 98/100/100/100).
+
+**Publicado em produção (2026-10-23):** PR #23 (squash `03acb55`), deploy de Production ok e `staging` alinhada à `main`. `MOTION=all` em Production desde o merge (criado pelo dono antes). Aceite do dono em produção ok. PageSpeed da home (celular): Desempenho 95, Acessibilidade 100, Práticas recomendadas 100, SEO 100. O desempenho caiu de 98 para 95 numa medição só; no Lighthouse local, lado a lado, a branch não piorou (81 → 82 e 82,5 → 83,5). Acompanhar nas próximas medições do PageSpeed.
+
+## Prompt 22 · Revisão final
+
+**Auditoria (2026-10-23, só leitura):** plano em 7 PRs aprovado pelo dono. Ordem: 1 segurança → 2 notificações → 3 melhorias (5a, 5b, 5c) → 4 flags da home (`NEW_HOME`, `AGENDA_V2`) → 5 flags do painel (`ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO`, `MOTION`) → 6 acessibilidade e testes → 7 documentação.
+
+**Decisões (aprovadas pelo dono em 2026-10-23):**
+- Flags que viram código definitivo: `AGENDA_V2`, `NEW_HOME`, `ADMIN_PANEL_V2`, `MENSALISTAS` (depois do 5a), `CALENDARIO`, `MOTION`. Continuam como botão de desligar: `NOTIFICACOES`, `WEB_PUSH`, `PWA_INSTALL`.
+- D1: `/barbershop/[id]` vira redirecionamento permanente para `/` (PR 4).
+- D2: `/classic` sai já no PR 4 (antes dos 30 dias combinados).
+- D3: lista do `/adm` = "Próximas" + "Últimos 30 dias" (PR 5).
+- D4: `MOTION` definitivo. D5: 5a atrás de `MENSALISTAS` antes de remover a flag.
+- D6: troca do adapter do login (`@auth/prisma-adapter` → `@next-auth/prisma-adapter`) fica para o Prompt 23, junto com o Next 15.
+- D7: mensalista sem horário fixo adiado. D8: `Booking_backup_duplicates` e a linha com falha em `_prisma_migrations` ficam e são documentadas; remoção com backup no Prompt 23.
+- D9: upgrade do Next (14.2.35 não recebe mais correções de segurança) = Prompt 23.
+- 5c: texto da dica do push vai para aprovação do dono antes de publicar.
+- **Regra de publicação:** nenhum merge em produção de sexta 20h até sábado 21h (sábado é dia de movimento). Staging liberada.
+
+### PR 1 · Segurança (`prompt22/seguranca`)
+
+**Feito:**
+- Headers de segurança em todas as rotas (`next.config.mjs`): `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, CSP só com `frame-ancestors 'none'; base-uri 'self'; object-src 'none'` (sem `script-src`: com nonce todas as páginas virariam dinâmicas) e `Permissions-Policy` (câmera, microfone, localização, pagamento, USB desligados). HSTS a Vercel já manda.
+- Dados pessoais no navegador: os cartões de reserva (`BookingItem`, `BookingItemAdm`) são client components e recebiam o `User` inteiro (e-mail, `isAdmin`, `emailReminders`…). Agora as consultas usam `select` (`app/_lib/booking-item-data.ts`): cliente leva só o nome da conta; admin, nome, e-mail e foto. Vale para `/bookings`, `/adm`, home nova (reservas da semana do admin) e home antiga.
+- Fuso: data e hora dos cartões (`BookingItem`, `BookingItemAdm`, `BookingInfo`) sempre em São Paulo (`formatBookingDate`). Antes, o `format` usava o fuso de quem renderiza: o HTML do servidor (UTC na Vercel) saía com +3h e trocava na hidratação.
+- `saveBooking`: entrada validada com zod (ids até 64 caracteres, data ISO com fuso); o serviço tem de ser da barbearia e a barbearia tem de estar visível (antes dava para reservar na "Indisponivel" ou com serviço de outra barbearia chamando a action direto). Erro novo `INVALID`: "Não conseguimos reservar esse serviço. Atualize a página e tente de novo."
+- `cancelBooking`: id validado; sem sessão, reserva inexistente ou de outra pessoa devolvem `{ success: false, error }` em vez de lançar (antes viravam erro genérico); o cliente não cancela reserva que já passou ("Essa reserva já passou e não pode ser cancelada."), o admin continua podendo.
+- Dependências: `next-auth` 4.24.15 (corrige 3 avisos do Auth.js v4), `nodemailer` 10.2.1, `@next-auth/prisma-adapter` removido (não era usado).
+
+**Testes:** unit `security-headers.test.ts` (headers em todas as rotas, CSP sem `script-src`), `booking-item-data.test.ts` (`select` sem `isAdmin`/preferências; fuso de SP, inclusive sexta 23:30), `save-booking.test.ts` (entrada inválida não toca no banco; serviço de outra barbearia ou barbearia escondida recusado sem travar nem gravar), `cancel-booking.test.ts` (erros devolvidos em vez de lançados; reserva passada recusada para o cliente e permitida ao admin; id inválido não chega ao banco). Integração: `bookings` e `cancellation` passam a esperar `{ success: false, error }`. e2e `seo.spec.ts`: headers em `/`, `/privacidade`, `/sw.js` e no manifest.
+
+**Validação (local, 2026-10-23, um de cada vez):** `npm run lint` ✅ · `npx tsc --noEmit` ✅ · `npm run test:unit` 311 ✅ · `npm run test:int` 84 ✅ (Neon "Testes", 655s) · `npm run build` ✅ · `npm run test:e2e` 60 ✅.
+
+**Pendências:**
+- [x] Removidos `app/_components/booking-carousel.tsx` (sem uso) e `app/barbershop/page.tsx` (cópia da `/bookings` sem link; `/barbershop` passa a dar 404) — autorizado pelo dono em 2026-10-23; lint, unit e build repetidos depois.
+- [ ] Teste de aceite do dono na staging.
+- [x] Commit e staging (autorizados pelo dono em 2026-10-23).
+- [ ] PR e merge: decisão do dono depois do teste na staging.
+
+### PR 2 · Notificações (`prompt22/notificacoes`)
+
+**Contexto:** 1 `NotificationLog` `ADMIN_NEW_BOOKING` FAILED "Interrompido durante o envio; não reenviado" (23/10 13:58): a linha ficou em `SENDING` e o Cron a fechou. Causa provável: a função da página morreu no meio do envio em segundo plano (o `waitUntil` vive até o `maxDuration` da função, e nenhuma página o definia). O envio é sequencial (confirmação → "Nova reserva"), com o SMTP do Gmail e `connection_limit=1`. Confirmar nos logs da Vercel (dono).
+
+**Feito:**
+- `export const maxDuration = 60` nas páginas cujas Server Actions enviam em segundo plano: home, `/bookings`, `/adm`, `/perfil` e `/barbershop/[id]` (esta sai no PR 4).
+- Reenvio só quando é seguro (`app/_lib/notifications/smtp-errors.ts`): pelo comando SMTP em que o nodemailer falhou. Antes da mensagem (conexão, login, `MAIL FROM`, `RCPT TO`, ou códigos `EAUTH`/`ECONNECTION`/`EDNS`/`ETLS`/`EENVELOPE`, ou SMTP não configurado) → pode tentar de novo. Durante ou depois do `DATA`, ou erro sem essa informação → FAILED final (pode ter sido entregue). Antes, toda falha da confirmação era reenviável (risco pequeno de duplicado).
+- Orçamento de tempo (`SEND_BUDGET_MS` = 40s desde o início da action): passou, a confirmação/"Nova reserva" que falta não começa; fica `FAILED` com `attempts = 0` e "Sem tempo na função; fica para o Cron." (`deferToCron`). Nada saiu, então o Cron envia sem risco de duplicar.
+- Log do tempo do SMTP por envio ("Notificação CONFIRMATION enviada em N ms."), sem e-mail nem texto.
+- A regra "SENDING parado → FAILED final" continua igual.
+
+**Testes:** unit `smtp-errors.test.ts` (antes/depois do `DATA`, sem comando, não configurado); `save-booking.test.ts` (início da função passado ao envio). Integração `notificacoes.int.test.ts`: erros no formato do nodemailer; falha no `DATA` não é reenviada pelo Cron; sem tempo na função → nada enviado, 2 linhas `FAILED`/0 tentativas, o Cron envia 1x cada.
+
+**Validação (local, 2026-10-23, um de cada vez):** lint ✅ · `tsc` ✅ · unit 324 ✅ · integração 86 ✅ · build ✅ · e2e 59/60 na suíte: `mensalistas.spec` passou do tempo esperando o `/adm` carregar ("Carregando agendamentos…" após 5s, lentidão do Neon "Testes"); rodado de novo sozinho, 2/2 ✅. Tratado nos PRs 5 (`/adm` mais leve) e 6 (timeouts).
+
+### PR 3 · Pequenas melhorias (`prompt22/melhorias`)
+
+**Feito:**
+- **5a** `/bookings` lista também a reserva de mensalista ativo com o e-mail da conta (mesma regra de "Meu próximo agendamento", agora em `bookingOwnersWhere`, `app/_lib/next-booking.ts`), atrás de `MENSALISTAS`. O cartão ganha o selo "Mensalista"; no detalhe, "Para remarcar, fale com o Cris." no lugar do "Cancelar Reserva" (`BookingItem` com `readOnly`; o `cancelBooking` já recusava, a reserva não tem `userId`).
+- **5b** Painel: "Lembrar no WhatsApp" nas reservas na mão com telefone (horário ainda por vir). Abre `wa.me` do cliente com o texto "Olá, {primeiro nome}! Passando para lembrar do seu horário com o Cris: {serviço}, {sexta 23/10} às {10:30}. Endereço: {endereço}. Até lá!" (`whatsappReminderUrl`, `app/_lib/whatsapp-message.ts`). Só o admin vê: sem flag. Botão de 44px.
+- **5c** Perfil, abaixo do switch "Notificações no celular" e só com ele ligado (atrás de `WEB_PUSH`): "Não está recebendo? Em alguns celulares, como Xiaomi, libere as notificações e o uso de bateria do Chrome nas configurações do aparelho." (texto aprovado pelo dono em 2026-10-23).
+- 5d (mensalista sem horário fixo) adiado (D7).
+
+**Testes:** unit `next-booking.test.ts` (com e sem flag, e-mail sem diferenciar maiúsculas, conta sem e-mail), `whatsapp-message.test.ts` (texto do lembrete, sem nome, link). e2e: `mensalistas.spec` (a `/bookings` do mensalista mostra o selo, "Para remarcar…" e nenhum "Cancelar Reserva"), `admin-painel.spec` (link do lembrete com telefone, nome, serviço, dia, hora e endereço; 44px), `web-push.spec` (dica só com o push ligado, com a inscrição do navegador simulada).
+
+**Validação (local, 2026-10-23, um de cada vez):** lint ✅ · `tsc` ✅ · unit 330 ✅ · integração 86 ✅ · build ✅ · e2e 61 ✅.
+
+### PR 4 · Flags da home: `NEW_HOME` e `AGENDA_V2` viram código (`prompt22/flags-home`)
+
+**Feito:**
+- Home nova é a única home; a regra da agenda (sexta e sábado da semana, grade fixa, só horário por vir) vale sempre no `saveBooking` (`getSlotStatus`), para cliente e admin.
+- D1: `/barbershop/[id]` → redirecionamento permanente (308) para `/` (`next.config.mjs`). D2: `/classic` removido e também redirecionado para `/`.
+- `saveBooking` mudou de lugar: `app/barbershop/[id]/_actions/` → `app/_actions/save-booking.ts` (a rota saiu).
+- Sitemap só com home e privacidade; `/classic` saiu do `robots.txt`; `images.remotePatterns` (`utfs.io`) removido (nenhuma imagem remota com `next/image`).
+- `AGENDA_V2` e `NEW_HOME` saíram de `flags.ts`, `.env.example`, `vitest.config.mts` e `playwright.config.ts`. **Vercel (dono):** as duas variáveis podem ser apagadas em Production e Preview depois do merge (o código não lê mais).
+
+**Removido:** `app/classic/page.tsx`; `app/barbershop/[id]/page.tsx`, `_components/service-item.tsx`, `_components/barbershop-info.tsx`, `_actions/get-day-bookings.ts` (+ teste); `app/(home)/_components/classic-home.tsx`, `search.tsx`, `barbershop-item.tsx`; `app/_components/ui/form.tsx`, `ui/calendar.tsx`; `isBookableSlot` e `buildDaySlots` (`schedule.ts`, + testes); `isAgendaV2Enabled`, `isNewHomeEnabled`; dependências `react-hook-form`, `@hookform/resolvers`, `react-day-picker`.
+
+**Testes:** unit `save-booking.test.ts` (regra sempre ligada, relógio fixo), `flags.test.ts` (exemplos com `NOTIFICACOES`), `schedule.test.ts`, `security-headers.test.ts` (redirecionamentos). Integração: `agenda-v2.int.test.ts` → `agenda.int.test.ts`; `bookings` e `notificacoes` com relógio fixo (quarta 02/01/2030); `admin-panel` sem o caminho "flags desligadas" e com `getTakenInstants` no lugar do `getDayBookings`. e2e: `fluxos`, `estados` (sábado lotado sugere a sexta) e `acessibilidade` (44px e 390px) passam a usar a home; `home-nova` sem `/classic`; `admin-painel` sem a `/barbershop`; `seo` com sitemap novo e os dois 308.
+
+**Validação (local, 2026-10-23, um de cada vez):** lint ✅ · `tsc` ✅ · unit 315 ✅ · integração 86 ✅ · build ✅ · e2e 62 ✅.
+
+### Status em 2026-10-24 (parada pedida pelo dono)
+
+Branches empilhadas, só locais (**nenhum push, nenhum PR, nenhum merge**; a `staging` não foi atualizada):
+
+| PR | Branch | Commit | Situação |
+|---|---|---|---|
+| 1 · Segurança | `prompt22/seguranca` | `385180b` | ✅ Commitado e validado (unit 311 · int 84 · build · e2e 60) |
+| 2 · Notificações | `prompt22/notificacoes` | `07148a7` | ✅ Commitado e validado (unit 324 · int 86 · build · e2e 59/60 + `mensalistas.spec` 2/2 sozinho) |
+| 3 · Melhorias (5a, 5b, 5c) | `prompt22/melhorias` | `d561fbc` | ✅ Commitado e validado (unit 330 · int 86 · build · e2e 61) |
+| 4 · Flags da home | `prompt22/flags-home` | `0faa232` | ✅ Commitado e validado (unit 315 · int 86 · build · e2e 62) |
+| 5 · Flags do painel | `prompt22/flags-painel` | — (ainda em `0faa232`) | 🟡 **Pela metade, sem commit** |
+| 6 · Acessibilidade e testes | `prompt22/a11y-testes` | — | ⬜ Não começado (branch não criada) |
+| 7 · Documentação | `prompt22/docs` | — | ⬜ Não começado (branch não criada) |
+
+**PR 5, o que já está feito no working tree (sem commit):**
+- `flags.ts`: ficam só `NOTIFICACOES`, `PWA_INSTALL`, `WEB_PUSH`. Saíram `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO`, `MOTION` (código, `flags.test.ts`, `.env.example`, `vitest.config.mts`, `playwright.config.ts`).
+- `/adm` (D3): grade sempre; lista "Próximas" (todas as futuras) + "Últimos 30 dias" (`RECENT_DAYS`), tudo num `Promise.all`; `page.test.ts` reescrito.
+- Mensalistas sem flag: aba sempre, `/bookings` e "Meu próximo agendamento" sempre incluem a reserva de mensalista (`bookingOwnersWhere(user)`, `getNextBooking(user, now)`); testes ajustados.
+- Calendário sem flag: botão na home para todos; `/api/calendario` responde sem login (sem dado pessoal); testes ajustados.
+- MOTION sem flag: `app/_providers/motion.tsx` apagado; `isMotionOn`/`MOTION_ATTRIBUTE` saíram de `motion.ts`; variante `fx:` removida do `tailwind.config.ts` (classes viraram `motion-safe:`/normais); `globals.css` sem `html[data-motion="on"]`; `layout.tsx` sem o provider; o ✓ novo e "Reservando…" para todos; cores do `/adm` (âmbar/roxo) para todos.
+- e2e ajustados: `motion.spec` (animações para todos), `calendario.spec` (cliente vê o botão, rota 200), `e2e/db.ts` (reserva passada do cliente C há 3 dias, para caber nos 30 dias), comentários de `admin-painel`/`mensalistas`.
+- Já conferido: `tsc` ✅ · lint ✅ · unit 304 ✅. **Não rodados:** integração, build e e2e (a validação foi interrompida no meio da integração).
+
+**Falta no PR 5:** rodar integração → build → e2e (um de cada vez), corrigir o que falhar, registrar a seção do PR 5 aqui e commitar em `prompt22/flags-painel`. Depois do merge, o dono pode apagar na Vercel `AGENDA_V2`, `NEW_HOME`, `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO` e `MOTION`.
+
+**Falta no PR 6 (`prompt22/a11y-testes`):** axe (com o `axe-core` já instalado, sem dependência nova) em `/adm` (Agenda e Mensalistas), `/bookings`, `/perfil`, `/privacidade` no `e2e/acessibilidade.spec.ts` e corrigir o que aparecer; tirar o `timeout: 15_000` do `motion.spec` e definir `expect.timeout` (CI 5s, local 10s); `npx tsc --noEmit` no CI; `@vitest/coverage-v8` (dev) com relatório de cobertura, sem trava. Ideia em aberto: manter `NOTIFICACOES`/`PWA_INSTALL`/`WEB_PUSH` em `admin` no e2e (cobre os dois lados do botão de desligar) — explicar ao dono.
+
+**Falta no PR 7 (`prompt22/docs`):** README, `CLAUDE.md` enxuto (sem as flags removidas, sem `pages/_document.tsx`), `docs/operacao.md` (flags que ficam, `NotificationLog`, Cron, rollback, backup, migração, tabelas legadas do D8). Depois: push só da `prompt22/docs` para a `staging` e o roteiro de teste único.
+
+### PR 5 · Flags do painel: `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO` e `MOTION` viram código (`prompt22/flags-painel`)
+
+(Retomado em 2026-10-26, depois da parada de 24/10.)
+
+**Feito:**
+- `flags.ts` só com os botões de desligar: `NOTIFICACOES`, `PWA_INSTALL`, `WEB_PUSH`.
+- `/adm` (D3): grade da semana sempre; abaixo, "Próximas" (todas as futuras, em ordem) e "Últimos 30 dias" (mais recentes primeiro). Grade, métricas, renovações e as duas listas num `Promise.all`. Antes vinha o histórico inteiro (milhares de reservas, cada uma com Sheet e AlertDialog).
+- Mensalistas para todos: aba sempre visível; `/bookings` e "Meu próximo agendamento" incluem a reserva de mensalista com o e-mail da conta (`bookingOwnersWhere(user)`, `getNextBooking(user, now)`).
+- Calendário para todos: "Adicionar ao calendário" no cartão de sucesso e em "Meu próximo agendamento"; `/api/calendario` responde sem login (sem dado pessoal, como antes com `all`).
+- Microinterações para todos: `MotionProvider` e o atributo `data-motion` saíram; a variante `fx:` saiu do `tailwind.config.ts` (animações com `motion-safe:`, cores e transições normais); `globals.css` sem `html[data-motion="on"]`. "Reduzir movimento" continua desligando tudo. O ✓ novo, "Reservando…" e as cores do `/adm` (bloqueado âmbar, reservado roxo) valem para todos.
+- Correção achada no `tsc`: `RECENT_DAYS` não pode ser exportado de uma página do Next (quebraria o build); ficou interno.
+- **Vercel (dono), depois do merge:** `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO` e `MOTION` podem ser apagadas em Production e Preview.
+
+**Removido:** `app/_providers/motion.tsx`; `isAdminPanelV2Enabled`, `isMensalistasEnabled`, `isCalendarioEnabled`, `isMotionEnabled`, `isMotionOn`, `MOTION_ATTRIBUTE`; o plugin `fx` do Tailwind; o ícone antigo do sucesso (`CalendarCheckIcon`); o redirecionamento da aba Mensalistas com a flag desligada.
+
+**Testes:** unit `flags.test.ts`, `adm/page.test.ts` (janelas "Próximas"/"30 dias", sem `userId`, `select` sem o User inteiro), `adm/mensalistas/page.test.ts`, `next-booking.test.ts`, `calendario/route.test.ts` (sem login responde), `motion.test.ts`. Integração `mensalistas.int` sem os casos "sem flag". e2e: `motion.spec` (cliente comum também anima; "reduzir movimento" desliga), `calendario.spec` (cliente vê o botão, rota 200), `e2e/db.ts` (reserva passada do cliente C há 3 dias, dentro dos 30 dias do `/adm`), `acessibilidade.spec` (espera as transições antes de medir 44px: no meio do transform media 43,99…), `login-resume.spec` (toast + cartão de sucesso, `first()`).
+
+**Validação (local, 2026-10-26, um de cada vez):** lint ✅ · `tsc` ✅ · unit 304 ✅ · integração 86 ✅ · build ✅ · e2e 60/62 na 1ª rodada (os 2 testes acima, corrigidos) → 62 ✅ na suíte completa.
+
+### PR 6 · Acessibilidade e testes (`prompt22/a11y-testes`)
+
+**Decisão do dono (2026-10-26):** `NOTIFICACOES`, `PWA_INSTALL` e `WEB_PUSH` continuam em `admin` no e2e, para testar os dois lados do botão de desligar (ligado para o admin, desligado para o cliente).
+
+**Feito:**
+- axe-core (WCAG 2.1 A/AA) no e2e, sem violações, em `/` (deslogado), `/privacidade`, `/bookings` e `/perfil` (cliente), `/adm` e `/adm/mensalistas` (admin) — pendência do Prompt 17. `axe-core` 4.11.3 declarado como devDependency (já vinha instalado pelo `eslint-config-next`; mesma versão).
+- `expect.timeout` no `playwright.config.ts`: 10s local (Neon "Testes" pela internet) e 5s no CI; saiu o `timeout: 15_000` do cancelamento no `motion.spec` (o `/adm` ficou mais leve no PR 5).
+- CI: passo "Tipos (tsc)" (`npx tsc --noEmit`) depois do lint — o `next build` não confere `tests/` nem `e2e/`.
+- Cobertura: `npm run test:coverage` (`@vitest/coverage-v8` 5.0.5, só relatório, sem mínimo). Unit em 2026-10-26: `app/_actions` 94% das linhas, `app/_lib` 88%, `app/_actions/admin` 61% (pagamento e situação de mensalista são cobertos na integração, fora desse relatório), total 46% (componentes de tela ficam com o e2e).
+- Lighthouse não rodado localmente: o desempenho local fica abaixo do de produção (banco pela internet) e não serve para a meta da home (≥ 90). Conferir no PageSpeed em produção depois do merge.
+
+**Validação (local, 2026-10-26, um de cada vez):** lint ✅ · `tsc` ✅ · unit 304 ✅ · integração 86 ✅ · build ✅ · e2e 68 ✅.
+
+### PR 7 · Documentação (`prompt22/docs`)
+
+**Feito:**
+- `README.md` reescrito (era o modelo do create-next-app): o que é o app, como rodar, testes, ambientes, as 3 flags, como publicar (com a janela sex 20h–sáb 21h), onde estão migração e backup.
+- `CLAUDE.md` enxuto: sem as flags removidas e sem o `pages/_document.tsx` (não existe mais); rotas, modelo de dados e regras atualizados; detalhes do dia a dia movidos para `docs/operacao.md`.
+- `docs/operacao.md` (novo): flags que ficam e como ligar/desligar (com redeploy), variáveis que podem ser apagadas da Vercel, `NotificationLog` (status e consultas só de leitura), Cron, rollback (flag, Instant Rollback da Vercel, service worker), backup (5432), migração em produção (SQL manual + `migrate resolve`), tabelas legadas (D8) e segredos.
+
+**Validação:** só documentação (nenhum código mudou depois do PR 6, validado em 2026-10-26).
+
+### Status em 2026-10-26
+
+| PR | Branch | Commit |
+|---|---|---|
+| 1 · Segurança | `prompt22/seguranca` | `385180b` |
+| 2 · Notificações | `prompt22/notificacoes` | `07148a7` |
+| 3 · Melhorias | `prompt22/melhorias` | `d561fbc` |
+| 4 · Flags da home | `prompt22/flags-home` | `0faa232` |
+| 5 · Flags do painel | `prompt22/flags-painel` | `67dfed2` |
+| 6 · Acessibilidade e testes | `prompt22/a11y-testes` | `93c7470` |
+| 7 · Documentação | `prompt22/docs` | (este commit) |
+
+A seção "Status em 2026-10-24" acima ficou como histórico; o PR 5 foi concluído em 26/10.
+
+**Pendências:**
+- [x] `prompt22/docs` enviada para a `staging` (autorizado pelo dono em 2026-10-26).
+- [x] Teste de aceite do dono na staging ✅ em 2026-10-26: login, reserva, horário 09:00 sem piscar, redirecionamentos de `/classic` e `/barbershop`, dica do Xiaomi, `/adm` com "Próximas" + "Últimos 30 dias", "Lembrar no WhatsApp", bloqueio, mensalistas e e-mails uma vez só.
+- [x] PR único da `prompt22/docs` para a `main` (squash), merge autorizado pelo dono em 2026-10-26 se todos os checks passarem.
+- [ ] Depois do merge (dono): apagar na Vercel `AGENDA_V2`, `NEW_HOME`, `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO`, `MOTION` e `NEXT_AUTH_SECRET`; PageSpeed da home (meta: desempenho ≥ 90, acessibilidade 100); conferir nos logs o tempo do SMTP ("Notificação … enviada em N ms").
+- [ ] Prompt 23: upgrade do Next (15/16, React 19), troca do adapter do login (D6), remoção da `Booking_backup_duplicates` e da linha com falha em `_prisma_migrations` com backup (D8).
+- [ ] Tarefas do dono fora do código (ver o plano do Prompt 22): senha do banco de produção, revisão jurídica da Política, `GOOGLE_CLIENT_SECRET` "Needs Attention", projeto de dev travado no Supabase, logs da Vercel de 23/10 13:58.
+
+**Produção:** publicado em produção — previsto após o merge (PR único com os 7, segunda 2026-10-26, fora da janela sex 20h–sáb 21h). Sem migração. Nenhuma variável da Vercel alterada por este PR; as flags removidas podem ser apagadas depois pelo dono (ver `docs/operacao.md`).

@@ -3,9 +3,9 @@ import { FIXTURES } from "../tests/setup/fixtures";
 import { E2E, testDb } from "./db";
 import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs } from "./helpers";
 
-// Microinterações (Prompt 21). e2e com MOTION=admin: o admin vê as animações e o cliente comum não.
-// Nada aqui depende do tempo das animações: confere o atributo no <html>, as classes e o
-// animation-name calculado (que continua valendo depois que a animação termina).
+// Microinterações (Prompt 21), para todos desde o Prompt 22 (sem a flag MOTION).
+// Nada aqui depende do tempo das animações: confere as classes e o animation-name calculado
+// (que continua valendo depois que a animação termina).
 // Usa só o sábado às 12:30 (bloqueio), 13:30 (reserva pela home) e 14:30 (cancelamento no /adm).
 const { barbershop, service, clienteA, admin } = FIXTURES;
 const { clienteC } = E2E;
@@ -32,8 +32,6 @@ test.beforeEach(cleanUp);
 test.afterAll(cleanUp);
 
 const animationName = (locator: Locator) => locator.evaluate((el) => getComputedStyle(el).animationName);
-
-const motionAttribute = (page: Page) => page.evaluate(() => document.documentElement.getAttribute("data-motion"));
 
 // Segura a próxima Server Action até `release()`: dá para ver o estado de carregando sem depender de tempo.
 const holdNextServerAction = async (page: Page) => {
@@ -63,13 +61,12 @@ const bookSaturday1330 = async (page: Page) => {
 const successCard = (page: Page) =>
   page.getByTestId("booking-success-live").getByRole("region", { name: `Reservado! ${saturdayLabel} às 13:30.` });
 
-test("admin com MOTION: grade entra ao trocar o dia, horário faz pop, carregando com aria-busy e ✓ no sucesso", async ({
+test("admin: grade entra ao trocar o dia, horário faz pop, carregando com aria-busy e ✓ no sucesso", async ({
   page,
   context,
 }) => {
   await loginAs(context, admin.sessionToken);
   await gotoLoggedIn(page, "/", admin.id);
-  await expect.poll(() => motionAttribute(page)).toBe("on");
 
   // Primeiro carregamento: a grade não anima (não mexe no LCP).
   const panel = page.getByTestId("slots-panel");
@@ -97,10 +94,9 @@ test("admin com MOTION: grade entra ao trocar o dia, horário faz pop, carregand
   expect(await animationName(check.locator("path"))).toBe("check-draw");
 });
 
-test("admin com MOTION: o horário escolhido faz pop e os botões afundam no toque", async ({ page, context }) => {
+test("admin: o horário escolhido faz pop e os botões afundam no toque", async ({ page, context }) => {
   await loginAs(context, admin.sessionToken);
   await gotoLoggedIn(page, "/", admin.id);
-  await expect.poll(() => motionAttribute(page)).toBe("on");
 
   await page.getByRole("button", { name: new RegExp(`^${saturdayLabel}`) }).click();
   const slot = page.getByRole("button", { name: "13:30", exact: true });
@@ -108,11 +104,11 @@ test("admin com MOTION: o horário escolhido faz pop e os botões afundam no toq
   await expect(slot).toHaveAttribute("aria-pressed", "true");
   expect(await animationName(slot)).toBe("pop");
 
-  // :active com scale(.97): a regra existe para os botões quando a flag está ligada.
+  // :active com scale(.97): a regra existe para os botões.
   const pressRule = await page.evaluate(() =>
     Array.from(document.styleSheets).some((sheet) => {
       try {
-        return Array.from(sheet.cssRules).some((rule) => rule.cssText.includes('html[data-motion="on"] button:not(:disabled):active'));
+        return Array.from(sheet.cssRules).some((rule) => rule.cssText.includes("button:not(:disabled):active"));
       } catch {
         return false;
       }
@@ -121,24 +117,23 @@ test("admin com MOTION: o horário escolhido faz pop e os botões afundam no toq
   expect(pressRule).toBe(true);
 });
 
-test("cliente comum (MOTION=admin): sem data-motion e nenhuma animação", async ({ page, context }) => {
+test("cliente comum também vê as animações (sem flag desde o Prompt 22)", async ({ page, context }) => {
   await loginAs(context, clienteA.sessionToken);
   await gotoLoggedIn(page, "/", clienteA.id);
-  expect(await motionAttribute(page)).toBeNull();
+  expect(await page.evaluate(() => document.documentElement.getAttribute("data-motion"))).toBeNull();
 
   await page.getByRole("button", { name: new RegExp(`^${saturdayLabel}`) }).click();
-  expect(await animationName(page.getByTestId("slots-panel"))).toBe("none");
+  expect(await animationName(page.getByTestId("slots-panel"))).toBe("slots-in");
   const slot = page.getByRole("button", { name: "13:30", exact: true });
   await slot.click();
   await expect(slot).toHaveAttribute("aria-pressed", "true");
-  expect(await animationName(slot)).toBe("none");
+  expect(await animationName(slot)).toBe("pop");
 });
 
-test("reduzir movimento: com MOTION ligada, nada anima e a reserva funciona igual", async ({ page, context }) => {
+test("reduzir movimento: nada anima e a reserva funciona igual", async ({ page, context }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await loginAs(context, admin.sessionToken);
   await gotoLoggedIn(page, "/", admin.id);
-  await expect.poll(() => motionAttribute(page)).toBe("on");
 
   // Trocar o dia e escolher o horário: sem animação (conferido antes de abrir o Sheet, que esconde a página).
   await page.getByRole("button", { name: new RegExp(`^${saturdayLabel}`) }).click();
@@ -163,13 +158,12 @@ test("reduzir movimento: com MOTION ligada, nada anima e a reserva funciona igua
 const openAdminSaturday = async (page: Page) => {
   await gotoLoggedIn(page, "/adm", admin.id);
   await expect(page.getByRole("heading", { level: 1, name: "Agenda" })).toBeVisible();
-  await expect.poll(() => motionAttribute(page)).toBe("on");
   await page.getByRole("button", { name: new RegExp(`^${saturdayLabel}`) }).click();
   const list = page.getByRole("list", { name: `Horários de ${saturdayLabel}` });
   return (time: string) => list.getByRole("listitem").filter({ hasText: new RegExp(`^${time}`) });
 };
 
-test("/adm com MOTION: bloquear troca a cor da linha e anima o status; toast em 240ms", async ({ page, context }) => {
+test("/adm: bloquear troca a cor da linha e anima o status; toast em 240ms", async ({ page, context }) => {
   await loginAs(context, admin.sessionToken);
   const row = await openAdminSaturday(page);
 
@@ -191,7 +185,7 @@ test("/adm com MOTION: bloquear troca a cor da linha e anima o status; toast em 
   expect(await animationName(blockedRow.getByTestId("slot-status"))).toBe("status-in");
 });
 
-test("/adm com MOTION: cancelar faz o número de Canceladas dar o pulinho", async ({ page, context }) => {
+test("/adm: cancelar faz o número de Canceladas dar o pulinho", async ({ page, context }) => {
   const db = testDb();
   try {
     await db.booking.create({
@@ -210,8 +204,8 @@ test("/adm com MOTION: cancelar faz o número de Canceladas dar o pulinho", asyn
   const before = Number(await canceladas.textContent());
   await row("14:30").getByRole("button", { name: "Cancelar reserva das 14:30" }).click();
   await page.getByRole("alertdialog", { name: `Cancelar reserva de ${clienteC.name}?` }).getByRole("button", { name: "Cancelar reserva" }).click();
-  // O /adm re-renderizado chega depois do toast; com os dados das outras specs passa de 5s no Neon.
-  await expect(canceladas).toHaveText(String(before + 1), { timeout: 15_000 });
+  // O /adm re-renderizado chega depois do toast (expect.timeout do playwright.config: 10s local, 5s no CI).
+  await expect(canceladas).toHaveText(String(before + 1));
   await expect(number).toHaveClass(/animate-bump/);
   expect(await animationName(number)).toBe("bump");
   await expect(row("14:30")).toHaveAttribute("data-state", "free");

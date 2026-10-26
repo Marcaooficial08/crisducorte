@@ -12,7 +12,7 @@ const TABS = [
 ] as const;
 
 // Abas do painel do admin (spec §3, AdminTabs): Agenda e Mensalistas, com o número de renovações
-// pendentes. Só aparece com a flag MENSALISTAS.
+// pendentes.
 const AdminTabs = ({ current, pendingRenewals }: AdminTabsProps) => (
   <nav aria-label="Painel do admin" className="mb-6 flex gap-1 rounded-[var(--radius-lg)] border border-border p-1">
     {TABS.map((tab) => {

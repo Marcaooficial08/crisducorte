@@ -4,23 +4,19 @@ import Header from "@/app/_components/header";
 import { authOptions } from "@/app/_lib/auth";
 import { assertAdmin } from "@/app/_lib/auth-guards";
 import { db } from "@/app/_lib/prisma";
-import { isMensalistasEnabled } from "@/app/_lib/flags";
 import { visibleBarbershopWhere } from "@/app/_lib/barbershops";
 import { getMensalistas } from "@/app/_lib/mensalistas";
 import { getNow } from "@/app/_lib/schedule";
 import AdminTabs from "../_components/admin-tabs";
 import MensalistasPanel from "../_components/mensalistas-panel";
 
-// Aba Mensalistas do painel (spec §4.5, MEL-025, flag MENSALISTAS). Só isAdmin.
+// Aba Mensalistas do painel (spec §4.5, MEL-025). Só isAdmin.
 const MensalistasPage = async () => {
   const session = await getServerSession(authOptions);
   try {
     assertAdmin(session);
   } catch {
     return redirect("/");
-  }
-  if (!isMensalistasEnabled(session)) {
-    return redirect("/adm");
   }
 
   // Relógio da agenda (getNow): no e2e, a mesma semana da grade.

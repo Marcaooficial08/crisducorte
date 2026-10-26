@@ -10,7 +10,7 @@ vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
 import { db } from "@/app/_lib/prisma";
 import { resetRateLimit } from "@/app/_lib/rate-limit";
 import { SLOT_UNAVAILABLE_MESSAGE } from "@/app/_lib/schedule";
-import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
+import { saveBooking } from "@/app/_actions/save-booking";
 import { FIXTURES, resetDatabase, seedFixtures } from "../setup/fixtures";
 
 const { barbershop, service, clienteA } = FIXTURES;
@@ -33,11 +33,10 @@ const book = (date: string) => {
   return saveBooking({ barbershopId: barbershop.id, serviceId: service.id, date });
 };
 
-describe("saveBooking com AGENDA_V2=all (banco real, relógio fixo)", () => {
+describe("saveBooking com a regra da agenda (banco real, relógio fixo)", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     resetRateLimit();
-    vi.stubEnv("AGENDA_V2", "all");
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(WEDNESDAY_NOON));
     await resetDatabase(db);

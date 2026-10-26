@@ -17,7 +17,7 @@ import { saveMensalista } from "@/app/_actions/admin/save-mensalista";
 import { registerMensalistaPayment } from "@/app/_actions/admin/register-mensalista-payment";
 import { excludeMensalista, pauseMensalista, reactivateMensalista } from "@/app/_actions/admin/mensalista-status";
 import { adminCancelBooking } from "@/app/_actions/admin/admin-cancel-booking";
-import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
+import { saveBooking } from "@/app/_actions/save-booking";
 import { FIXTURES, resetDatabase, seedFixtures } from "../setup/fixtures";
 
 const { barbershop, service, clienteA, admin } = FIXTURES;
@@ -211,7 +211,6 @@ describe("mensalistas (banco real, relógio fixo)", () => {
     });
 
     it("o cliente não reserva o horário do mensalista quando a semana abre", async () => {
-      vi.stubEnv("NEW_HOME", "all");
       const pedro = await create();
       await pay(pedro.id);
 
@@ -285,7 +284,6 @@ describe("mensalistas (banco real, relógio fixo)", () => {
       expect(await itemOf(pedro.id)).toMatchObject({ status: "PAUSADO", needsRenewal: false, nextBooking: null });
 
       // Horário livre para cliente de novo.
-      vi.stubEnv("NEW_HOME", "all");
       expect(
         await as(clienteA, () => saveBooking({ barbershopId: barbershop.id, serviceId: service.id, date: at1030(FRIDAYS[1]).toISOString() })),
       ).toEqual({ success: true });
@@ -315,18 +313,17 @@ describe("mensalistas (banco real, relógio fixo)", () => {
   });
 
   describe("Meu próximo agendamento", () => {
-    it("com a flag, a conta com o mesmo e-mail vê a reserva do mensalista; sem a flag ou outro e-mail, não", async () => {
+    it("a conta com o mesmo e-mail vê a reserva do mensalista; outro e-mail, não", async () => {
       const pedro = await create({ email: clienteA.email.toUpperCase() });
       await pay(pedro.id);
 
-      const next = await getNextBooking(clienteA, new Date(), true);
+      const next = await getNextBooking(clienteA, new Date());
       expect(next).toMatchObject({ date: at1030(FRIDAYS[0]), source: "MENSALISTA", service: { name: service.name } });
-      expect(await getNextBooking(clienteA, new Date(), false)).toBeNull();
-      expect(await getNextBooking(FIXTURES.clienteB, new Date(), true)).toBeNull();
+      expect(await getNextBooking(FIXTURES.clienteB, new Date())).toBeNull();
 
       // Pausado: as futuras foram canceladas, nada aparece.
       await asAdmin(() => pauseMensalista(pedro.id));
-      expect(await getNextBooking(clienteA, new Date(), true)).toBeNull();
+      expect(await getNextBooking(clienteA, new Date())).toBeNull();
     });
 
     it("a reserva própria do cliente continua aparecendo e vem antes se for mais cedo", async () => {
@@ -335,7 +332,7 @@ describe("mensalistas (banco real, relógio fixo)", () => {
       await db.booking.create({
         data: { barbershopId: barbershop.id, serviceId: service.id, userId: clienteA.id, date: at1030(FRIDAYS[0]) },
       });
-      expect(await getNextBooking(clienteA, new Date(), true)).toMatchObject({ source: "CLIENT", userId: clienteA.id });
+      expect(await getNextBooking(clienteA, new Date())).toMatchObject({ source: "CLIENT", userId: clienteA.id });
     });
   });
 });

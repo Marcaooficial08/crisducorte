@@ -24,3 +24,22 @@ export const whatsappConfirmationText = ({ serviceName, date, time, address }: O
 
 export const whatsappConfirmationUrl = (input: WhatsappConfirmation): string =>
   `${whatsappUrl(input.phone)}?text=${encodeURIComponent(whatsappConfirmationText(input))}`;
+
+// "Lembrar no WhatsApp" do painel (Prompt 22): o Cris manda o lembrete para quem reservou na mão.
+export interface WhatsappReminder {
+  phone: string; // WhatsApp do cliente (Booking.customerPhone, só dígitos)
+  customerName: string;
+  address: string;
+  serviceName: string;
+  date: string; // "2026-10-23"
+  time: string; // "10:30"
+}
+
+export const whatsappReminderText = ({ customerName, serviceName, date, time, address }: Omit<WhatsappReminder, "phone">): string => {
+  const firstName = customerName.trim().split(/\s+/)[0];
+  const greeting = firstName ? `Olá, ${firstName}!` : "Olá!";
+  return `${greeting} Passando para lembrar do seu horário com o Cris: ${serviceName}, ${dayText(date)} às ${time}. Endereço: ${address}. Até lá!`;
+};
+
+export const whatsappReminderUrl = (input: WhatsappReminder): string =>
+  `${whatsappUrl(input.phone)}?text=${encodeURIComponent(whatsappReminderText(input))}`;

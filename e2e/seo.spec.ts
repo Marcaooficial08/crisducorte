@@ -65,17 +65,39 @@ test("home tem JSON-LD HairSalon com endereço e horário", async ({ page }) => 
 test("robots.txt bloqueia as áreas privadas", async ({ request }) => {
   const body = await (await request.get("/robots.txt")).text();
 
-  for (const path of ["/adm", "/perfil", "/bookings", "/api", "/classic"]) {
+  for (const path of ["/adm", "/perfil", "/bookings", "/api"]) {
     expect(body).toContain(`Disallow: ${path}`);
   }
   expect(body).toContain(`Sitemap: ${SITE_URL}/sitemap.xml`);
 });
 
-test("sitemap.xml lista home, privacidade e a barbearia", async ({ request }) => {
+test("sitemap.xml lista só a home e a privacidade", async ({ request }) => {
   const body = await (await request.get("/sitemap.xml")).text();
 
   expect(body).toContain(`<loc>${SITE_URL}</loc>`);
   expect(body).toContain(`<loc>${SITE_URL}/privacidade</loc>`);
-  expect(body).toContain(`<loc>${SITE_URL}/barbershop/${FIXTURES.barbershop.id}</loc>`);
+  expect(body).not.toContain("/barbershop");
   expect(body).not.toContain("/adm");
+});
+
+// Prompt 22 (D1, D2): página da barbearia e home antiga redirecionam para a home, permanente.
+test("/barbershop/[id] e /classic redirecionam para a home (308)", async ({ request }) => {
+  for (const path of [`/barbershop/${FIXTURES.barbershop.id}`, "/classic"]) {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status(), path).toBe(308);
+    expect(response.headers()["location"], path).toBe("/");
+  }
+});
+
+// Prompt 22: headers de segurança nas páginas, nas rotas de API e no service worker.
+test("respostas trazem os headers de segurança", async ({ request }) => {
+  for (const path of ["/", "/privacidade", "/sw.js", "/manifest.webmanifest"]) {
+    const response = await request.get(path);
+    const headers = response.headers();
+    expect(headers["x-content-type-options"], path).toBe("nosniff");
+    expect(headers["x-frame-options"], path).toBe("DENY");
+    expect(headers["referrer-policy"], path).toBe("strict-origin-when-cross-origin");
+    expect(headers["content-security-policy"], path).toContain("frame-ancestors 'none'");
+    expect(headers["permissions-policy"], path).toContain("camera=()");
+  }
 });

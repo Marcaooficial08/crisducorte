@@ -10,7 +10,7 @@ vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
 import { db } from "@/app/_lib/prisma";
 import { resetRateLimit } from "@/app/_lib/rate-limit";
 import { getBookingMetrics } from "@/app/_lib/metrics";
-import { getSlotStatus } from "@/app/_lib/availability";
+import { dayRange, getSlotStatus, getTakenInstants } from "@/app/_lib/availability";
 import { ADMIN_ERROR_MESSAGES, AdminErrorCode } from "@/app/_lib/admin-actions";
 import { blockSlot } from "@/app/_actions/admin/block-slot";
 import { unblockSlot } from "@/app/_actions/admin/unblock-slot";
@@ -18,8 +18,7 @@ import { blockDay } from "@/app/_actions/admin/block-day";
 import { unblockDay } from "@/app/_actions/admin/unblock-day";
 import { createManualBooking } from "@/app/_actions/admin/create-manual-booking";
 import { adminCancelBooking } from "@/app/_actions/admin/admin-cancel-booking";
-import { saveBooking } from "@/app/barbershop/[id]/_actions/save-booking";
-import { getDayBookings } from "@/app/barbershop/[id]/_actions/get-day-bookings";
+import { saveBooking } from "@/app/_actions/save-booking";
 import { FIXTURES, resetDatabase, seedFixtures } from "../setup/fixtures";
 
 const { barbershop, service, clienteA, clienteB, admin } = FIXTURES;
@@ -69,7 +68,6 @@ describe("painel do admin (banco real, relógio fixo)", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     resetRateLimit();
-    vi.stubEnv("NEW_HOME", "all");
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(WEDNESDAY_NOON);
     await resetDatabase(db);
@@ -86,7 +84,7 @@ describe("painel do admin (banco real, relógio fixo)", () => {
   });
 
   describe("bloquear horário", () => {
-    it("horário bloqueado é recusado pelo saveBooking (home nova e agenda antiga) e some da /barbershop/[id]", async () => {
+    it("horário bloqueado é recusado pelo saveBooking e aparece ocupado para o cliente", async () => {
       expect(await asAdmin(() => blockSlot({ date: FRIDAY, time: "09:00", reason: "Médico" }))).toEqual({
         success: true,
         message: "Horário 09:00 bloqueado.",
@@ -94,14 +92,11 @@ describe("painel do admin (banco real, relógio fixo)", () => {
       expect(await db.slotBlock.findMany()).toMatchObject([{ date: FRIDAY_0900, reason: "Médico" }]);
       expect(await statusOf("09:00")).toBe("BLOCKED");
 
-      // NEW_HOME ligada (getSlotStatus) e flags desligadas (getInstantStatus).
-      expect(await clientBooks(clienteA, FRIDAY_0900)).toMatchObject({ success: false, code: "SLOT_UNAVAILABLE" });
-      vi.stubEnv("NEW_HOME", "off");
       expect(await clientBooks(clienteA, FRIDAY_0900)).toMatchObject({ success: false, code: "SLOT_UNAVAILABLE" });
       expect(await db.booking.count()).toBe(0);
 
-      // /barbershop/[id]: o bloqueado vem como ocupado, só com a data.
-      expect(await getDayBookings(barbershop.id, FRIDAY_0900)).toEqual([{ date: FRIDAY_0900 }]);
+      // Home: o bloqueado vem como ocupado, só com a data (nada de dado pessoal).
+      expect(await getTakenInstants(barbershop.id, dayRange(FRIDAY))).toEqual([FRIDAY_0900]);
     });
 
     it("desbloquear libera o horário de novo", async () => {

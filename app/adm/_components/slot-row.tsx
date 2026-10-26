@@ -20,6 +20,7 @@ import { adminCancelBooking } from "@/app/_actions/admin/admin-cancel-booking";
 import { unblockSlot } from "@/app/_actions/admin/unblock-slot";
 import type { AdminSlot } from "@/app/_lib/admin-agenda";
 import { formatPhone, whatsappUrl } from "@/app/_lib/phone";
+import { whatsappReminderUrl } from "@/app/_lib/whatsapp-message";
 import { track } from "@/app/_lib/track";
 import { cn } from "@/app/_lib/utils";
 import { useChangedSinceMount } from "@/app/_lib/use-changed-since-mount";
@@ -29,12 +30,13 @@ interface SlotRowProps {
   date: string;
   dayLabel: string;
   slot: AdminSlot;
+  address: string; // endereço da barbearia, para o "Lembrar no WhatsApp"
   onBlock: () => void;
   onManualBooking: () => void;
 }
 
 // Um horário da grade do admin (spec §4.4): estado + ações. Horário passado não tem ações.
-const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProps) => {
+const SlotRow = ({ date, dayLabel, slot, address, onBlock, onManualBooking }: SlotRowProps) => {
   const [loading, setLoading] = useState(false);
   const { time, past, booking, block } = slot;
 
@@ -55,7 +57,7 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
   // Mensalista: "Desmarcar esta semana" (spec §4.4); a falta conta como usada no ciclo (D2).
   const isMensalista = booking?.source === "MENSALISTA";
 
-  // MOTION: a linha troca de cor com o estado e o texto do status entra com fade + deslize lateral,
+  // A linha troca de cor com o estado e o texto do status entra com fade + deslize lateral,
   // só quando o estado muda (bloquear, desbloquear, cancelar, reservar na mão), não ao abrir a página.
   const state = booking ? "booked" : block ? "blocked" : "free";
   const stateChanged = useChangedSinceMount(state);
@@ -69,12 +71,11 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
       className={cn(
         // Celular: botões abaixo; computador: na mesma linha, à direita.
         "flex flex-col gap-3 rounded-[var(--radius-lg)] border p-3 sm:flex-row sm:items-center sm:justify-between",
-        block && !booking ? "border-dashed border-border" : "border-border",
-        // MOTION: livre neutro → bloqueado âmbar (borda sólida) → reservado roxo, com transição de cor de 220ms.
-        "fx:transition-colors fx:duration-[220ms] fx:ease-motion",
-        state === "free" && "fx:bg-secondary/40",
-        state === "blocked" && "fx:border-solid fx:border-warning fx:bg-warning/[0.14]",
-        state === "booked" && "fx:border-accent/70 fx:bg-accent/[0.12]",
+        // Livre neutro → bloqueado âmbar → reservado roxo, com transição de cor de 220ms.
+        "transition-colors duration-[220ms] ease-motion",
+        state === "free" && "border-border bg-secondary/40",
+        state === "blocked" && "border-warning bg-warning/[0.14]",
+        state === "booked" && "border-accent/70 bg-accent/[0.12]",
         past && "opacity-70",
       )}
     >
@@ -83,7 +84,7 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
         <div
           key={state}
           data-testid="slot-status"
-          className={cn("flex min-w-0 flex-1 flex-col gap-1", stateChanged && "fx:motion-safe:animate-status-in")}
+          className={cn("flex min-w-0 flex-1 flex-col gap-1", stateChanged && "motion-safe:animate-status-in")}
         >
           {booking ? (
             <>
@@ -110,12 +111,12 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
               )}
             </>
           ) : block ? (
-            // MOTION: "Bloqueado · motivo" em âmbar (#FBBF24, ~8:1 sobre o fundo âmbar) com cadeado.
-            <p className="text-body fx:flex fx:items-center fx:gap-1.5 fx:text-warning">
-              <LockIcon className="hidden h-4 w-4 shrink-0 fx:inline-block" aria-hidden="true" />
+            // "Bloqueado · motivo" em âmbar (#FBBF24, ~8:1 sobre o fundo âmbar) com cadeado.
+            <p className="flex items-center gap-1.5 text-body text-warning">
+              <LockIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span>
                 <span className="font-bold">Bloqueado</span>
-                {block.reason && <span className="text-muted-foreground fx:text-warning"> · {block.reason}</span>}
+                {block.reason && <span className="text-warning"> · {block.reason}</span>}
               </span>
             </p>
           ) : (
@@ -127,6 +128,26 @@ const SlotRow = ({ date, dayLabel, slot, onBlock, onManualBooking }: SlotRowProp
 
       {!past && (
         <div className="flex flex-wrap gap-2 sm:shrink-0 sm:justify-end">
+          {/* Reserva na mão: o cliente não recebe e-mail; o Cris lembra pelo WhatsApp (texto pronto). */}
+          {booking?.source === "MANUAL" && booking.customerPhone && (
+            <Button asChild variant="secondary" size="sm">
+              <a
+                href={whatsappReminderUrl({
+                  phone: booking.customerPhone,
+                  customerName: booking.customerName,
+                  address,
+                  serviceName: booking.serviceName,
+                  date,
+                  time,
+                })}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Lembrar ${booking.customerName} no WhatsApp`}
+              >
+                Lembrar no WhatsApp
+              </a>
+            </Button>
+          )}
           {booking && (
             <AlertDialog>
               <AlertDialogTrigger asChild>

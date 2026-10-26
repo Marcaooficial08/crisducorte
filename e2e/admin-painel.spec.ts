@@ -1,9 +1,9 @@
 import { expect, Locator, Page, test } from "@playwright/test";
 import { FIXTURES } from "../tests/setup/fixtures";
 import { E2E, testDb } from "./db";
-import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs, waitForServerActions } from "./helpers";
+import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs } from "./helpers";
 
-// e2e com ADMIN_PANEL_V2=admin e o relógio do servidor (SCHEDULE_NOW) numa quarta futura:
+// e2e com o relógio do servidor (SCHEDULE_NOW) numa quarta futura:
 // a grade do /adm é a sexta e o sábado dessa semana. Este arquivo usa só a sexta às
 // 09:00, 14:30, 17:30 e 18:30 (os outros horários da sexta são de outras specs) e limpa
 // bloqueios e reservas no fim de cada teste.
@@ -55,7 +55,7 @@ const expectTouchTarget = async (locator: Locator) => {
 const canceladas = (page: Page) =>
   page.getByRole("region", { name: /Métricas/ }).locator("dt", { hasText: "Canceladas" }).locator("xpath=following-sibling::dd[1]");
 
-test("admin bloqueia com motivo; cliente vê ocupado na home nova e não vê na /barbershop; admin desbloqueia", async ({
+test("admin bloqueia com motivo; cliente vê ocupado na home; admin desbloqueia", async ({
   page,
   context,
   browser,
@@ -76,24 +76,10 @@ test("admin bloqueia com motivo; cliente vê ocupado na home nova e não vê na 
     await loginAs(clientContext, clienteA.sessionToken);
     const clientPage = await clientContext.newPage();
 
-    // Home nova: riscado e desabilitado, igual a um horário reservado.
+    // Home: riscado e desabilitado, igual a um horário reservado.
     await gotoLoggedIn(clientPage, "/", clienteA.id);
     await clientPage.getByRole("button", { name: new RegExp(`^${fridayLabel}`) }).click();
     await expect(clientPage.getByRole("button", { name: "17:30, ocupado" })).toBeDisabled();
-
-    // /barbershop/[id]: o horário bloqueado não aparece.
-    await clientPage.clock.setFixedTime(wednesday);
-    await gotoLoggedIn(clientPage, `/barbershop/${barbershop.id}`, clienteA.id);
-    await clientPage.getByRole("button", { name: "Reservar" }).first().click();
-    const bookingSheet = clientPage.getByRole("dialog");
-    if (friday.getUTCMonth() !== wednesday.getUTCMonth()) {
-      await bookingSheet.getByRole("button", { name: "Go to next month" }).click();
-    }
-    const fridayLoaded = waitForServerActions(clientPage);
-    await bookingSheet.getByRole("gridcell", { name: String(friday.getUTCDate()), exact: true, disabled: false }).click();
-    await fridayLoaded;
-    await expect(bookingSheet.getByRole("button", { name: "18:30" })).toBeVisible();
-    await expect(bookingSheet.getByRole("button", { name: "17:30" })).toHaveCount(0);
   } finally {
     await clientContext.close();
   }
@@ -128,6 +114,17 @@ test("reserva manual aparece na grade com WhatsApp; cancelamento pelo admin libe
   const whatsapp = row.getByRole("link", { name: "Chamar Maria Manual no WhatsApp" });
   await expect(whatsapp).toHaveAttribute("href", "https://wa.me/5511912345678");
   await expect(whatsapp).toHaveText("(11) 91234-5678");
+
+  // "Lembrar no WhatsApp" (Prompt 22, 5b): wa.me do cliente com dia, horário e endereço prontos.
+  const reminder = row.getByRole("link", { name: "Lembrar Maria Manual no WhatsApp" });
+  const reminderUrl = new URL((await reminder.getAttribute("href")) ?? "");
+  expect(`${reminderUrl.origin}${reminderUrl.pathname}`).toBe("https://wa.me/5511912345678");
+  const text = reminderUrl.searchParams.get("text") ?? "";
+  expect(text).toMatch(/^Olá, Maria! Passando para lembrar do seu horário com o Cris: /);
+  expect(text).toContain(`${service.name}, sexta `);
+  expect(text).toContain("às 18:30");
+  expect(text).toContain(`Endereço: ${barbershop.address}.`);
+  expect((await reminder.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 
   const db = testDb();
   try {

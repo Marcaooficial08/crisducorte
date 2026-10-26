@@ -20,6 +20,8 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Local o servidor fala com o Neon "Testes" pela internet (us-east-2): 10s; no CI (Postgres local), o padrão de 5s.
+  expect: { timeout: process.env.CI ? 5_000 : 10_000 },
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: BASE_URL,
@@ -40,26 +42,15 @@ export default defineConfig({
       NEXTAUTH_SECRET: "e2e-secret-nao-usar-em-producao",
       GOOGLE_CLIENT_ID: "e2e-google-client-id",
       GOOGLE_CLIENT_SECRET: "e2e-google-client-secret",
-      // O `next start` também lê o .env local; fixa a flag para o e2e dar igual local e no CI.
-      AGENDA_V2: "off",
-      // Home nova para todos, como em produção desde 2026-10-17; a antiga continua em /classic.
-      NEW_HOME: "all",
-      // Painel do admin novo (grade, bloqueios, reserva manual).
-      ADMIN_PANEL_V2: "admin",
-      // Mensalistas (aba do /adm e "Meu próximo agendamento" do mensalista com conta).
-      MENSALISTAS: "all",
+      // O `next start` também lê o .env local: as flags ficam fixas para o e2e dar igual local e no CI.
       // Notificações (switch do Perfil e WhatsAppButton) só para o admin, como no rollout. Sem credenciais
       // do Gmail: nada sai do e2e, mesmo que o .env local tenha SMTP_USER/SMTP_PASS.
       NOTIFICACOES: "admin",
-      // "Adicionar ao calendário" só para o admin, como no rollout (Prompt 20).
-      CALENDARIO: "admin",
       // Service worker e dica de instalação só para o admin, como no rollout (Prompt 20).
       PWA_INSTALL: "admin",
       // Web Push: switch do Perfil só para o admin. Só a chave pública (gerada para o e2e; a privada foi
       // descartada): o switch aparece, mas sem VAPID_PRIVATE_KEY nenhum push sai do e2e.
       WEB_PUSH: "admin",
-      // Microinterações (Prompt 21) só para o admin, como no rollout.
-      MOTION: "admin",
       VAPID_PUBLIC_KEY: "BMM8W9wROJhu82APZiwpllaK79weh5eziyTMcDseT0KZU4hRZeMnrBPzOsp9uomsHq55RBYhR_vuxDU1E8ltYes",
       VAPID_PRIVATE_KEY: "",
       VAPID_SUBJECT: "",

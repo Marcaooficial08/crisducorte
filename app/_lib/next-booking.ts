@@ -6,20 +6,24 @@ interface NextBookingUser {
   email?: string | null;
 }
 
-// "Meu próximo agendamento" da home nova: a próxima reserva do próprio cliente e, com a flag
-// MENSALISTAS, também a de mensalista cujo e-mail é o da conta (D4j). A reserva de mensalista
-// não tem userId: o cliente vê, mas não cancela pelo app.
-export const getNextBooking = (user: NextBookingUser, now: Date, includeMensalista: boolean) => {
+// Reservas "do cliente": as da própria conta e as de mensalista ativo cujo e-mail é o da conta (D4j).
+// Usado em "Meu próximo agendamento" e na /bookings (Prompt 22).
+export const bookingOwnersWhere = (user: NextBookingUser): Prisma.BookingWhereInput[] => {
   const owners: Prisma.BookingWhereInput[] = [{ userId: user.id }];
-  if (includeMensalista && user.email) {
+  if (user.email) {
     owners.push({
       source: "MENSALISTA",
       mensalista: { is: { email: { equals: user.email, mode: "insensitive" }, status: "ATIVO" } },
     });
   }
-  return db.booking.findFirst({
-    where: { date: { gte: now }, OR: owners },
+  return owners;
+};
+
+// "Meu próximo agendamento" da home: a próxima reserva do próprio cliente ou de mensalista com o
+// e-mail da conta. A reserva de mensalista não tem userId: o cliente vê, mas não cancela pelo app.
+export const getNextBooking = (user: NextBookingUser, now: Date) =>
+  db.booking.findFirst({
+    where: { date: { gte: now }, OR: bookingOwnersWhere(user) },
     include: { service: true, barbershop: { select: { address: true } } },
     orderBy: { date: "asc" },
   });
-};

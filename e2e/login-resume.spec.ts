@@ -3,7 +3,7 @@ import { FIXTURES } from "../tests/setup/fixtures";
 import { E2E, testDb } from "./db";
 import { atSaoPauloTime, futureWednesdayNoon, loginAs, waitForServerActions } from "./helpers";
 
-// Voltar com a seleção depois do login (MEL-009). e2e roda com NEW_HOME=all e SCHEDULE_NOW numa quarta futura.
+// Voltar com a seleção depois do login (MEL-009). e2e roda com SCHEDULE_NOW numa quarta futura.
 // Sem Google: o POST do signIn é interceptado, o cookie de sessão é criado e a resposta manda para o callbackUrl.
 const { barbershop, service, clienteA } = FIXTURES;
 const { clienteC } = E2E;
@@ -72,7 +72,8 @@ test("deslogado escolhe um horário, faz login e volta com o mesmo dia e horári
   const saved = waitForServerActions(page);
   await sheet.getByRole("button", { name: "Confirmar reserva" }).click();
   await saved;
-  await expect(page.getByText(`Reservado! ${fridayLabel} às 15:30.`)).toBeVisible();
+  // Toast + cartão de sucesso (o calendário vale para todos desde o Prompt 22): o texto aparece 2 vezes.
+  await expect(page.getByText(`Reservado! ${fridayLabel} às 15:30.`).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "15:30, ocupado" })).toBeDisabled();
 
   const booking = await bookingAt(resumedSlot);

@@ -59,7 +59,6 @@ describe("/adm", () => {
 
   it("conta comum volta para a home sem ler reservas nem métricas", async () => {
     mocks.getServerSession.mockResolvedValue(sessionOf(false));
-    vi.stubEnv("ADMIN_PANEL_V2", "all");
 
     await expect(BookingsPageAdm()).rejects.toThrow("NEXT_REDIRECT:/");
     expect(mocks.findMany).not.toHaveBeenCalled();
@@ -67,43 +66,36 @@ describe("/adm", () => {
     expect(mocks.getAdminAgenda).not.toHaveBeenCalled();
   });
 
-  it("admin abre a página e vê todas as reservas", async () => {
+  it("admin vê todas as reservas: próximas e só os últimos 30 dias (D3)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-23T15:00:00.000Z"));
     mocks.getServerSession.mockResolvedValue(sessionOf(true));
 
     await expect(BookingsPageAdm()).resolves.toBeTruthy();
+    vi.useRealTimers();
+
     expect(mocks.redirect).not.toHaveBeenCalled();
-    expect(mocks.findMany).toHaveBeenCalledWith(
-      expect.not.objectContaining({ where: expect.objectContaining({ userId: expect.anything() }) }),
-    );
+    expect(mocks.findMany).toHaveBeenCalledTimes(2);
+    const [upcoming, recent] = mocks.findMany.mock.calls.map(([args]) => args);
+    // Sem filtro de userId: o admin vê as reservas de todos.
+    expect(upcoming.where).toEqual({ date: { gte: new Date("2026-10-23T15:00:00.000Z") } });
+    expect(upcoming.orderBy).toEqual({ date: "asc" });
+    expect(recent.where).toEqual({
+      date: { gte: new Date("2026-09-23T15:00:00.000Z"), lt: new Date("2026-10-23T15:00:00.000Z") },
+    });
+    expect(recent.orderBy).toEqual({ date: "desc" });
+    // Só os campos do cartão: nunca o User inteiro.
+    expect(upcoming.select.user).toEqual({ select: { name: true, email: true, image: true } });
   });
 
-  it("ADMIN_PANEL_V2 off: lista antiga + métricas, sem a grade", async () => {
+  it("grade da semana aberta da barbearia + métricas de 5 semanas + renovações para o badge", async () => {
     mocks.getServerSession.mockResolvedValue(sessionOf(true));
-
-    await BookingsPageAdm();
-
-    expect(mocks.getBookingMetrics).toHaveBeenCalledTimes(1);
-    expect(mocks.getAdminAgenda).not.toHaveBeenCalled();
-  });
-
-  it("ADMIN_PANEL_V2 ligada: grade da semana aberta da barbearia + métricas de 5 semanas", async () => {
-    mocks.getServerSession.mockResolvedValue(sessionOf(true));
-    vi.stubEnv("ADMIN_PANEL_V2", "admin");
 
     await BookingsPageAdm();
 
     expect(mocks.getAdminAgenda).toHaveBeenCalledWith("shop-1", expect.any(Date));
     const [desde, ate] = mocks.getBookingMetrics.mock.calls[0] as [Date, Date];
     expect(Math.round((ate.getTime() - desde.getTime()) / (24 * 60 * 60 * 1000))).toBe(35);
-  });
-
-  it("MENSALISTAS: off não conta renovações; ligada conta para o badge da aba", async () => {
-    mocks.getServerSession.mockResolvedValue(sessionOf(true));
-    await BookingsPageAdm();
-    expect(mocks.countPendingRenewals).not.toHaveBeenCalled();
-
-    vi.stubEnv("MENSALISTAS", "admin");
-    await BookingsPageAdm();
     expect(mocks.countPendingRenewals).toHaveBeenCalledTimes(1);
   });
 });

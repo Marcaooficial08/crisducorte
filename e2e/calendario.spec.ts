@@ -3,7 +3,7 @@ import { FIXTURES } from "../tests/setup/fixtures";
 import { testDb } from "./db";
 import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs, waitForServerActions } from "./helpers";
 
-// e2e roda com CALENDARIO=admin (Prompt 20): o admin vê "Adicionar ao calendário"; o cliente comum, não.
+// "Adicionar ao calendário" (Prompt 20) para todos desde o Prompt 22 (sem a flag CALENDARIO).
 const { barbershop, service, clienteA, admin } = FIXTURES;
 
 const friday = (() => {
@@ -76,7 +76,7 @@ test("admin reserva e adiciona ao calendário: Google Agenda e .ics com o horár
   expect(nextGoogle.searchParams.get("dates")).toBe(EXPECTED_DATES);
 });
 
-test("cliente comum (flag só para o admin) não vê o botão e a rota do .ics responde 404", async ({ page, context }) => {
+test("cliente comum também vê o botão e a rota do .ics responde", async ({ page, context }) => {
   const db = testDb();
   try {
     await db.booking.create({
@@ -89,8 +89,10 @@ test("cliente comum (flag só para o admin) não vê o botão e a rota do .ics r
   await loginAs(context, clienteA.sessionToken);
   await gotoLoggedIn(page, "/", clienteA.id);
   await expect(page.getByRole("heading", { name: "Meu próximo agendamento" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Adicionar ao calendário" })).toHaveCount(0);
+  const next = page.getByRole("region", { name: "Meu próximo agendamento" });
+  await expect(next.getByRole("button", { name: "Adicionar ao calendário" })).toBeVisible();
 
   const response = await page.request.get(`/api/calendario?data=${fridayDate}&hora=18:30&servico=${service.id}`);
-  expect(response.status()).toBe(404);
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toBe("text/calendar; charset=utf-8");
 });
