@@ -7,8 +7,9 @@ import { FIXTURES } from "../tests/setup/fixtures";
 export const E2E = {
   // Segundo cliente do teste de dois clientes no mesmo horário (o cliente B é excluído no lgpd.spec).
   clienteC: { id: "test-cliente-c", name: "Cliente C", email: "cliente-c@teste.local", sessionToken: "e2e-session-cliente-c" },
-  // Reserva passada do cliente C: o admin sempre tem o que ver em /adm.
-  pastBookingDate: new Date("2026-01-02T15:00:00.000Z"),
+  // Reserva passada do cliente C: o admin sempre tem o que ver em /adm. Há 3 dias, às 15:00 UTC: o /adm
+  // lista só os últimos 30 dias (D3, Prompt 22).
+  pastBookingDate: new Date(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).setUTCHours(15, 0, 0, 0)),
   // Sessão extra do cliente C, criada pelo teste do "Sair" (o signOut apaga a sessão no banco).
   logoutSessionToken: "e2e-session-cliente-c-sair",
   // Reserva passada do próprio admin, criada só no teste do menu (o estados.spec usa o admin sem reservas).

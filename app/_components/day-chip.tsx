@@ -18,9 +18,9 @@ const DayChip = ({ label, freeCount, selected, onSelect }: DayChipProps) => {
       aria-pressed={selected}
       onClick={onSelect}
       className={cn(
-        "flex min-h-[60px] flex-1 flex-col items-center justify-center rounded-[var(--radius-lg)] border px-3 py-2 transition-colors",
-        // MOTION: o escolhido acende com cor, borda e brilho em 180ms.
-        "fx:transition-[color,background-color,border-color,box-shadow] fx:duration-[180ms] fx:ease-motion",
+        "flex min-h-[60px] flex-1 flex-col items-center justify-center rounded-[var(--radius-lg)] border px-3 py-2",
+        // O escolhido acende com cor, borda e brilho em 180ms.
+        "transition-[color,background-color,border-color,box-shadow] duration-[180ms] ease-motion",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         // .glass fica fora de @layer e venceria a borda e o fundo do selecionado.
         selected ? "border-accent bg-accent/[0.18] shadow-selected" : "glass hover:bg-secondary",

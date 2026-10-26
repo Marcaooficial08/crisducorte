@@ -1,5 +1,4 @@
 import type { Config } from "tailwindcss"
-import plugin from "tailwindcss/plugin"
 
 const config = {
   darkMode: ["class"],
@@ -93,8 +92,8 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        // Microinterações (flag MOTION, Prompt 21): só transform e opacidade (o ✓ usa stroke-dashoffset,
-        // exceção aprovada: SVG de 20px, só repintura). Sempre com `fx:motion-safe:`.
+        // Microinterações (Prompt 21): só transform e opacidade (o ✓ usa stroke-dashoffset,
+        // exceção aprovada: SVG de 20px, só repintura). Sempre com `motion-safe:`.
         "slots-in": {
           from: { opacity: "0", transform: "translateY(8px)" },
         },
@@ -134,9 +133,6 @@ const config = {
   },
   plugins: [
     require("tailwindcss-animate"),
-    // `fx:` = só com a flag MOTION (atributo no <html>, ver app/_providers/motion.tsx). Vale também
-    // para portais (Sheet, Dialog, toast). Combinar com `motion-safe:` em toda animação.
-    plugin(({ addVariant }) => addVariant("fx", 'html[data-motion="on"] &')),
   ],
 } satisfies Config
 

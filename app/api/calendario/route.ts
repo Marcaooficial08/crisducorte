@@ -1,8 +1,5 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/app/_lib/auth";
 import { db } from "@/app/_lib/prisma";
-import { isCalendarioEnabled } from "@/app/_lib/flags";
 import { buildIcs, icsFileName, isGridTime, isValidDate } from "@/app/_lib/calendar";
 import { appUrl } from "@/app/_lib/notifications/templates";
 
@@ -13,11 +10,6 @@ export const dynamic = "force-dynamic";
 const notFound = () => new NextResponse("Não encontrado.", { status: 404 });
 
 export const GET = async (request: Request) => {
-  const session = await getServerSession(authOptions);
-  if (!isCalendarioEnabled(session)) {
-    return notFound();
-  }
-
   const params = new URL(request.url).searchParams;
   const date = params.get("data") ?? "";
   const time = params.get("hora") ?? "";

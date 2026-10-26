@@ -3,7 +3,7 @@ import { FIXTURES } from "../tests/setup/fixtures";
 import { testDb } from "./db";
 import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs } from "./helpers";
 
-// e2e com MENSALISTAS=all, ADMIN_PANEL_V2=admin e o relógio do servidor (SCHEDULE_NOW) numa quarta
+// e2e com o relógio do servidor (SCHEDULE_NOW) numa quarta
 // futura. Este arquivo usa a sexta às 16:30 (Pedro) e o sábado às 16:30 (conflito do João), nesta
 // semana e nas seguintes, e um cliente próprio (o "mensalista com conta"). Limpa tudo no fim.
 const { barbershop, service, clienteA, admin } = FIXTURES;

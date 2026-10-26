@@ -24,7 +24,7 @@
 | 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
 | 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção e liberado para todos | 2026-10-22 | `prompt20/push` (PR #21, com A, B e C) |
 | 21 · Microinterações (MOTION) | ✅ Publicado em produção e liberado para todos | 2026-10-23 | `prompt21/motion` (PR #23) |
-| 22 · Revisão final · PR 1 Segurança | 🟡 Em desenvolvimento | 2026-10-23 | `prompt22/seguranca` |
+| 22 · Revisão final (PRs 1–7) | 🟡 Em desenvolvimento — parado no PR 5 | 2026-10-24 | `prompt22/*` (branches empilhadas, sem push) |
 
 ## Ambientes
 
@@ -941,4 +941,52 @@ Elemento LCP igual antes e depois (deslogado: `<h1>`; admin: imagem do card). `/
 **Testes:** unit `save-booking.test.ts` (regra sempre ligada, relógio fixo), `flags.test.ts` (exemplos com `NOTIFICACOES`), `schedule.test.ts`, `security-headers.test.ts` (redirecionamentos). Integração: `agenda-v2.int.test.ts` → `agenda.int.test.ts`; `bookings` e `notificacoes` com relógio fixo (quarta 02/01/2030); `admin-panel` sem o caminho "flags desligadas" e com `getTakenInstants` no lugar do `getDayBookings`. e2e: `fluxos`, `estados` (sábado lotado sugere a sexta) e `acessibilidade` (44px e 390px) passam a usar a home; `home-nova` sem `/classic`; `admin-painel` sem a `/barbershop`; `seo` com sitemap novo e os dois 308.
 
 **Validação (local, 2026-10-23, um de cada vez):** lint ✅ · `tsc` ✅ · unit 315 ✅ · integração 86 ✅ · build ✅ · e2e 62 ✅.
+
+### Status em 2026-10-24 (parada pedida pelo dono)
+
+Branches empilhadas, só locais (**nenhum push, nenhum PR, nenhum merge**; a `staging` não foi atualizada):
+
+| PR | Branch | Commit | Situação |
+|---|---|---|---|
+| 1 · Segurança | `prompt22/seguranca` | `385180b` | ✅ Commitado e validado (unit 311 · int 84 · build · e2e 60) |
+| 2 · Notificações | `prompt22/notificacoes` | `07148a7` | ✅ Commitado e validado (unit 324 · int 86 · build · e2e 59/60 + `mensalistas.spec` 2/2 sozinho) |
+| 3 · Melhorias (5a, 5b, 5c) | `prompt22/melhorias` | `d561fbc` | ✅ Commitado e validado (unit 330 · int 86 · build · e2e 61) |
+| 4 · Flags da home | `prompt22/flags-home` | `0faa232` | ✅ Commitado e validado (unit 315 · int 86 · build · e2e 62) |
+| 5 · Flags do painel | `prompt22/flags-painel` | — (ainda em `0faa232`) | 🟡 **Pela metade, sem commit** |
+| 6 · Acessibilidade e testes | `prompt22/a11y-testes` | — | ⬜ Não começado (branch não criada) |
+| 7 · Documentação | `prompt22/docs` | — | ⬜ Não começado (branch não criada) |
+
+**PR 5, o que já está feito no working tree (sem commit):**
+- `flags.ts`: ficam só `NOTIFICACOES`, `PWA_INSTALL`, `WEB_PUSH`. Saíram `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO`, `MOTION` (código, `flags.test.ts`, `.env.example`, `vitest.config.mts`, `playwright.config.ts`).
+- `/adm` (D3): grade sempre; lista "Próximas" (todas as futuras) + "Últimos 30 dias" (`RECENT_DAYS`), tudo num `Promise.all`; `page.test.ts` reescrito.
+- Mensalistas sem flag: aba sempre, `/bookings` e "Meu próximo agendamento" sempre incluem a reserva de mensalista (`bookingOwnersWhere(user)`, `getNextBooking(user, now)`); testes ajustados.
+- Calendário sem flag: botão na home para todos; `/api/calendario` responde sem login (sem dado pessoal); testes ajustados.
+- MOTION sem flag: `app/_providers/motion.tsx` apagado; `isMotionOn`/`MOTION_ATTRIBUTE` saíram de `motion.ts`; variante `fx:` removida do `tailwind.config.ts` (classes viraram `motion-safe:`/normais); `globals.css` sem `html[data-motion="on"]`; `layout.tsx` sem o provider; o ✓ novo e "Reservando…" para todos; cores do `/adm` (âmbar/roxo) para todos.
+- e2e ajustados: `motion.spec` (animações para todos), `calendario.spec` (cliente vê o botão, rota 200), `e2e/db.ts` (reserva passada do cliente C há 3 dias, para caber nos 30 dias), comentários de `admin-painel`/`mensalistas`.
+- Já conferido: `tsc` ✅ · lint ✅ · unit 304 ✅. **Não rodados:** integração, build e e2e (a validação foi interrompida no meio da integração).
+
+**Falta no PR 5:** rodar integração → build → e2e (um de cada vez), corrigir o que falhar, registrar a seção do PR 5 aqui e commitar em `prompt22/flags-painel`. Depois do merge, o dono pode apagar na Vercel `AGENDA_V2`, `NEW_HOME`, `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO` e `MOTION`.
+
+**Falta no PR 6 (`prompt22/a11y-testes`):** axe (com o `axe-core` já instalado, sem dependência nova) em `/adm` (Agenda e Mensalistas), `/bookings`, `/perfil`, `/privacidade` no `e2e/acessibilidade.spec.ts` e corrigir o que aparecer; tirar o `timeout: 15_000` do `motion.spec` e definir `expect.timeout` (CI 5s, local 10s); `npx tsc --noEmit` no CI; `@vitest/coverage-v8` (dev) com relatório de cobertura, sem trava. Ideia em aberto: manter `NOTIFICACOES`/`PWA_INSTALL`/`WEB_PUSH` em `admin` no e2e (cobre os dois lados do botão de desligar) — explicar ao dono.
+
+**Falta no PR 7 (`prompt22/docs`):** README, `CLAUDE.md` enxuto (sem as flags removidas, sem `pages/_document.tsx`), `docs/operacao.md` (flags que ficam, `NotificationLog`, Cron, rollback, backup, migração, tabelas legadas do D8). Depois: push só da `prompt22/docs` para a `staging` e o roteiro de teste único.
+
+### PR 5 · Flags do painel: `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO` e `MOTION` viram código (`prompt22/flags-painel`)
+
+(Retomado em 2026-10-26, depois da parada de 24/10.)
+
+**Feito:**
+- `flags.ts` só com os botões de desligar: `NOTIFICACOES`, `PWA_INSTALL`, `WEB_PUSH`.
+- `/adm` (D3): grade da semana sempre; abaixo, "Próximas" (todas as futuras, em ordem) e "Últimos 30 dias" (mais recentes primeiro). Grade, métricas, renovações e as duas listas num `Promise.all`. Antes vinha o histórico inteiro (milhares de reservas, cada uma com Sheet e AlertDialog).
+- Mensalistas para todos: aba sempre visível; `/bookings` e "Meu próximo agendamento" incluem a reserva de mensalista com o e-mail da conta (`bookingOwnersWhere(user)`, `getNextBooking(user, now)`).
+- Calendário para todos: "Adicionar ao calendário" no cartão de sucesso e em "Meu próximo agendamento"; `/api/calendario` responde sem login (sem dado pessoal, como antes com `all`).
+- Microinterações para todos: `MotionProvider` e o atributo `data-motion` saíram; a variante `fx:` saiu do `tailwind.config.ts` (animações com `motion-safe:`, cores e transições normais); `globals.css` sem `html[data-motion="on"]`. "Reduzir movimento" continua desligando tudo. O ✓ novo, "Reservando…" e as cores do `/adm` (bloqueado âmbar, reservado roxo) valem para todos.
+- Correção achada no `tsc`: `RECENT_DAYS` não pode ser exportado de uma página do Next (quebraria o build); ficou interno.
+- **Vercel (dono), depois do merge:** `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO` e `MOTION` podem ser apagadas em Production e Preview.
+
+**Removido:** `app/_providers/motion.tsx`; `isAdminPanelV2Enabled`, `isMensalistasEnabled`, `isCalendarioEnabled`, `isMotionEnabled`, `isMotionOn`, `MOTION_ATTRIBUTE`; o plugin `fx` do Tailwind; o ícone antigo do sucesso (`CalendarCheckIcon`); o redirecionamento da aba Mensalistas com a flag desligada.
+
+**Testes:** unit `flags.test.ts`, `adm/page.test.ts` (janelas "Próximas"/"30 dias", sem `userId`, `select` sem o User inteiro), `adm/mensalistas/page.test.ts`, `next-booking.test.ts`, `calendario/route.test.ts` (sem login responde), `motion.test.ts`. Integração `mensalistas.int` sem os casos "sem flag". e2e: `motion.spec` (cliente comum também anima; "reduzir movimento" desliga), `calendario.spec` (cliente vê o botão, rota 200), `e2e/db.ts` (reserva passada do cliente C há 3 dias, dentro dos 30 dias do `/adm`), `acessibilidade.spec` (espera as transições antes de medir 44px: no meio do transform media 43,99…), `login-resume.spec` (toast + cartão de sucesso, `first()`).
+
+**Validação (local, 2026-10-26, um de cada vez):** lint ✅ · `tsc` ✅ · unit 304 ✅ · integração 86 ✅ · build ✅ · e2e 60/62 na 1ª rodada (os 2 testes acima, corrigidos) → 62 ✅ na suíte completa.
 

@@ -15,7 +15,7 @@ export interface AddToCalendarProps {
   bookingsUrl: string;
 }
 
-// "Adicionar ao calendário" (Prompt 20, flag CALENDARIO): abre as duas opções, Google Agenda
+// "Adicionar ao calendário" (Prompt 20): abre as duas opções, Google Agenda
 // (link) e Apple/Outlook (arquivo .ics de /api/calendario).
 const AddToCalendar = ({ date, time, serviceId, serviceName, address, bookingsUrl }: AddToCalendarProps) => {
   const [open, setOpen] = useState(false);

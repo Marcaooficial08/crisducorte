@@ -72,7 +72,8 @@ test("deslogado escolhe um horário, faz login e volta com o mesmo dia e horári
   const saved = waitForServerActions(page);
   await sheet.getByRole("button", { name: "Confirmar reserva" }).click();
   await saved;
-  await expect(page.getByText(`Reservado! ${fridayLabel} às 15:30.`)).toBeVisible();
+  // Toast + cartão de sucesso (o calendário vale para todos desde o Prompt 22): o texto aparece 2 vezes.
+  await expect(page.getByText(`Reservado! ${fridayLabel} às 15:30.`).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "15:30, ocupado" })).toBeDisabled();
 
   const booking = await bookingAt(resumedSlot);

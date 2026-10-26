@@ -9,7 +9,7 @@ interface NextBookingCardProps {
   serviceName: string;
   // Horário fixo de mensalista (MEL-025): não está em /bookings e não se cancela pelo app.
   mensalista?: boolean;
-  // "Adicionar ao calendário" (flag CALENDARIO), abaixo do cartão (fora do link para /bookings).
+  // "Adicionar ao calendário", abaixo do cartão (fora do link para /bookings).
   calendar?: AddToCalendarProps;
 }
 

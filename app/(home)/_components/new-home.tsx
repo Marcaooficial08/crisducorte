@@ -14,7 +14,7 @@ import { AGENDA_CLOSED_MESSAGE, DaySlots, TIME_ZONE, getNextServiceDays, getNow 
 import { getDaySlots } from "@/app/_lib/availability";
 import { getNextBooking } from "@/app/_lib/next-booking";
 import { bookingItemSelect } from "@/app/_lib/booking-item-data";
-import { isCalendarioEnabled, isMensalistasEnabled, isNotificacoesEnabled, isPwaInstallEnabled } from "@/app/_lib/flags";
+import { isNotificacoesEnabled, isPwaInstallEnabled } from "@/app/_lib/flags";
 import { appUrl } from "@/app/_lib/notifications/templates";
 import BookingPicker from "./booking-picker";
 
@@ -48,7 +48,7 @@ const NewHome = async ({ session }: NewHomeProps) => {
     barbershop
       ? Promise.all(serviceDays.map((day) => getDaySlots(day.date, { barbershopId: barbershop.id, now })))
       : Promise.resolve([]),
-    user ? getNextBooking(user, now, isMensalistasEnabled(session)) : Promise.resolve(null),
+    user ? getNextBooking(user, now) : Promise.resolve(null),
     isAdmin && rangeEnd
       ? db.booking.findMany({
           where: { date: { gte: now, lt: rangeEnd } },
@@ -60,7 +60,6 @@ const NewHome = async ({ session }: NewHomeProps) => {
 
   const days = daySlots.filter((day): day is DaySlots => day !== null);
   const firstName = user?.name?.split(" ")[0];
-  const calendarEnabled = isCalendarioEnabled(session);
   const bookingsUrl = appUrl("/bookings");
 
   return (
@@ -90,7 +89,7 @@ const NewHome = async ({ session }: NewHomeProps) => {
                   days={days}
                   isAuthenticated={!!user}
                   emailConfirmation={isNotificacoesEnabled(session) && !!user?.email}
-                  calendar={calendarEnabled ? { address: barbershop.address, bookingsUrl } : null}
+                  calendar={{ address: barbershop.address, bookingsUrl }}
                   whatsapp={
                     isNotificacoesEnabled(session) && barbershop.phone
                       ? { phone: barbershop.phone, address: barbershop.address }
@@ -110,18 +109,14 @@ const NewHome = async ({ session }: NewHomeProps) => {
                 date={nextBooking.date}
                 serviceName={nextBooking.service.name}
                 mensalista={nextBooking.source === "MENSALISTA"}
-                calendar={
-                  calendarEnabled
-                    ? {
-                        date: formatInTimeZone(nextBooking.date, TIME_ZONE, "yyyy-MM-dd"),
-                        time: formatInTimeZone(nextBooking.date, TIME_ZONE, "HH:mm"),
-                        serviceId: nextBooking.service.id,
-                        serviceName: nextBooking.service.name,
-                        address: nextBooking.barbershop.address,
-                        bookingsUrl,
-                      }
-                    : undefined
-                }
+                calendar={{
+                  date: formatInTimeZone(nextBooking.date, TIME_ZONE, "yyyy-MM-dd"),
+                  time: formatInTimeZone(nextBooking.date, TIME_ZONE, "HH:mm"),
+                  serviceId: nextBooking.service.id,
+                  serviceName: nextBooking.service.name,
+                  address: nextBooking.barbershop.address,
+                  bookingsUrl,
+                }}
               />
             </section>
           )}

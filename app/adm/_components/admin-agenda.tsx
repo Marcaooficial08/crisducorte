@@ -24,7 +24,7 @@ interface AdminAgendaProps {
 
 type BlockTarget = { kind: "slot"; time: string } | { kind: "day" };
 
-// Grade da semana aberta no /adm (spec §4.4, flag ADMIN_PANEL_V2).
+// Grade da semana aberta no /adm (spec §4.4).
 const AdminAgenda = ({ days, services, address }: AdminAgendaProps) => {
   const [selectedDate, setSelectedDate] = useState(days[0]?.date);
   const [blockTarget, setBlockTarget] = useState<BlockTarget | null>(null);

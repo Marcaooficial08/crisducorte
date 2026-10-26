@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { fromZonedTime } from "date-fns-tz";
 import Link from "next/link";
-import { CalendarCheckIcon, CalendarXIcon, Loader2 } from "lucide-react";
+import { CalendarXIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import DayChip from "@/app/_components/day-chip";
 import TimeSlot from "@/app/_components/time-slot";
@@ -14,7 +14,6 @@ import EmptyState from "@/app/_components/empty-state";
 import WhatsAppButton from "@/app/_components/whatsapp-button";
 import AddToCalendar from "@/app/_components/add-to-calendar";
 import SuccessCheck from "@/app/_components/success-check";
-import { useMotion } from "@/app/_providers/motion";
 import { Button } from "@/app/_components/ui/button";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/app/_components/ui/sheet";
 import { saveBooking } from "@/app/_actions/save-booking";
@@ -46,7 +45,7 @@ interface BookingPickerProps {
   whatsapp?: { phone: string; address: string } | null;
   // Notificações ligadas para este usuário (flag NOTIFICACOES): avisa que a confirmação foi por e-mail.
   emailConfirmation?: boolean;
-  // "Adicionar ao calendário" (flag CALENDARIO): endereço da barbearia e link "Ver ou cancelar".
+  // "Adicionar ao calendário": endereço da barbearia e link "Ver ou cancelar".
   calendar?: { address: string; bookingsUrl: string } | null;
 }
 
@@ -84,10 +83,9 @@ const BookingPicker = ({
   const [sheetIsOpen, setSheetIsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<BookingSuccess>();
-  // MOTION: a grade só anima depois de trocar de dia (nunca no primeiro carregamento, para não mexer no LCP).
+  // A grade só anima depois de trocar de dia (nunca no primeiro carregamento, para não mexer no LCP).
   const [daySwitched, setDaySwitched] = useState(false);
   const resumeChecked = useRef(false);
-  const motion = useMotion();
 
   const day = days.find((d) => d.date === selectedDate);
   // Cartão de sucesso só quando há algo nele além do "Reservado!" (sem isso, só o toast, como antes).
@@ -245,7 +243,7 @@ const BookingPicker = ({
             Horários livres
           </h2>
           {/* key pelo dia: a troca de dia remonta a grade e a animação de entrada roda de novo. */}
-          <div key={day.date} data-testid="slots-panel" className={cn(daySwitched && "fx:motion-safe:animate-slots-in")}>
+          <div key={day.date} data-testid="slots-panel" className={cn(daySwitched && "motion-safe:animate-slots-in")}>
             {day.freeCount === 0 ? (
               <EmptyState
                 icon={CalendarXIcon}
@@ -280,10 +278,10 @@ const BookingPicker = ({
         {success && hasSuccessCard && (
           <section
             aria-labelledby="reserva-sucesso"
-            className="mt-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent/60 bg-accent/[0.08] p-4 fx:motion-safe:animate-card-in"
+            className="mt-4 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-accent/60 bg-accent/[0.08] p-4 motion-safe:animate-card-in"
           >
             <p id="reserva-sucesso" className="flex items-center gap-2 font-bold">
-              {motion ? <SuccessCheck /> : <CalendarCheckIcon className="h-5 w-5 text-accent" aria-hidden="true" />}
+              <SuccessCheck />
               Reservado! {success.dayLabel} às {success.time}.
             </p>
             {emailConfirmation && (
@@ -375,7 +373,7 @@ const BookingPicker = ({
           <SheetFooter className="px-page pb-6">
             <Button className="w-full" onClick={submit} disabled={!time || !service || submitting} aria-busy={submitting}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
-              {submitting && motion ? "Reservando…" : "Confirmar reserva"}
+              {submitting ? "Reservando…" : "Confirmar reserva"}
             </Button>
           </SheetFooter>
         </SheetContent>

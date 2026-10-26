@@ -3,7 +3,7 @@ import { FIXTURES } from "../tests/setup/fixtures";
 import { E2E, testDb } from "./db";
 import { atSaoPauloTime, futureWednesdayNoon, gotoLoggedIn, loginAs } from "./helpers";
 
-// e2e com ADMIN_PANEL_V2=admin e o relógio do servidor (SCHEDULE_NOW) numa quarta futura:
+// e2e com o relógio do servidor (SCHEDULE_NOW) numa quarta futura:
 // a grade do /adm é a sexta e o sábado dessa semana. Este arquivo usa só a sexta às
 // 09:00, 14:30, 17:30 e 18:30 (os outros horários da sexta são de outras specs) e limpa
 // bloqueios e reservas no fim de cada teste.

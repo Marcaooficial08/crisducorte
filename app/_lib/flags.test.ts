@@ -1,11 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getFlagMode,
-  isAdminPanelV2Enabled,
-  isCalendarioEnabled,
   isEnabled,
-  isMensalistasEnabled,
-  isMotionEnabled,
   isNotificacoesEnabled,
   isNotificacoesEnabledForUser,
   isPwaInstallEnabled,
@@ -54,24 +50,6 @@ describe("feature flags", () => {
     expect(isEnabled("NOTIFICACOES", null)).toBe(true);
   });
 
-  it("ADMIN_PANEL_V2: padrão off; admin ou all ligam para o admin", () => {
-    expect(isAdminPanelV2Enabled(sessionOf(true))).toBe(false);
-    vi.stubEnv("ADMIN_PANEL_V2", "admin");
-    expect(isAdminPanelV2Enabled(sessionOf(true))).toBe(true);
-    expect(isAdminPanelV2Enabled(sessionOf(false))).toBe(false);
-    vi.stubEnv("ADMIN_PANEL_V2", "all");
-    expect(isAdminPanelV2Enabled(sessionOf(true))).toBe(true);
-  });
-
-  it("MENSALISTAS: padrão off; admin liga só para o admin; all para todos", () => {
-    expect(isMensalistasEnabled(sessionOf(true))).toBe(false);
-    vi.stubEnv("MENSALISTAS", "admin");
-    expect(isMensalistasEnabled(sessionOf(true))).toBe(true);
-    expect(isMensalistasEnabled(sessionOf(false))).toBe(false);
-    vi.stubEnv("MENSALISTAS", "all");
-    expect(isMensalistasEnabled(sessionOf(false))).toBe(true);
-  });
-
   it("NOTIFICACOES pela sessão (tela) e pelo usuário do banco (Cron e avisos)", () => {
     vi.stubEnv("NOTIFICACOES", undefined);
     expect(isNotificacoesEnabled(sessionOf(true))).toBe(false);
@@ -86,20 +64,6 @@ describe("feature flags", () => {
 
     vi.stubEnv("NOTIFICACOES", "all");
     expect(isNotificacoesEnabledForUser({ isAdmin: false })).toBe(true);
-  });
-
-  it("CALENDARIO pela sessão: admin só para quem é admin, all para todos", () => {
-    vi.stubEnv("CALENDARIO", undefined);
-    expect(isCalendarioEnabled(sessionOf(true))).toBe(false);
-
-    vi.stubEnv("CALENDARIO", "admin");
-    expect(isCalendarioEnabled(sessionOf(true))).toBe(true);
-    expect(isCalendarioEnabled(sessionOf(false))).toBe(false);
-    expect(isCalendarioEnabled(null)).toBe(false);
-
-    vi.stubEnv("CALENDARIO", "all");
-    expect(isCalendarioEnabled(sessionOf(false))).toBe(true);
-    expect(isCalendarioEnabled(null)).toBe(true);
   });
 
   it("PWA_INSTALL pela sessão", () => {
@@ -126,17 +90,5 @@ describe("feature flags", () => {
 
     vi.stubEnv("WEB_PUSH", "all");
     expect(isWebPushEnabledForUser({ isAdmin: false })).toBe(true);
-  });
-
-  it("MOTION pela sessão: padrão off; admin só para o admin; all para todos", () => {
-    vi.stubEnv("MOTION", undefined);
-    expect(getFlagMode("MOTION")).toBe("off");
-    expect(isMotionEnabled(sessionOf(true))).toBe(false);
-    vi.stubEnv("MOTION", "admin");
-    expect(isMotionEnabled(sessionOf(true))).toBe(true);
-    expect(isMotionEnabled(sessionOf(false))).toBe(false);
-    expect(isMotionEnabled(null)).toBe(false);
-    vi.stubEnv("MOTION", "all");
-    expect(isMotionEnabled(null)).toBe(true);
   });
 });

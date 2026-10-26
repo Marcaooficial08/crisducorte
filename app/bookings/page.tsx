@@ -6,7 +6,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../_lib/auth";
 import { bookingItemSelect } from "../_lib/booking-item-data";
 import { bookingOwnersWhere } from "../_lib/next-booking";
-import { isMensalistasEnabled } from "../_lib/flags";
 import EmptyState from "../_components/empty-state";
 import { Button } from "../_components/ui/button";
 import { CalendarIcon } from "lucide-react";
@@ -22,8 +21,8 @@ const BookingsPage = async () => {
         return redirect("/");
     }
 
-    // Reservas da conta e, com MENSALISTAS, as de mensalista com o e-mail da conta (Prompt 22, 5a).
-    const owners = bookingOwnersWhere(session.user, isMensalistasEnabled(session));
+    // Reservas da conta e as de mensalista com o e-mail da conta (Prompt 22, 5a).
+    const owners = bookingOwnersWhere(session.user);
 
     const [confirmedBookings, finishedBookings] = await Promise.all([
         db.booking.findMany({

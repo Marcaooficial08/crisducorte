@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ getServerSession: vi.fn(), findUnique: vi.fn() }));
+const mocks = vi.hoisted(() => ({ findUnique: vi.fn() }));
 
-vi.mock("next-auth", () => ({ getServerSession: mocks.getServerSession }));
-vi.mock("@/app/_lib/auth", () => ({ authOptions: {} }));
 vi.mock("@/app/_lib/prisma", () => ({ db: { service: { findUnique: mocks.findUnique } } }));
 
 import { GET } from "./route";
@@ -12,17 +10,10 @@ const URL_BASE = "https://crisducorte.vercel.app/api/calendario";
 const request = (query: string) => new Request(`${URL_BASE}?${query}`);
 const VALID = "data=2026-10-23&hora=10:30&servico=svc-1";
 
-const sessionOf = (isAdmin: boolean) => ({
-  user: { id: "user-1", name: "Teste", email: "teste@example.com", isAdmin },
-  expires: "2999-01-01T00:00:00.000Z",
-});
-
 describe("rota do .ics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("CALENDARIO", "all");
     vi.stubEnv("NEXTAUTH_URL", "https://staging.example.com");
-    mocks.getServerSession.mockResolvedValue(null);
     mocks.findUnique.mockResolvedValue({ name: "Corte de Cabelo", barbershop: { address: "Rua dos Testes, 1" } });
   });
 
@@ -30,16 +21,7 @@ describe("rota do .ics", () => {
     vi.unstubAllEnvs();
   });
 
-  it("flag off: 404 sem ler o banco; admin: só para o admin", async () => {
-    vi.stubEnv("CALENDARIO", "off");
-    expect((await GET(request(VALID))).status).toBe(404);
-
-    vi.stubEnv("CALENDARIO", "admin");
-    mocks.getServerSession.mockResolvedValue(sessionOf(false));
-    expect((await GET(request(VALID))).status).toBe(404);
-    expect(mocks.findUnique).not.toHaveBeenCalled();
-
-    mocks.getServerSession.mockResolvedValue(sessionOf(true));
+  it("sem login também responde: o .ics não tem dado pessoal (Prompt 22, sem a flag CALENDARIO)", async () => {
     expect((await GET(request(VALID))).status).toBe(200);
   });
 

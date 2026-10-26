@@ -9,8 +9,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { BRAND_BACKGROUND, SHARE_TITLE, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./_lib/site";
 import { getFlagMode } from "./_lib/flags";
 import SwRegister from "./_components/sw-register";
-import MotionProvider from "./_providers/motion";
-import { MOTION_ATTRIBUTE } from "./_lib/motion";
 
 const sans = Space_Grotesk({ subsets: ["latin"], variable: "--font-space-grotesk", display: "swap" });
 const brand = Permanent_Marker({ subsets: ["latin"], weight: "400", variable: "--font-permanent-marker", display: "swap" });
@@ -52,20 +50,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const motionMode = getFlagMode("MOTION");
-  // MOTION=all: o atributo já sai do servidor; "admin" é decidido no navegador pelo MotionProvider.
-  const motionAttribute = motionMode === "all" ? { [MOTION_ATTRIBUTE]: "on" } : {};
-
   return (
-    <html lang="pt-BR" {...motionAttribute}>
+    <html lang="pt-BR">
       <body className={`dark ${sans.variable} ${brand.variable} font-sans`}>
         <AuthProvider>
-          <MotionProvider mode={motionMode}>
-            <main className="flex-1">{children}</main>
-            <Toaster />
-            <Footer />
-            <SwRegister modes={[getFlagMode("PWA_INSTALL"), getFlagMode("WEB_PUSH")]} />
-          </MotionProvider>
+          <main className="flex-1">{children}</main>
+          <Toaster />
+          <Footer />
+          <SwRegister modes={[getFlagMode("PWA_INSTALL"), getFlagMode("WEB_PUSH")]} />
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

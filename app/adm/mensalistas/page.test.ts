@@ -36,7 +36,6 @@ describe("/adm/mensalistas", () => {
   });
 
   it("sem sessão e conta comum voltam para a home sem ler mensalistas", async () => {
-    vi.stubEnv("MENSALISTAS", "all");
     mocks.getServerSession.mockResolvedValueOnce(null);
     await expect(MensalistasPage()).rejects.toThrow("NEXT_REDIRECT:/");
     mocks.getServerSession.mockResolvedValueOnce(sessionOf(false));
@@ -44,15 +43,8 @@ describe("/adm/mensalistas", () => {
     expect(mocks.getMensalistas).not.toHaveBeenCalled();
   });
 
-  it("flag desligada: admin volta para o /adm", async () => {
+  it("admin vê a lista", async () => {
     mocks.getServerSession.mockResolvedValue(sessionOf(true));
-    await expect(MensalistasPage()).rejects.toThrow("NEXT_REDIRECT:/adm");
-    expect(mocks.getMensalistas).not.toHaveBeenCalled();
-  });
-
-  it("flag ligada: admin vê a lista", async () => {
-    mocks.getServerSession.mockResolvedValue(sessionOf(true));
-    vi.stubEnv("MENSALISTAS", "admin");
     await expect(MensalistasPage()).resolves.toBeTruthy();
     expect(mocks.getMensalistas).toHaveBeenCalledTimes(1);
   });

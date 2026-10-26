@@ -4,7 +4,20 @@ import { futureWednesdayNoon, gotoLoggedIn, loginAs } from "./helpers";
 
 const { clienteA } = FIXTURES;
 
+// Espera as transições/animações finitas da página (Sheet abrindo, botão voltando do toque):
+// medir no meio de um transform dá 43,99… em vez de 44.
+const settle = (locator: Locator) =>
+  locator.page().evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.then(() => undefined, () => undefined)),
+    ).then(() => undefined),
+  );
+
 const expectTouchTarget = async (locator: Locator) => {
+  await settle(locator);
   const box = await locator.boundingBox();
   expect(box?.width).toBeGreaterThanOrEqual(44);
   expect(box?.height).toBeGreaterThanOrEqual(44);
