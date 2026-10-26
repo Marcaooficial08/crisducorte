@@ -24,7 +24,7 @@
 | 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
 | 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção e liberado para todos | 2026-10-22 | `prompt20/push` (PR #21, com A, B e C) |
 | 21 · Microinterações (MOTION) | ✅ Publicado em produção e liberado para todos | 2026-10-23 | `prompt21/motion` (PR #23) |
-| 22 · Revisão final (PRs 1–7) | 🟡 Em desenvolvimento — parado no PR 5 | 2026-10-24 | `prompt22/*` (branches empilhadas, sem push) |
+| 22 · Revisão final (PRs 1–7) | 🟡 Na staging (`prompt22/docs`), aguardando o teste do dono — sem PR e sem merge | 2026-10-26 | `prompt22/*` (7 branches empilhadas) |
 
 ## Ambientes
 
@@ -1002,4 +1002,35 @@ Branches empilhadas, só locais (**nenhum push, nenhum PR, nenhum merge**; a `st
 - Lighthouse não rodado localmente: o desempenho local fica abaixo do de produção (banco pela internet) e não serve para a meta da home (≥ 90). Conferir no PageSpeed em produção depois do merge.
 
 **Validação (local, 2026-10-26, um de cada vez):** lint ✅ · `tsc` ✅ · unit 304 ✅ · integração 86 ✅ · build ✅ · e2e 68 ✅.
+
+### PR 7 · Documentação (`prompt22/docs`)
+
+**Feito:**
+- `README.md` reescrito (era o modelo do create-next-app): o que é o app, como rodar, testes, ambientes, as 3 flags, como publicar (com a janela sex 20h–sáb 21h), onde estão migração e backup.
+- `CLAUDE.md` enxuto: sem as flags removidas e sem o `pages/_document.tsx` (não existe mais); rotas, modelo de dados e regras atualizados; detalhes do dia a dia movidos para `docs/operacao.md`.
+- `docs/operacao.md` (novo): flags que ficam e como ligar/desligar (com redeploy), variáveis que podem ser apagadas da Vercel, `NotificationLog` (status e consultas só de leitura), Cron, rollback (flag, Instant Rollback da Vercel, service worker), backup (5432), migração em produção (SQL manual + `migrate resolve`), tabelas legadas (D8) e segredos.
+
+**Validação:** só documentação (nenhum código mudou depois do PR 6, validado em 2026-10-26).
+
+### Status em 2026-10-26
+
+| PR | Branch | Commit |
+|---|---|---|
+| 1 · Segurança | `prompt22/seguranca` | `385180b` |
+| 2 · Notificações | `prompt22/notificacoes` | `07148a7` |
+| 3 · Melhorias | `prompt22/melhorias` | `d561fbc` |
+| 4 · Flags da home | `prompt22/flags-home` | `0faa232` |
+| 5 · Flags do painel | `prompt22/flags-painel` | `67dfed2` |
+| 6 · Acessibilidade e testes | `prompt22/a11y-testes` | `93c7470` |
+| 7 · Documentação | `prompt22/docs` | (este commit) |
+
+A seção "Status em 2026-10-24" acima ficou como histórico; o PR 5 foi concluído em 26/10.
+
+**Pendências:**
+- [x] `prompt22/docs` enviada para a `staging` (autorizado pelo dono em 2026-10-26).
+- [ ] Teste de aceite do dono na staging (roteiro único do Prompt 22).
+- [ ] PRs e merge: decisão do dono depois do teste. Ordem sugerida: um PR só da `prompt22/docs` para a `main` (contém os 7) ou os 7 em sequência. Nunca de sexta 20h a sábado 21h.
+- [ ] Depois do merge (dono): apagar na Vercel `AGENDA_V2`, `NEW_HOME`, `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO`, `MOTION` e `NEXT_AUTH_SECRET`; PageSpeed da home (meta: desempenho ≥ 90, acessibilidade 100); conferir nos logs o tempo do SMTP ("Notificação … enviada em N ms").
+- [ ] Prompt 23: upgrade do Next (15/16, React 19), troca do adapter do login (D6), remoção da `Booking_backup_duplicates` e da linha com falha em `_prisma_migrations` com backup (D8).
+- [ ] Tarefas do dono fora do código (ver o plano do Prompt 22): senha do banco de produção, revisão jurídica da Política, `GOOGLE_CLIENT_SECRET` "Needs Attention", projeto de dev travado no Supabase, logs da Vercel de 23/10 13:58.
 
