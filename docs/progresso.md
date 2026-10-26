@@ -24,7 +24,7 @@
 | 19 · Notificações (MEL-022) | ✅ Publicado em produção — previsto após o merge | 2026-10-21 | `fase3/notificacoes` (PR #20) |
 | 20 · Calendário, PWA instalável e Web Push (MEL-023) | ✅ Publicado em produção e liberado para todos | 2026-10-22 | `prompt20/push` (PR #21, com A, B e C) |
 | 21 · Microinterações (MOTION) | ✅ Publicado em produção e liberado para todos | 2026-10-23 | `prompt21/motion` (PR #23) |
-| 22 · Revisão final (PRs 1–7) | 🟡 Na staging (`prompt22/docs`), aguardando o teste do dono — sem PR e sem merge | 2026-10-26 | `prompt22/*` (7 branches empilhadas) |
+| 22 · Revisão final (segurança, notificações, melhorias, limpeza de flags) | ✅ Publicado em produção — previsto após o merge | 2026-10-26 | `prompt22/docs` (PR único com os 7) |
 
 ## Ambientes
 
@@ -1028,9 +1028,10 @@ A seção "Status em 2026-10-24" acima ficou como histórico; o PR 5 foi conclu�
 
 **Pendências:**
 - [x] `prompt22/docs` enviada para a `staging` (autorizado pelo dono em 2026-10-26).
-- [ ] Teste de aceite do dono na staging (roteiro único do Prompt 22).
-- [ ] PRs e merge: decisão do dono depois do teste. Ordem sugerida: um PR só da `prompt22/docs` para a `main` (contém os 7) ou os 7 em sequência. Nunca de sexta 20h a sábado 21h.
+- [x] Teste de aceite do dono na staging ✅ em 2026-10-26: login, reserva, horário 09:00 sem piscar, redirecionamentos de `/classic` e `/barbershop`, dica do Xiaomi, `/adm` com "Próximas" + "Últimos 30 dias", "Lembrar no WhatsApp", bloqueio, mensalistas e e-mails uma vez só.
+- [x] PR único da `prompt22/docs` para a `main` (squash), merge autorizado pelo dono em 2026-10-26 se todos os checks passarem.
 - [ ] Depois do merge (dono): apagar na Vercel `AGENDA_V2`, `NEW_HOME`, `ADMIN_PANEL_V2`, `MENSALISTAS`, `CALENDARIO`, `MOTION` e `NEXT_AUTH_SECRET`; PageSpeed da home (meta: desempenho ≥ 90, acessibilidade 100); conferir nos logs o tempo do SMTP ("Notificação … enviada em N ms").
 - [ ] Prompt 23: upgrade do Next (15/16, React 19), troca do adapter do login (D6), remoção da `Booking_backup_duplicates` e da linha com falha em `_prisma_migrations` com backup (D8).
 - [ ] Tarefas do dono fora do código (ver o plano do Prompt 22): senha do banco de produção, revisão jurídica da Política, `GOOGLE_CLIENT_SECRET` "Needs Attention", projeto de dev travado no Supabase, logs da Vercel de 23/10 13:58.
 
+**Produção:** publicado em produção — previsto após o merge (PR único com os 7, segunda 2026-10-26, fora da janela sex 20h–sáb 21h). Sem migração. Nenhuma variável da Vercel alterada por este PR; as flags removidas podem ser apagadas depois pelo dono (ver `docs/operacao.md`).
