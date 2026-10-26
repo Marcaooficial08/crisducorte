@@ -990,3 +990,16 @@ Branches empilhadas, só locais (**nenhum push, nenhum PR, nenhum merge**; a `st
 
 **Validação (local, 2026-10-26, um de cada vez):** lint ✅ · `tsc` ✅ · unit 304 ✅ · integração 86 ✅ · build ✅ · e2e 60/62 na 1ª rodada (os 2 testes acima, corrigidos) → 62 ✅ na suíte completa.
 
+### PR 6 · Acessibilidade e testes (`prompt22/a11y-testes`)
+
+**Decisão do dono (2026-10-26):** `NOTIFICACOES`, `PWA_INSTALL` e `WEB_PUSH` continuam em `admin` no e2e, para testar os dois lados do botão de desligar (ligado para o admin, desligado para o cliente).
+
+**Feito:**
+- axe-core (WCAG 2.1 A/AA) no e2e, sem violações, em `/` (deslogado), `/privacidade`, `/bookings` e `/perfil` (cliente), `/adm` e `/adm/mensalistas` (admin) — pendência do Prompt 17. `axe-core` 4.11.3 declarado como devDependency (já vinha instalado pelo `eslint-config-next`; mesma versão).
+- `expect.timeout` no `playwright.config.ts`: 10s local (Neon "Testes" pela internet) e 5s no CI; saiu o `timeout: 15_000` do cancelamento no `motion.spec` (o `/adm` ficou mais leve no PR 5).
+- CI: passo "Tipos (tsc)" (`npx tsc --noEmit`) depois do lint — o `next build` não confere `tests/` nem `e2e/`.
+- Cobertura: `npm run test:coverage` (`@vitest/coverage-v8` 5.0.5, só relatório, sem mínimo). Unit em 2026-10-26: `app/_actions` 94% das linhas, `app/_lib` 88%, `app/_actions/admin` 61% (pagamento e situação de mensalista são cobertos na integração, fora desse relatório), total 46% (componentes de tela ficam com o e2e).
+- Lighthouse não rodado localmente: o desempenho local fica abaixo do de produção (banco pela internet) e não serve para a meta da home (≥ 90). Conferir no PageSpeed em produção depois do merge.
+
+**Validação (local, 2026-10-26, um de cada vez):** lint ✅ · `tsc` ✅ · unit 304 ✅ · integração 86 ✅ · build ✅ · e2e 68 ✅.
+

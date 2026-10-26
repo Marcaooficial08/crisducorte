@@ -51,6 +51,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # O next build só confere os tipos do app; aqui entram também tests/ e e2e/.
+      - name: Tipos (tsc)
+        run: npx tsc --noEmit
+
       - name: Testes de unidade
         run: npm run test:unit
 

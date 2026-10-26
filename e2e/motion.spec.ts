@@ -204,8 +204,8 @@ test("/adm: cancelar faz o número de Canceladas dar o pulinho", async ({ page, 
   const before = Number(await canceladas.textContent());
   await row("14:30").getByRole("button", { name: "Cancelar reserva das 14:30" }).click();
   await page.getByRole("alertdialog", { name: `Cancelar reserva de ${clienteC.name}?` }).getByRole("button", { name: "Cancelar reserva" }).click();
-  // O /adm re-renderizado chega depois do toast; com os dados das outras specs passa de 5s no Neon.
-  await expect(canceladas).toHaveText(String(before + 1), { timeout: 15_000 });
+  // O /adm re-renderizado chega depois do toast (expect.timeout do playwright.config: 10s local, 5s no CI).
+  await expect(canceladas).toHaveText(String(before + 1));
   await expect(number).toHaveClass(/animate-bump/);
   expect(await animationName(number)).toBe("bump");
   await expect(row("14:30")).toHaveAttribute("data-state", "free");

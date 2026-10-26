@@ -20,6 +20,8 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Local o servidor fala com o Neon "Testes" pela internet (us-east-2): 10s; no CI (Postgres local), o padrão de 5s.
+  expect: { timeout: process.env.CI ? 5_000 : 10_000 },
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: BASE_URL,

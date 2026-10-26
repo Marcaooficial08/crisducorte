@@ -1,8 +1,21 @@
-import { expect, Locator, test } from "@playwright/test";
+import { expect, Locator, Page, test } from "@playwright/test";
 import { FIXTURES } from "../tests/setup/fixtures";
 import { futureWednesdayNoon, gotoLoggedIn, loginAs } from "./helpers";
 
-const { clienteA } = FIXTURES;
+const { clienteA, admin } = FIXTURES;
+
+// axe-core (Prompt 22): WCAG 2.1 A/AA nas telas que não tinham medição (pendência do Prompt 17).
+const AXE_PATH = require.resolve("axe-core/axe.min.js");
+
+const axeViolations = async (page: Page) => {
+  await page.addScriptTag({ path: AXE_PATH });
+  return page.evaluate(async () => {
+    const result = await (window as unknown as { axe: { run: (context: Document, options: object) => Promise<{ violations: { id: string; nodes: { target: unknown }[] }[] }> } }).axe.run(document, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+    });
+    return result.violations.map((violation) => `${violation.id}: ${violation.nodes.map((node) => JSON.stringify(node.target)).join(", ")}`);
+  });
+};
 
 // Espera as transições/animações finitas da página (Sheet abrindo, botão voltando do toque):
 // medir no meio de um transform dá 43,99… em vez de 44.
@@ -61,3 +74,26 @@ test("dias e horários da home com 44px cabem em 390px sem rolagem horizontal", 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+const AXE_PAGES: { path: string; as: "anon" | "cliente" | "admin"; ready: string }[] = [
+  { path: "/", as: "anon", ready: "Escolha o dia" },
+  { path: "/privacidade", as: "anon", ready: "Política de Privacidade" },
+  { path: "/bookings", as: "cliente", ready: "Agendamentos" },
+  { path: "/perfil", as: "cliente", ready: "Perfil" },
+  { path: "/adm", as: "admin", ready: "Agenda" },
+  { path: "/adm/mensalistas", as: "admin", ready: "Mensalistas" },
+];
+
+for (const { path, as, ready } of AXE_PAGES) {
+  test(`axe (WCAG 2.1 AA) sem violações em ${path} (${as})`, async ({ page, context }) => {
+    if (as === "anon") {
+      await page.goto(path);
+    } else {
+      const user = as === "admin" ? admin : clienteA;
+      await loginAs(context, user.sessionToken);
+      await gotoLoggedIn(page, path, user.id);
+    }
+    await expect(page.getByRole("heading", { name: ready }).first()).toBeVisible();
+    expect(await axeViolations(page)).toEqual([]);
+  });
+}

@@ -27,6 +27,13 @@ export default defineConfig({
     jsx: { runtime: "automatic" },
   },
   test: {
+    // Relatório de cobertura (npm run test:coverage): só leitura, sem mínimo que trave o CI.
+    coverage: {
+      provider: "v8",
+      include: ["app/**/*.{ts,tsx}"],
+      exclude: ["app/**/*.test.ts", "app/_components/ui/**"],
+      reporter: ["text-summary", "text", "html"],
+    },
     projects: [
       {
         extends: true,
